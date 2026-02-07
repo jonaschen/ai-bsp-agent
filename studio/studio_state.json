@@ -1,0 +1,30 @@
+{
+    "meta": {
+        "schema_version": "1.0",
+        "last_updated": "2026-02-07T12:00:00.000000+00:00",
+        "system_status": "BOOTSTRAP",
+        "consecutive_success_count": 0
+    },
+    "registry": {
+        "screener": {
+            "role": "product",
+            "version": "0.1.0",
+            "source_file": "bsp_agent/screener.py",
+            "health": { "status": "PENDING" }
+        },
+        "pathologist": {
+            "role": "product",
+            "version": "0.1.0",
+            "source_file": "bsp_agent/pathologist.py",
+            "health": { "status": "PENDING" }
+        },
+        "librarian": {
+            "role": "product",
+            "version": "0.1.0",
+            "source_file": "bsp_agent/librarian.py",
+            "health": { "status": "PENDING" }
+        }
+    },
+    "evolution_queue": [],
+    "history_log_pointer": "studio/review_history.md"
+}
