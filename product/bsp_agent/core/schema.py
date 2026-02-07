@@ -1,9 +1,9 @@
-from typing import List, Optional
+from typing import List, Literal
 from pydantic import BaseModel, Field
 
 class LogPayload(BaseModel):
-    dmesg_content: Optional[str] = Field(None, description="Raw content or URL of dmesg log")
-    logcat_content: Optional[str] = Field(None, description="Raw content or URL of logcat log")
+    dmesg_content: str = Field(..., description="Raw content of dmesg log")
+    logcat_content: str = Field("", description="Raw content of logcat log")
 
 class CaseFile(BaseModel):
     case_id: str
@@ -13,8 +13,8 @@ class CaseFile(BaseModel):
     log_payload: LogPayload
 
 class TriageReport(BaseModel):
-    status: str
-    failure_type: str
+    status: Literal["CRITICAL", "WARNING"]
+    failure_type: Literal["KERNEL_PANIC", "WATCHDOG", "HANG_STALL", "RESUME_FAIL"]
     event_horizon_timestamp: str
     key_evidence: List[str]
     suspected_file_hint: str
