@@ -92,13 +92,13 @@ class StudioManager:
         the appropriate agent role.
         """
         task_lower = task_description.lower()
-        if any(keyword in task_lower for keyword in ["fix", "bug", "feature", "implement", "logic", "code"]):
+        if any(keyword in task_lower for keyword in ["feature", "request", "plan", "blueprint", "strategy"]):
+            return "PM"
+        if any(keyword in task_lower for keyword in ["fix", "bug", "implement", "logic", "code"]):
             return "Architect"
         if any(keyword in task_lower for keyword in ["prompt", "optimize", "tune", "meta"]):
             return "Optimizer"
         if any(keyword in task_lower for keyword in ["test", "verify", "qa", "pytest"]):
             return "QA"
-        if any(keyword in task_lower for keyword in ["plan", "blueprint", "strategy"]):
-            return "PM"
 
         return "Architect"  # Default
