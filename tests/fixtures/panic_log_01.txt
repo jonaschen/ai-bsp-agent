@@ -1,0 +1,34 @@
+[ 1456.788012] mdss_dsi_phy_init:phy_regulator_enable failed
+[ 1456.789001] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000010
+[ 1456.789005] Mem abort info:
+[ 1456.789008]   ESR = 0x96000004
+[ 1456.789012]   Exception class = DABT (current EL), IL = 32 bits
+[ 1456.789015]   SET = 0, FnV = 0
+[ 1456.789018]   EA = 0, S1PTW = 0
+[ 1456.789025] Data abort info:
+[ 1456.789028]   ISV = 0, ISS = 0x00000004
+[ 1456.789031]   CM = 0, WnR = 0
+[ 1456.789038] user pgtable: 4k pages, 39-bit VAs, pgdp=0000000105655000
+[ 1456.789042] [0000000000000010] pgd=0000000000000000
+[ 1456.789050] Internal error: Oops: 96000004 [#1] PREEMPT SMP
+[ 1456.789055] Modules linked in: wlan(O)
+[ 1456.789062] CPU: 4 PID: 1234 Comm: kworker/u16:12 Tainted: G        O      5.10.101-android12-9-g392849 #1
+[ 1456.789066] Hardware name: Qualcomm Technologies, Inc. SM8350 MTP (DT)
+[ 1456.789072] Workqueue: events_unbound dpm_run_callback
+[ 1456.789078] pstate: 60400005 (nZCv daif +PAN -UAO -TCO BTYPE=--)
+[ 1456.789082] pc : mdss_resume+0x24/0x80
+[ 1456.789086] lr : dpm_run_callback+0x40/0x100
+[ 1456.789090] sp : ffffffc010003c80
+[ 1456.789093] x29: ffffffc010003c80 x28: ffffffc011499000 
+[ 1456.789097] x27: 0000000000000000 x26: 0000000000000000 
+[ 1456.789101] x25: ffffffc011499000 x24: ffffffc010003d60 
+[ 1456.789105] x23: 0000000000000000 x22: ffffff8004561000 
+[ 1456.789109] x21: ffffff8004561080 x20: 0000000000000000 
+[ 1456.789113] x19: ffffff8004561000 x18: 0000000000000000 
+[ 1456.789117] x17: 0000000000000000 x16: 0000000000000000 
+[ 1456.789121] x15: 0000000000000000 x14: 0000000000000000 
+[ 1456.789125] x13: 0000000000000000 x12: 0000000000000000 
+[ 1456.789129] Call trace:
+[ 1456.789133]  mdss_resume+0x24/0x80
+[ 1456.789136]  dpm_run_callback+0x40/0x100
+[ 1456.789140]  device_resume+0x9c/0x150
