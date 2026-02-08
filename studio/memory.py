@@ -1,188 +1,112 @@
 """
 studio/memory.py
 ----------------
-Defines the Schema for the Studio's Single Source of Truth (studio_state.json).
-Enforces the "Memory Fabric" architecture for the AI Agent Scrum Team.
+Defines the Pydantic Schema for the Studio's Single Source of Truth.
+Refined based on "Engineering Resilient Cognitive Architectures" (Report 588).
 
-Layers:
-1. Hot: Runtime Context (Orchestration)
-2. Warm: Sprint Board (Task Tracking)
-3. Cold: Product Backlog (Requirements)
-4. Episodic: Review History (Learning)
+Updates:
+- Added SemanticHealthMetric for SE monitoring[cite: 722].
+- Added ContextBundle for strict context slicing.
 """
 
-from typing import List, Dict, Optional, Literal, Union, Any
-from datetime import datetime, timezone
-from pydantic import BaseModel, Field, HttpUrl, validator
+from typing import List, Dict, Optional, Literal, Any
+from datetime import datetime
+from pydantic import BaseModel, Field
 
-# --- Primitive Types ---
-AgentRole = Literal["Orchestrator", "ProductOwner", "ScrumMaster", "Architect", "Engineer", "QA", "Optimizer"]
-TicketStatus = Literal["TODO", "IN_PROGRESS", "REVIEW", "DONE", "BLOCKED"]
-VerificationStatus = Literal["GREEN", "RED", "PENDING"]
-PrivacyLevel = Literal["PUBLIC", "INTERNAL", "CONFIDENTIAL_USER_DATA"]
+# --- SECTION 1: Mathematical Guardrails (Semantic Entropy) ---
+class SemanticHealthMetric(BaseModel):
+    """
+    Runtime metric for 'Cognitive Health'.
+    Used by Orchestrator to trigger Circuit Breakers.
+    Ref: [cite: 722]
+    """
+    entropy_score: float = Field(..., description="Calculated uncertainty (0.0 - 10.0)")
+    threshold: float = 7.0
+    sample_size: int = Field(default=5, description="Number of parallel generations")
+    is_tunneling: bool = Field(..., description="True if entropy_score > threshold")
+    cluster_distribution: Dict[str, float] = Field(default={}, description="Distribution of semantic meanings")
 
-# --- Layer 4: Episodic Memory (Long-term Wisdom) ---
-class ArchitecturalDecisionRecord(BaseModel):
-    id: str
-    title: str
-    date: str
-    status: Literal["PROPOSED", "ACCEPTED", "DEPRECATED"]
-    consequences: List[str]
-
-class RetrospectiveInsight(BaseModel):
-    sprint_id: str
-    insight_type: Literal["PROCESS_IMPROVEMENT", "TOOLING_GAP", "TEAM_DYNAMIC"]
-    observation: str
-    action_item: str
-
-class EpisodicMemory(BaseModel):
-    architectural_decision_records: List[ArchitecturalDecisionRecord] = []
-    retrospective_insights: List[RetrospectiveInsight] = []
-
-# --- Layer 3: Optimization State (Evolution) ---
-class HardNegative(BaseModel):
-    input_id: str
-    expected: str
-    actual: str
-
-class OptimizationTrajectory(BaseModel):
-    iteration: int
-    prompt_hash: str
-    score: float = Field(..., ge=0.0, le=1.0)
-    feedback: str
-
-class OptimizationState(BaseModel):
-    target_prompt: str  # e.g., "product/prompts/pathologist.yaml"
-    optimization_trajectory: List[OptimizationTrajectory] = []
-    hard_negatives: List[HardNegative] = []
-
-# --- Layer 2: Engineering & Quality State (The Factory Floor) ---
-class WorkspaceSnapshot(BaseModel):
-    current_file: str
-    git_branch: str
-    diff_stat: str
-
-class CodeArtifacts(BaseModel):
-    proposed_patch: str
-    justification_refs: List[str] = Field(
-        ..., 
-        description="Must link to specific Ticket Criteria or Blueprint Sections. Traceability is mandatory."
-    )
-    lint_score: Optional[float] = None
-
-class TestRunResult(BaseModel):
-    test_id: str
-    outcome: Literal["PASS", "FAIL", "ERROR"]
-    error_message: Optional[str] = None
-    duration_ms: float
-
-class VerificationGate(BaseModel):
-    status: VerificationStatus
-    latest_test_run: Optional[TestRunResult] = None
-    failure_counter: int = 0
-
-class EngineeringState(BaseModel):
-    workspace_snapshot: Optional[WorkspaceSnapshot] = None
-    code_artifacts: Optional[CodeArtifacts] = None
-    verification_gate: VerificationGate = Field(default_factory=lambda: VerificationGate(status="PENDING"))
-
-# --- Layer 1: Orchestration & Sprint State (The Runtime) ---
-class Ticket(BaseModel):
-    id: str
-    title: str
-    status: TicketStatus
-    assigned_to: Optional[AgentRole] = None
-    priority: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
-    acceptance_criteria: List[str] = []
-
-class SprintBoard(BaseModel):
-    sprint_id: str
-    sprint_goal: str
-    start_date: str
-    end_date: str
-    tickets: Dict[str, Ticket] = {}
-    blockers: List[str] = []
-
-class InteractionTurn(BaseModel):
-    role: Literal["user", "assistant", "system"]
+class AgentStepOutput(BaseModel):
+    """
+    Standardized Output Wrapper for all Agent Actions.
+    Forces agents to report their 'Mental State' along with content.
+    Ref: [cite: 723]
+    """
     content: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    thought_process: str
+    cognitive_health: Optional[SemanticHealthMetric] = None
 
-class InquirySession(BaseModel):
-    privacy_level: PrivacyLevel = "CONFIDENTIAL_USER_DATA"
-    session_id: str
-    user_intent: str
-    interaction_history: List[InteractionTurn] = []
-    active_agent: Optional[AgentRole] = None
+# --- SECTION 2: Context Slicing Structures ---
+class ContextSlice(BaseModel):
+    """
+    Ephemeral data bundle passed to agents to prevent Context Collapse.
+    Ref: [cite: 405, 818]
+    """
+    slice_id: str
+    intent: Literal["DIAGNOSIS", "CODING", "REVIEW"]
+    active_files: Dict[str, str] = Field(description="Subset of file content (AST or snippets)")
+    relevant_logs: str = Field(description="Pre-sliced 'Event Horizon' logs (max 500 lines)")
+    constraints: List[str] = Field(description="Active constitutional rules")
+
+# --- SECTION 3: The Core State Layers ---
+
+# Layer 1: Orchestration (The Runtime)
+class TriageStatus(BaseModel):
+    is_log_available: bool
+    suspected_domain: str
+    assigned_specialist: Optional[str] = None
+    handoff_reason: Optional[str] = None
+
+class SOPState(BaseModel):
+    """Tracks Interactive Debugging flow for No-Log scenarios """
+    active_sop_id: Optional[str] = None
+    current_step_index: int = 0
+    pending_steps: List[str] = []
 
 class OrchestrationState(BaseModel):
-    sprint_board: SprintBoard
-    inquiry_session: Optional[InquirySession] = None
+    session_id: str
+    user_intent: str
+    triage_status: Optional[TriageStatus] = None
+    guidance_sop: Optional[SOPState] = None
+    # The active context slice being processed
+    current_context_slice: Optional[ContextSlice] = None
 
-# --- ROOT: The Studio State (Single Source of Truth) ---
-class StudioMeta(BaseModel):
-    system_version: str
-    constitution_hash: str
-    current_phase: str
-    simulation_mode: bool = False
-    last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+# Layer 2: Engineering (The TDD Loop)
+class VerificationGate(BaseModel):
+    status: Literal["RED", "GREEN", "PENDING"]
+    failure_counter: int = 0
+    blocking_reason: Optional[str] = None
 
+class EngineeringState(BaseModel):
+    current_task: Optional[str] = None
+    verification_gate: VerificationGate = Field(default_factory=lambda: VerificationGate(status="PENDING"))
+    # Code artifacts are stored here, but only sliced versions are sent to agents
+    proposed_patch: Optional[str] = None
+
+# --- ROOT: Studio State ---
 class StudioState(BaseModel):
     """
-    The Root State Object for the AI Software Studio.
-    Managed by LangGraph Checkpointers.
+    The Single Source of Truth.
+    Managed by LangGraph Checkpointer.
+    Ref: [cite: 829]
     """
-    studio_meta: StudioMeta
-    orchestration_state: OrchestrationState
-    engineering_state: EngineeringState
-    optimization_state: OptimizationState
-    episodic_memory: EpisodicMemory
+    # Meta-Data
+    system_version: str = "5.2.0"
+    circuit_breaker_triggered: bool = False # Hard Stop for SE > 7.0 [cite: 733]
 
-    # --- Access Control Helpers (The Matrix) ---
-    def get_view_for_agent(self, role: AgentRole) -> Dict[str, Any]:
+    # Layers
+    orchestration: OrchestrationState
+    engineering: EngineeringState
+
+    # Privacy & Security
+    privacy_mode: bool = True # If True, redact PII from Optimizer
+
+    def get_agent_slice(self, role: str) -> ContextSlice:
         """
-        Returns a filtered view of the state based on the Agent's Permission Matrix.
-        This prevents agents from hallucinating or accessing restricted data.
+        Logic to generate the specific view for an agent.
+        Implementation of the 'Context Slicing' principle.
+        Ref:
         """
-        view = {}
-        
-        # Everyone sees Meta and Blueprint (implied)
-        view["meta"] = self.studio_meta.dict()
-
-        if role == "Orchestrator":
-            return self.dict() # God View
-
-        elif role == "ProductOwner":
-            view["sprint_board"] = self.orchestration_state.sprint_board.dict()
-            # PO focuses on tickets, not code or runtime logs
-
-        elif role == "ScrumMaster":
-            view["sprint_board"] = self.orchestration_state.sprint_board.dict()
-            view["episodic_memory"] = self.episodic_memory.dict()
-            view["metrics"] = self.engineering_state.verification_gate.dict()
-
-        elif role == "Engineer":
-            # Engineer sees their active ticket and the workspace
-            # They do NOT see the full history or strategic insights to save context
-            view["active_ticket"] = self._get_active_ticket_for("Engineer")
-            view["workspace"] = self.engineering_state.dict()
-
-        elif role == "QA":
-            view["artifacts"] = self.engineering_state.code_artifacts.dict()
-            view["criteria"] = self._get_active_ticket_for("Engineer").get("acceptance_criteria", [])
-
-        elif role == "Optimizer":
-            # Optimizer sees the failure history but NOT User Data (Privacy)
-            view["optimization_state"] = self.optimization_state.dict()
-            if not self.studio_meta.simulation_mode:
-                 # Redact user session in production optimization
-                 view["sanitized_session"] = "REDACTED" 
-            
-        return view
-
-    def _get_active_ticket_for(self, role: str) -> Dict:
-        """Helper to find the ticket assigned to the agent."""
-        for tid, ticket in self.orchestration_state.sprint_board.tickets.items():
-            if ticket.assigned_to == role and ticket.status == "IN_PROGRESS":
-                return ticket.dict()
-        return {}
+        # (This logic will be implemented in the Orchestrator,
+        # but the structure is defined here)
+        pass

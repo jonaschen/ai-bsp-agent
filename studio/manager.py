@@ -5,8 +5,7 @@ import tempfile
 from typing import Any, Dict
 from datetime import datetime, timezone
 from studio.memory import (
-    StudioState, StudioMeta, OrchestrationState, SprintBoard,
-    EngineeringState, OptimizationState, EpisodicMemory, VerificationGate
+    StudioState, OrchestrationState, EngineeringState, VerificationGate
 )
 
 class StudioManager:
@@ -25,24 +24,14 @@ class StudioManager:
 
     def _get_default_state(self) -> StudioState:
         return StudioState(
-            studio_meta=StudioMeta(
-                system_version="5.1.0",
-                constitution_hash="sha256:default",
-                current_phase="BOOTSTRAP"
+            system_version="5.2.0",
+            orchestration=OrchestrationState(
+                session_id="SESSION-00",
+                user_intent="BOOTSTRAP"
             ),
-            orchestration_state=OrchestrationState(
-                sprint_board=SprintBoard(
-                    sprint_id="SPRINT-00",
-                    sprint_goal="Bootstrap Studio",
-                    start_date=datetime.now(timezone.utc).isoformat(),
-                    end_date=datetime.now(timezone.utc).isoformat()
-                )
-            ),
-            engineering_state=EngineeringState(
+            engineering=EngineeringState(
                 verification_gate=VerificationGate(status="PENDING")
-            ),
-            optimization_state=OptimizationState(target_prompt=""),
-            episodic_memory=EpisodicMemory()
+            )
         )
 
     def _load_state(self) -> StudioState:
@@ -88,7 +77,7 @@ class StudioManager:
     def update_state(self, key: str, value: Any):
         """
         Updates a key in the state and saves it.
-        Supports dot notation for nested keys (e.g., 'orchestration_state.sprint_board.sprint_id').
+        Supports dot notation for nested keys (e.g., 'orchestration.session_id').
         """
         keys = key.split('.')
         target = self.state
@@ -120,7 +109,7 @@ class StudioManager:
         """
         Delegates to StudioState.get_view_for_agent.
         """
-        return self.state.get_view_for_agent(role)
+        return self.state.get_agent_slice(role)
 
     def perform_atomic_swap(self, candidate_path: str, target_path: str):
         """

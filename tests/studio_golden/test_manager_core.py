@@ -31,11 +31,10 @@ def test_manager_initializes_state(temp_studio):
     assert temp_studio["state"].exists()
     with open(temp_studio["state"]) as f:
         data = json.load(f)
-        assert "studio_meta" in data
-        assert "orchestration_state" in data
-        assert "engineering_state" in data
-        assert "optimization_state" in data
-        assert "episodic_memory" in data
+        assert data["system_version"] == "5.2.0"
+        assert "orchestration" in data
+        assert "engineering" in data
+        assert "circuit_breaker_triggered" in data
 
 def test_atomic_swap_protocol(temp_studio):
     """
@@ -73,9 +72,9 @@ def test_state_write_lock_enforcement(temp_studio):
     mgr = StudioManager(root_dir=str(temp_studio["root"]))
 
     # Use a valid key path from the schema
-    # orchestration_state.sprint_board.sprint_id is a good candidate
-    mgr.update_state(key="orchestration_state.sprint_board.sprint_id", value="SPRINT-99")
+    # orchestration.session_id is a good candidate
+    mgr.update_state(key="orchestration.session_id", value="SESSION-99")
 
     with open(temp_studio["state"]) as f:
         data = json.load(f)
-        assert data["orchestration_state"]["sprint_board"]["sprint_id"] == "SPRINT-99"
+        assert data["orchestration"]["session_id"] == "SESSION-99"
