@@ -11,6 +11,10 @@ Layers:
 4. Episodic: Review History (Learning)
 """
 
+import os
+import json
+import tempfile
+import shutil
 from typing import List, Dict, Optional, Literal, Union, Any
 from datetime import datetime
 from pydantic import BaseModel, Field, HttpUrl, validator
@@ -186,3 +190,78 @@ class StudioState(BaseModel):
             if ticket.assigned_to == role and ticket.status == "IN_PROGRESS":
                 return ticket.dict()
         return {}
+
+
+class StudioMemory:
+    """
+    Persistence Layer for StudioState.
+    Handles loading, saving, and atomic writes to studio_state.json.
+    """
+    def __init__(self, root_dir: str = "."):
+        self.root_dir = root_dir
+        # Ensure we look in studio/ subdirectory if root_dir is repo root
+        if os.path.exists(os.path.join(root_dir, "studio")):
+             self.state_path = os.path.join(root_dir, "studio", "studio_state.json")
+        else:
+             # Fallback or if root_dir is already inside studio (less likely for repo root)
+             self.state_path = os.path.join(root_dir, "studio_state.json")
+
+        self.state: StudioState = self.load()
+
+        # Ensure persistence on init if missing
+        if not os.path.exists(self.state_path):
+             self.save()
+
+    def load(self) -> StudioState:
+        if not os.path.exists(self.state_path):
+            return self._create_default_state()
+
+        try:
+            with open(self.state_path, "r") as f:
+                data = json.load(f)
+            return StudioState(**data)
+        except (json.JSONDecodeError, ValueError) as e:
+            # Backup corrupt file and start fresh to avoid blocking
+            if os.path.exists(self.state_path):
+                shutil.move(self.state_path, self.state_path + ".corrupt")
+            return self._create_default_state()
+
+    def save(self):
+        """
+        Atomic write to ensure data sovereignty.
+        """
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(self.state_path), exist_ok=True)
+
+        # Write to temp file first
+        fd, temp_path = tempfile.mkstemp(dir=os.path.dirname(self.state_path), text=True)
+        try:
+            with os.fdopen(fd, 'w') as f:
+                f.write(self.state.model_dump_json(indent=2))
+
+            # Atomic swap
+            os.replace(temp_path, self.state_path)
+        except Exception as e:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+            raise e
+
+    def _create_default_state(self) -> StudioState:
+        return StudioState(
+            studio_meta=StudioMeta(
+                system_version="5.1.0",
+                constitution_hash="UNKNOWN",
+                current_phase="BOOTSTRAP"
+            ),
+            orchestration_state=OrchestrationState(
+                sprint_board=SprintBoard(
+                    sprint_id="SPRINT-00",
+                    sprint_goal="Bootstrap Studio",
+                    start_date=datetime.utcnow().isoformat(),
+                    end_date=datetime.utcnow().isoformat()
+                )
+            ),
+            engineering_state=EngineeringState(),
+            optimization_state=OptimizationState(target_prompt=""),
+            episodic_memory=EpisodicMemory()
+        )

@@ -1,66 +1,34 @@
 import os
-import json
 import shutil
-import tempfile
 from typing import Any, Dict
+from studio.memory import StudioMemory, StudioState
 
-class StudioManager:
+class Orchestrator:
     """
-    The Manager — The Autopilot
+    The Orchestrator — The Runtime Executive
     Monitors system health via studio_state.json.
     Routes work to PM, Architect, or Optimizer.
     Implements Circuit Breakers.
-    SOLE authority for writing to studio_state.json.
+    SOLE authority for writing to studio_state.json via StudioMemory.
     """
-
-    DEFAULT_STATE = {
-        "version": "1.0",
-        "evolution_queue": [],
-        "meta": {
-            "schema_version": "1.0",
-            "system_status": "BOOTSTRAP"
-        }
-    }
 
     def __init__(self, root_dir: str = "."):
         self.root_dir = root_dir
-        self.state_path = os.path.join(self.root_dir, "studio_state.json")
-        self.state = self._load_state()
+        self.memory = StudioMemory(root_dir=self.root_dir)
 
-    def _load_state(self) -> Dict[str, Any]:
-        """
-        AGENTS.md Sec 9.1: Manager is the State Owner.
-        Verify it creates a valid default state file if none exists.
-        """
-        if not os.path.exists(self.state_path):
-            state = self.DEFAULT_STATE.copy()
-            self.state = state
-            self._save_state()
-            return state
-
-        with open(self.state_path, "r") as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return self.DEFAULT_STATE.copy()
-
-    def _save_state(self):
-        """
-        AGENTS.md Sec 9: Data Sovereignty.
-        Ensure _save_state() writes to a temporary file first, then renames it (atomic write).
-        """
-        fd, temp_path = tempfile.mkstemp(dir=self.root_dir, text=True)
-        with os.fdopen(fd, 'w') as f:
-            json.dump(self.state, f, indent=4)
-
-        os.replace(temp_path, self.state_path)
+    @property
+    def state(self) -> StudioState:
+        return self.memory.state
 
     def update_state(self, key: str, value: Any):
         """
         Updates a key in the state and saves it.
         """
-        self.state[key] = value
-        self._save_state()
+        if hasattr(self.state, key):
+            setattr(self.state, key, value)
+            self.memory.save()
+        else:
+            raise AttributeError(f"StudioState has no attribute '{key}'")
 
     def perform_atomic_swap(self, candidate_path: str, target_path: str):
         """
