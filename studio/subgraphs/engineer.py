@@ -27,7 +27,8 @@ from studio.memory import (
 from studio.utils.jules_client import JulesGitHubClient, TaskPayload, WorkStatus, TaskPriority
 from vertexai.generative_models import GenerativeModel
 from studio.utils.entropy_math import SemanticEntropyCalculator, VertexFlashJudge
-from studio.utils.sandbox import SandboxEnvironment
+from studio.utils.sandbox import DockerSandbox
+from studio.utils.patching import apply_virtual_patch
 from studio.utils.prompts import ENGINEER_SYSTEM_PROMPT
 
 logger = logging.getLogger("JulesProxy")
@@ -259,35 +260,92 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
     """
     jules_data = state["jules_metadata"]
 
-    if jules_data.status!= "VERIFYING":
+    if jules_data.status != "VERIFYING":
         return {}
 
     logger.info("QA_Verifier: Running dynamic verification in sandbox.")
 
-    # 1. Setup Sandbox
-    # Replicates the Engineer's environment for validation
-    sandbox = SandboxEnvironment(session_id=jules_data.session_id)
+    # 1. Prepare Files
+    # We need to gather all relevant files (context + modified)
+    # and apply the virtual patch.
 
-    # 2. Apply Virtual Patch & Run Tests
-    # The 'Virtual Patch' pattern  allows testing without committing to main.
+    files_to_patch = {}
+    test_files = []
+
+    # Identify files from context slice
+    if jules_data.active_context_slice and jules_data.active_context_slice.files:
+        for filepath in jules_data.active_context_slice.files:
+            try:
+                # In a real deployment, we'd fetch these from the repo
+                if os.path.exists(filepath):
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        files_to_patch[filepath] = f.read()
+
+                # Assume tests are in 'tests/' directory or similar
+                if "test" in filepath or "spec" in filepath:
+                    test_files.append(filepath)
+            except FileNotFoundError:
+                logger.warning(f"Context file not found: {filepath}")
+
+    # Get the diff
+    diff_content = ""
+    if jules_data.generated_artifacts:
+        diff_content = jules_data.generated_artifacts[0].diff_content
+
+    # Apply Patch
     try:
-        # Assume artifacts is the primary diff
-        # In a real scenario, we would iterate over artifacts
-        diff_content = ""
-        if jules_data.generated_artifacts:
-            diff_content = jules_data.generated_artifacts[0].diff_content
+        patched_files = apply_virtual_patch(files_to_patch, diff_content)
+    except Exception as e:
+        logger.error(f"Failed to apply virtual patch: {e}")
+        # Mark as error in feedback
+        status = "ERROR"
+        logs = f"Patch application failed: {str(e)}"
 
-        await sandbox.apply_patch(diff_content)
+        result = TestResult(
+            test_id="patch_application",
+            status=status,
+            logs=logs,
+            attempt_count=jules_data.retry_count + 1
+        )
+        jules_data.test_results_history.append(result)
+        jules_data.status = "FAILED"
+        return {"jules_metadata": jules_data}
 
-        # Run tests related to the context slice
-        test_output = await sandbox.run_tests(target_files=jules_data.active_context_slice.files)
+    # 2. Setup Sandbox
+    # Replicates the Engineer's environment for validation
+    sandbox = None
+    try:
+        sandbox = DockerSandbox()
 
-        status = "PASS" if test_output.exit_code == 0 else "FAIL"
-        logs = test_output.stdout + test_output.stderr
+        # Inject Code + Tests
+        if not sandbox.setup_workspace(patched_files):
+             raise RuntimeError("Failed to setup workspace")
+
+        # 3. Install Deps
+        sandbox.install_dependencies(["pytest", "mock"]) # Basic deps
+
+        # 4. Run Tests
+        # If no specific tests identified, run all in tests/
+        target = "tests/"
+        if test_files:
+             target = " ".join(test_files)
+
+        test_output = sandbox.run_pytest(target)
+
+        sandbox.teardown()
+        sandbox = None
+
+        status = "PASS" if test_output.passed else "FAIL"
+        logs = test_output.error_log or "Tests Passed"
 
     except Exception as e:
         status = "ERROR"
         logs = str(e)
+        if sandbox:
+            try:
+                sandbox.teardown()
+            except Exception:
+                pass
 
     # 3. Record Result
     result = TestResult(
