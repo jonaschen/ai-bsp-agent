@@ -53,12 +53,14 @@ These agents reside in the `studio/` directory. They manage the lifecycle of the
     * Enforces SOLID principles.
     * **Gatekeeper:** Rejects any solution that violates `AGENTS.md`.
 
-### 2.5 The Engineer (The Builder)
-* **Role:** The Hand.
+### 2.5 The Engineer (The Interface)
+* **Role:** The Handler for the AI Employee (Jules).
 * **Responsibilities:**
-    * Writes Python code for the Product Agents.
-    * Implements the RAG pipelines and Tool interfaces.
-    * **Constraint:** Cannot commit code until the QA Agent passes it.
+    * Converts Sprint Tickets into Jules-friendly Issues.
+    * Monitors Jules's PRs.
+    * **Safety Layer:** Runs the "Entropy Check" on Jules's PRs before notifying the QA Agent.
+
+
 
 ### 2.6 The QA Agent (The Verifier)
 * **Role:** The Judge.
