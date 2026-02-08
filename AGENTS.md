@@ -104,5 +104,5 @@ To prevent catastrophic self-modification, we define two levels of change:
 ## 5. Technology Stack Mandate
 * **Infrastructure:** Google Cloud Vertex AI.
 * **Orchestration:** LangGraph (State Management).
-* **Context:** Gemini-1.5-Pro (Long Context Window for Logs).
+* **Context:** Gemini-2.5-Pro (Long Context Window for Logs).
 * **Memory:** Managed Checkpointers (SQLite/Postgres).
