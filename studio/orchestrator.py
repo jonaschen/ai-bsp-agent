@@ -28,6 +28,8 @@ from studio.memory import (
     AgentStepOutput,
     TriageStatus
 )
+from studio.utils.entropy_math import SemanticEntropyCalculator, VertexFlashJudge
+from vertexai.generative_models import GenerativeModel
 
 # --- MOCK SUBGRAPHS (Placeholders for compilation) ---
 def engineer_subgraph_node(state: ContextSlice) -> Dict:
@@ -58,6 +60,11 @@ def reflector_node(state: StudioState) -> Dict:
 class Orchestrator:
     def __init__(self):
         self.logger = logging.getLogger("Orchestrator")
+
+        # Initialize the Semantic Sensor
+        self.judge = VertexFlashJudge(GenerativeModel("gemini-1.5-flash"))
+        self.calculator = SemanticEntropyCalculator(self.judge)
+
         # Initialize the Supergraph with the Global StudioState
         self.workflow = StateGraph(StudioState)
         self._setup_graph()
@@ -68,7 +75,7 @@ class Orchestrator:
         Ref:
         """
         # Wrappers for Context Slicing & State Transformation
-        def _engineer_wrapper(state: StudioState) -> Dict:
+        async def _engineer_wrapper(state: StudioState) -> Dict:
             """Wraps engineer subgraph to handle Context Slicing"""
             slice_obj = state.orchestration.current_context_slice
             if not slice_obj:
@@ -81,8 +88,17 @@ class Orchestrator:
             # Invoke subgraph (mock)
             output_data = engineer_subgraph_node(slice_obj)
 
+            # Enforce Semantic Entropy Guardrail
+            # Real implementation using the actual calculator
+            metric = await self.calculator.measure_uncertainty(slice_obj.intent, slice_obj.intent)
+
             # Parse output into AgentStepOutput
-            agent_output = AgentStepOutput(**output_data)
+            # Override the mock health with real calculation
+            agent_output = AgentStepOutput(
+                content=output_data["content"],
+                thought_process=output_data["thought_process"],
+                cognitive_health=metric
+            )
 
             updates = {}
 
@@ -96,8 +112,8 @@ class Orchestrator:
             updates["engineering"] = eng_update
 
             # Circuit Breaker Logic
-            if agent_output.cognitive_health and agent_output.cognitive_health.is_tunneling:
-                self.logger.critical(f"Cognitive Tunneling Detected (SE={agent_output.cognitive_health.entropy_score})! Triggering Circuit Breaker.")
+            if metric.is_tunneling:
+                self.logger.critical(f"Cognitive Tunneling Detected (SE={metric.entropy_score})! Triggering Circuit Breaker.")
                 updates["circuit_breaker_triggered"] = True
 
             return updates
