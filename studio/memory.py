@@ -12,7 +12,7 @@ Layers:
 """
 
 from typing import List, Dict, Optional, Literal, Union, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field, HttpUrl, validator
 
 # --- Primitive Types ---
@@ -106,7 +106,7 @@ class SprintBoard(BaseModel):
 class InteractionTurn(BaseModel):
     role: Literal["user", "assistant", "system"]
     content: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class InquirySession(BaseModel):
     privacy_level: PrivacyLevel = "CONFIDENTIAL_USER_DATA"
@@ -125,7 +125,7 @@ class StudioMeta(BaseModel):
     constitution_hash: str
     current_phase: str
     simulation_mode: bool = False
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class StudioState(BaseModel):
     """
