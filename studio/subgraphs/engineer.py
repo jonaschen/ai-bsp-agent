@@ -10,18 +10,21 @@ Plan -> Execute -> Monitor (Entropy) -> Verify (TDD) -> Feedback.
 
 import asyncio
 import logging
+import os
 from typing import Literal, Dict, Any, List
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from pydantic import SecretStr
 
 from studio.memory import (
     AgentState,
     JulesMetadata,
     SemanticEntropyReading,
     TestResult,
-    ContextSlice
+    ContextSlice,
+    CodeChangeArtifact
 )
-from studio.utils.jules_client import JulesClient, RemoteStatus
+from studio.utils.jules_client import JulesGitHubClient, TaskPayload, WorkStatus, TaskPriority
 from studio.utils.entropy_math import calculate_semantic_entropy
 from studio.utils.sandbox import SandboxEnvironment
 from studio.utils.prompts import ENGINEER_SYSTEM_PROMPT
@@ -62,30 +65,38 @@ async def node_task_dispatcher(state: AgentState) -> Dict[str, Any]:
     )
     jules_data.active_context_slice = context_slice
 
-    # 3. Construct the 'Work Order' Prompt
-    # This follows the 'Digital Consultant' model - clear, actionable instructions.
-    prompt_content = f"Task: {task_description}\nContext Files: {str(context_slice.files)}"
-
+    # 3. Construct the 'Work Order' Prompt (via TaskPayload)
+    constraints = []
     if is_retry and jules_data.feedback_log:
-        # Injecting 'Evidence Snippets' from the Feedback Loop
-        last_feedback = jules_data.feedback_log[-1]
-        prompt_content += f"\n\nCRITICAL FEEDBACK FROM PREVIOUS ATTEMPT:\n{last_feedback}"
-        prompt_content += "\n\nAnalyze the evidence provided in the logs. Generate a Virtual Patch to fix these specific errors."
+        constraints.append("Analyze the evidence provided in the logs. Generate a Virtual Patch to fix these specific errors.")
+        constraints.append(f"CRITICAL FEEDBACK FROM PREVIOUS ATTEMPT: {jules_data.feedback_log[-1]}")
     else:
-        prompt_content += "\n\nFollow TDD: Write a failing test (Red) first, then the implementation (Green)."
+        constraints.append("Follow TDD: Write a failing test (Red) first, then the implementation (Green).")
 
     # 4. Asynchronous Handoff to Remote Jules
     # We use a client wrapper to abstract the A2A or MCP protocol details.[6]
-    client = JulesClient(api_key="env_var")
+    client = JulesGitHubClient(
+        github_token=SecretStr(os.environ.get("GITHUB_TOKEN", "")),
+        repo_name=os.environ.get("GITHUB_REPOSITORY", "google/jules-studio")
+    )
 
     # Ideally, we only start a new task if we aren't already working.
     if jules_data.status == "QUEUED" or is_retry:
         logger.info(f"Dispatching task to Jules Session {jules_data.session_id}")
-        task_id = await client.start_session(
-            session_id=jules_data.session_id,
-            prompt=prompt_content,
-            files=context_slice.dict()
+
+        # Convert List[str] to Dict[str, str] for TaskPayload
+        context_files_dict = {f: "Context file" for f in context_slice.files}
+
+        payload = TaskPayload(
+            task_id=jules_data.session_id,
+            intent=task_description,
+            context_files=context_files_dict,
+            relevant_logs=None, # Could extract if available
+            constraints=constraints,
+            priority=TaskPriority.MEDIUM
         )
+
+        task_id = client.dispatch_task(payload)
         jules_data.external_task_id = task_id
         jules_data.status = "WORKING"
 
@@ -105,7 +116,10 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
     3. Identifies 'NEEDS_INFO' states to trigger Human-in-the-loop interrupts.
     """
     jules_data = state["jules_metadata"]
-    client = JulesClient(api_key="env_var")
+    client = JulesGitHubClient(
+        github_token=SecretStr(os.environ.get("GITHUB_TOKEN", "")),
+        repo_name=os.environ.get("GITHUB_REPOSITORY", "google/jules-studio")
+    )
 
     if not jules_data.external_task_id:
         # Safety check - should not happen due to graph topology
@@ -114,34 +128,46 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
     logger.info(f"Watch_Tower: Polling task {jules_data.external_task_id}")
 
     # 1. Fetch Remote Status
-    # Using a hypothetical async client. In production, this might interact via
-    # the Agent2Agent (A2A) protocol.[6]
     try:
-        remote_status: RemoteStatus = await client.get_status(jules_data.external_task_id)
+        remote_status: WorkStatus = client.get_status(jules_data.external_task_id)
     except Exception as e:
         logger.error(f"Polling failed: {e}")
         # Transient error handling strategy could be implemented here
         return {"jules_metadata": jules_data} # Retry next loop
 
     # 2. State Mapping
-    if remote_status.state == "COMPLETED":
+    if remote_status.status == "COMPLETED":
+        # Merged or closed
         logger.info("Remote task completed. Proceeding to Entropy Check.")
+        jules_data.status = "VERIFYING" # Treat as VERIFYING to ensure tests run
+
+        if remote_status.raw_diff:
+            artifact = CodeChangeArtifact(
+                diff_content=remote_status.raw_diff,
+                change_type="MODIFY",
+                pr_link=remote_status.pr_url
+            )
+            jules_data.generated_artifacts = [artifact]
+
+    elif remote_status.status == "REVIEW_READY":
+        logger.info("Remote task is ready for review. Proceeding to Entropy Check/Verification.")
         jules_data.status = "VERIFYING"
+
         # Retrieve artifacts (virtual patches, diffs)
-        jules_data.generated_artifacts = remote_status.artifacts
+        if remote_status.raw_diff:
+            artifact = CodeChangeArtifact(
+                diff_content=remote_status.raw_diff,
+                change_type="MODIFY",
+                pr_link=remote_status.pr_url
+            )
+            jules_data.generated_artifacts = [artifact]
 
-    elif remote_status.state == "FAILED":
-        logger.error("Remote task failed execution.")
-        jules_data.status = "FAILED"
-
-    elif remote_status.state == "NEEDS_INFO":
-        # Supports the "Interactive Debugging Guide" pattern
-        # The agent is stuck (e.g., no logs available) and needs human help.
+    elif remote_status.status == "BLOCKED": # Was NEEDS_INFO or BLOCKED
         logger.warning("Agent requires human intervention.")
         jules_data.status = "BLOCKED"
 
     else:
-        # Still WORKING or QUEUED remotely
+        # WORKING or QUEUED
         jules_data.status = "WORKING"
 
     return {"jules_metadata": jules_data}
@@ -164,12 +190,10 @@ async def node_entropy_guard(state: AgentState) -> Dict[str, Any]:
     # We only run this check if the agent claims it is done.
     # We verify if it's *actually* done or just hallucinating completion.
 
-    client = JulesClient()
-    # Fetch the "Thought Trace" or reasoning logs
-    if jules_data.external_task_id:
-        traces = await client.get_reasoning_traces(jules_data.external_task_id)
-    else:
-        traces = ""
+    # New Client doesn't support traces, use diff content.
+    traces = ""
+    if jules_data.generated_artifacts:
+        traces = jules_data.generated_artifacts[0].diff_content
 
     # 1. Calculate Semantic Entropy
     # SE measures the uncertainty over *meanings*, not just tokens.
@@ -195,8 +219,9 @@ async def node_entropy_guard(state: AgentState) -> Dict[str, Any]:
         jules_data.status = "FAILED" # Force failure to trigger Feedback/Reflection
 
         # Immediate Interruption - Do not waste resources on QA
-        if jules_data.external_task_id:
-            await client.cancel_task(jules_data.external_task_id)
+        # We can't easily cancel a GitHub issue, but we can comment or close PR.
+        # client.cancel_task not available.
+        # We could post feedback here?
 
         # Inject a meta-message to the graph history
         return {
@@ -316,7 +341,15 @@ async def node_feedback_loop(state: AgentState) -> Dict[str, Any]:
     # 2. Update Feedback Log
     jules_data.feedback_log.append(feedback)
 
-    # 3. Retry Logic (Self-Correction)
+    # 3. Post Feedback to Jules (The Hand)
+    client = JulesGitHubClient(
+        github_token=SecretStr(os.environ.get("GITHUB_TOKEN", "")),
+        repo_name=os.environ.get("GITHUB_REPOSITORY", "google/jules-studio")
+    )
+    if jules_data.external_task_id:
+        client.post_feedback(jules_data.external_task_id, feedback, is_error=True)
+
+    # 4. Retry Logic (Self-Correction)
     if jules_data.retry_count < jules_data.max_retries:
         jules_data.retry_count += 1
         jules_data.status = "QUEUED" # Reset status to trigger Task_Dispatcher
