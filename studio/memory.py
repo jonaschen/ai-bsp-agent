@@ -70,7 +70,6 @@ class OrchestrationState(BaseModel):
     guidance_sop: Optional[SOPState] = None
     # The active context slice being processed
     current_context_slice: Optional[ContextSlice] = None
-    latest_entropy: float = 0.0
 
 # Layer 2: Engineering (The TDD Loop)
 class VerificationGate(BaseModel):

@@ -25,14 +25,25 @@ from studio.memory import (
     ContextSlice,
     SOPState,
     SemanticHealthMetric,
-    AgentStepOutput
+    AgentStepOutput,
+    TriageStatus
 )
 
 # --- MOCK SUBGRAPHS (Placeholders for compilation) ---
-# In a real implementation, these would be imported from product.subgraphs.*
 def engineer_subgraph_node(state: ContextSlice) -> Dict:
     """Mock execution of the Engineer Subgraph"""
-    return {"content": "Patch applied.", "entropy": 0.5}
+    # Returns a dict matching AgentStepOutput schema
+    return {
+        "content": "Patch applied.",
+        "thought_process": "Analyzed dependencies and applied fix.",
+        "cognitive_health": {
+            "entropy_score": 0.5,
+            "threshold": 7.0,
+            "sample_size": 5,
+            "is_tunneling": False,
+            "cluster_distribution": {}
+        }
+    }
 
 def sop_guide_node(state: SOPState) -> Dict:
     """Mock execution of the Interactive SOP Guide"""
@@ -61,25 +72,35 @@ class Orchestrator:
             """Wraps engineer subgraph to handle Context Slicing"""
             slice_obj = state.orchestration.current_context_slice
             if not slice_obj:
-                # Fallback if no slice (though router should prevent this)
+                # Fallback if no slice
                 slice_obj = ContextSlice(
                     slice_id="fallback", intent="CODING",
                     active_files={}, relevant_logs="", constraints=[]
                 )
 
-            output = engineer_subgraph_node(slice_obj)
+            # Invoke subgraph (mock)
+            output_data = engineer_subgraph_node(slice_obj)
+
+            # Parse output into AgentStepOutput
+            agent_output = AgentStepOutput(**output_data)
+
+            updates = {}
 
             # Map output back to StudioState
-            # Updating engineering state and entropy
-            # We assume Pydantic V2 model_copy. If V1, use copy(update=...)
+            # Updating engineering state
             if hasattr(state.engineering, "model_copy"):
-                eng_update = state.engineering.model_copy(update={"proposed_patch": output.get("content")})
-                orch_update = state.orchestration.model_copy(update={"latest_entropy": output.get("entropy", 0.0)})
+                eng_update = state.engineering.model_copy(update={"proposed_patch": agent_output.content})
             else:
-                eng_update = state.engineering.copy(update={"proposed_patch": output.get("content")})
-                orch_update = state.orchestration.copy(update={"latest_entropy": output.get("entropy", 0.0)})
+                eng_update = state.engineering.copy(update={"proposed_patch": agent_output.content})
 
-            return {"engineering": eng_update, "orchestration": orch_update}
+            updates["engineering"] = eng_update
+
+            # Circuit Breaker Logic
+            if agent_output.cognitive_health and agent_output.cognitive_health.is_tunneling:
+                self.logger.critical(f"Cognitive Tunneling Detected (SE={agent_output.cognitive_health.entropy_score})! Triggering Circuit Breaker.")
+                updates["circuit_breaker_triggered"] = True
+
+            return updates
 
         def _sop_guide_wrapper(state: StudioState) -> Dict:
             """Wraps SOP guide to handle state isolation"""
@@ -104,7 +125,6 @@ class Orchestrator:
         self.workflow.add_node("context_slicer", self.slice_context)
 
         # 2. Define Subgraph Nodes (The Workers)
-        # Note: In LangGraph, we wrap subgraphs as nodes.
         self.workflow.add_node("engineer_subgraph", _engineer_wrapper)
         self.workflow.add_node("sop_guide_subgraph", _sop_guide_wrapper)
 
@@ -121,8 +141,7 @@ class Orchestrator:
             {
                 "coding": "context_slicer",       # Needs slicing before Engineering
                 "interactive_guide": "sop_guide_subgraph", # Direct SOP execution
-                "block": END,
-                "interactive_guide_direct": "sop_guide_subgraph" # Match return value of _decide_route
+                "block": END
             }
         )
 
@@ -130,7 +149,6 @@ class Orchestrator:
         self.workflow.add_edge("context_slicer", "engineer_subgraph")
 
         # Circuit Breaker Logic (Post-Execution Check)
-        # Ref: [cite: 2134]
         self.workflow.add_conditional_edges(
             "engineer_subgraph",
             self._check_semantic_health,
@@ -139,6 +157,10 @@ class Orchestrator:
                 "tunneling": "reflector" # Hard Stop
             }
         )
+
+        # Reflector ends or loops back (here just END for simplicity)
+        self.workflow.add_edge("reflector", END)
+        self.workflow.add_edge("sop_guide_subgraph", END)
 
         self.app = self.workflow.compile()
 
@@ -154,7 +176,6 @@ class Orchestrator:
         # Check for No-Log Scenario (The Consultant Pivot)
         if orch.triage_status and not orch.triage_status.is_log_available:
             self.logger.info("No Log detected. Routing to SOP Guide.")
-            # We return a partial update to the state
 
             new_sop = orch.guidance_sop or SOPState(active_sop_id="NO_LOG_DEBUG")
 
@@ -193,7 +214,7 @@ class Orchestrator:
         # Create the Ephemeral Slice
         new_slice = ContextSlice(
             slice_id="slice_" + datetime.now().isoformat(),
-            intent=intent, # type: ignore (Assuming intent is valid Literal)
+            intent=intent if intent in ["DIAGNOSIS", "CODING", "REVIEW"] else "CODING",
             active_files=relevant_files,
             relevant_logs="[1456.789] Panic at...", # Mock sliced log
             constraints=["DO NOT modify outside of drivers/"]
@@ -210,16 +231,11 @@ class Orchestrator:
     def _check_semantic_health(self, state: StudioState) -> Literal["healthy", "tunneling"]:
         """
         The Mathematical Guardrail.
-        Checks if the last agent output had SE > 7.0.
+        Checks if circuit breaker was triggered by last agent output.
         Ref: [cite: 2121, 2134]
         """
-        # We read the entropy from the state, populated by the wrapper
-        last_entropy_score = state.orchestration.latest_entropy
-
-        if last_entropy_score > 7.0:
-            self.logger.critical(f"Cognitive Tunneling Detected (SE={last_entropy_score})! Triggering Circuit Breaker.")
+        if state.circuit_breaker_triggered:
             return "tunneling"
-
         return "healthy"
 
     def _decide_route(self, state: StudioState) -> str:
