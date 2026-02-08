@@ -26,3 +26,18 @@ class RCAReport(BaseModel):
     technical_detail: str
     suggested_fix: str
     references: List[str]
+
+class SOPStep(BaseModel):
+    step_id: int
+    action_type: Literal["MEASUREMENT", "CODE_PATCH"]
+    instruction: str
+    expected_value: str
+    file_path: str
+
+class ConsultantResponse(BaseModel):
+    diagnosis_id: str
+    confidence_score: float = Field(ge=0.0, le=1.0)
+    status: Literal["CRITICAL", "WARNING", "INFO", "CLARIFY_NEEDED"]
+    root_cause_summary: str
+    evidence: List[str]
+    sop_steps: List[SOPStep]

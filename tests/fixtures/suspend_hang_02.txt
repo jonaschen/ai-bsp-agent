@@ -1,0 +1,8 @@
+[ 1234.567890] PM: suspend entry (deep)
+[ 1234.567900] Filesystems sync: 0.001 seconds
+[ 1234.568000] Freezing user space processes ... (elapsed 0.001 seconds) done.
+[ 1234.569000] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) done.
+[ 1234.570000] watchdog: BUG: soft lockup - CPU#0 stuck for 26s! [swapper/0:0]
+[ 1234.570005] Modules linked in: wlan(O)
+[ 1234.570010] CPU: 0 PID: 0 Comm: swapper/0 Tainted: G        O      5.10.101-android12-9-g392849 #1
+[ 1234.570015] Hardware name: Qualcomm Technologies, Inc. SM8350 MTP (DT)

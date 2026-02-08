@@ -1,0 +1,9 @@
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x412fd050]
+[    0.000000] Linux version 5.10.101-android12-9-g392849 #1 SMP PREEMPT Wed Feb 2 15:45:00 UTC 2022
+[    0.000000] Machine model: Qualcomm Technologies, Inc. SM8350 MTP
+[    0.000000] earlycon: qcom_geni0 at MMIO 0x0000000000990000 (options '')
+[    0.000000] bootconsole [qcom_geni0] enabled
+[    0.500000] Android: init started
+[    1.200000] Freeing unused kernel memory: 4096K
+[    1.300000] Run /init as init process
+[    2.000000] init: (1) startup
