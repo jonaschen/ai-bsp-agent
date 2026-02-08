@@ -25,7 +25,8 @@ from studio.memory import (
     CodeChangeArtifact
 )
 from studio.utils.jules_client import JulesGitHubClient, TaskPayload, WorkStatus, TaskPriority
-from studio.utils.entropy_math import calculate_semantic_entropy
+from vertexai.generative_models import GenerativeModel
+from studio.utils.entropy_math import SemanticEntropyCalculator, VertexFlashJudge
 from studio.utils.sandbox import SandboxEnvironment
 from studio.utils.prompts import ENGINEER_SYSTEM_PROMPT
 
@@ -52,6 +53,9 @@ async def node_task_dispatcher(state: AgentState) -> Dict[str, Any]:
     is_retry = jules_data.retry_count > 0
     # Handle case where messages might be empty
     task_description = state["messages"][-1].content if state["messages"] else "No description provided"
+
+    # Save the prompt for entropy check later
+    jules_data.current_task_prompt = task_description
 
     # 2. Context Slicing Strategy
     # We purposefully limit the context to avoid 'Inference Load' issues.
@@ -198,22 +202,31 @@ async def node_entropy_guard(state: AgentState) -> Dict[str, Any]:
     # 1. Calculate Semantic Entropy
     # SE measures the uncertainty over *meanings*, not just tokens.
     # High SE means the model is oscillating between semantically distinct options.
-    se_score = calculate_semantic_entropy(traces)
+
+    # Initialize the Sensor
+    judge = VertexFlashJudge(GenerativeModel("gemini-1.5-flash"))
+    calculator = SemanticEntropyCalculator(judge)
+
+    prompt = jules_data.current_task_prompt or "Unknown Intent"
+    metric = await calculator.measure_uncertainty(prompt, prompt)
+
+    se_score = metric.entropy_score
 
     logger.info(f"Entropy_Guard: Calculated SE = {se_score}")
 
     # 2. Update History & Trajectory
     reading = SemanticEntropyReading(
         score=se_score,
-        triggered_breaker=(se_score > 7.0),
-        context_hash=str(hash(str(traces))),
-        reasoning_trace_summary=traces[:100] + "..." if traces else None
+        threshold=metric.threshold,
+        triggered_breaker=metric.is_tunneling,
+        context_hash=str(hash(prompt)),
+        reasoning_trace_summary=str(metric.cluster_distribution)
     )
     jules_data.entropy_history.append(reading)
     jules_data.current_entropy = se_score
 
     # 3. Circuit Breaker Logic
-    if se_score > 7.0:
+    if metric.is_tunneling:
         logger.warning("Entropy_Guard: Circuit Breaker TRIPPED! Cognitive Tunneling detected.")
         jules_data.cognitive_tunneling_detected = True
         jules_data.status = "FAILED" # Force failure to trigger Feedback/Reflection
