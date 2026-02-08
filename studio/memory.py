@@ -143,6 +143,9 @@ class JulesMetadata(BaseModel):
     # Context Slicing (Input to the Agent)
     active_context_slice: ContextSlice = Field(default_factory=ContextSlice)
 
+    # Store the original prompt to allow entropy re-sampling
+    current_task_prompt: Optional[str] = None
+
     class Config:
         frozen = False  # Mutable state for Pydantic V2 compatibility in LangGraph
         arbitrary_types_allowed = True
