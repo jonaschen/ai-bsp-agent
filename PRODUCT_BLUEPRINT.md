@@ -73,50 +73,50 @@ The Product output is NOT just a text answer. It MUST adhere to this **Strict JS
 ## 4. Evaluation Criteria: The "Golden Set" (TDD)
 Instruction to QA Agent: To verify the Product, you must run the following scenarios. Use LLM-as-a-Judge (Semantic Similarity) to compare the Product's output against the "Expected Output."
 
-Test Case 1: The "Null Pointer" (Software Panic)
-Input: fixtures/panic_log_01.txt (Contains a NULL pointer dereference in mdss_dsi.c).
+### Test Case 1: The "Null Pointer" (Software Panic)
+* **Input:** fixtures/panic_log_01.txt (Contains a NULL pointer dereference in mdss_dsi.c).
 
-Expected Output (Semantic Keypoints):
+* **Expected Output (Semantic Keypoints):**
 
-Diagnosis: "Null Pointer Dereference."
+    * **Diagnosis:** "Null Pointer Dereference."
 
-Location: drivers/gpu/drm/msm/mdss.c.
+    * **Location:** drivers/gpu/drm/msm/mdss.c.
 
-Recommendation: "Add check for clk_ptr before access."
+    * **Recommendation:** "Add check for clk_ptr before access."
 
-Confidence: > 85%.
+    * **Confidence:** > 85%.
 
-Test Case 2: The "Sleep Zombie" (Hardware Hang)
-Input: fixtures/suspend_hang_02.txt (System freezes during S2D, valid dmesg ends abruptly).
+### Test Case 2: The "Sleep Zombie" (Hardware Hang)
+* **Input:** fixtures/suspend_hang_02.txt (System freezes during S2D, valid dmesg ends abruptly).
 
-Expected Output (Semantic Keypoints):
+* **Expected Output (Semantic Keypoints):**
 
-Diagnosis: "Watchdog Timeout / Hard Lockup."
+    * **Diagnosis:** "Watchdog Timeout / Hard Lockup."
 
-Suspect: "PMIC or DRAM Self-Refresh failure."
+    * **Suspect:** "PMIC or DRAM Self-Refresh failure."
 
-Action: "Connect JTAG and check Program Counter (PC)."
+    * **Action:** "Connect JTAG and check Program Counter (PC)."
 
-Test Case 3: The "False Alarm" (Fix #5)
-Input: fixtures/healthy_boot_03.txt (A standard, error-free Android boot log).
+### Test Case 3: The "False Alarm" (Fix #5)
+* **Input:** fixtures/healthy_boot_03.txt (A standard, error-free Android boot log).
 
-Expected Output (Semantic Keypoints):
+* **Expected Output (Semantic Keypoints):**
 
-Diagnosis: "No Anomaly Detected."
+    * **Diagnosis:** "No Anomaly Detected."
 
-Status: "INFO".
+    * **Status:** "INFO".
 
-Action: "None required."
+    * **Action:** "None required."
 
-Confidence: > 90%.
+    * **Confidence:** > 90%.
 
 ## 5. Technical Constraints (For the Architect)
-Context Window: Must support up to 1M tokens (for full dmesg).
+* **Context Window:** Must support up to 1M tokens (for full dmesg).
 
-Retrieval: Must implement a Vector Store for Datasheets.
+* **Retrieval:** Must implement a Vector Store for Datasheets.
 
-Security:
+* **Security:**
 
-Read-Only: Agents cannot execute shell commands on the user's host.
+    * **Read-Only:** Agents cannot execute shell commands on the user's host.
 
-Privacy: Logs are processed in a transient container.
+    * **Privacy:** Logs are processed in a transient container.
