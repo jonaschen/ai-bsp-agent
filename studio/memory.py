@@ -170,6 +170,14 @@ class AgentState(TypedDict):
 
 
 # Layer 1: Orchestration (The Runtime)
+class Ticket(BaseModel):
+    id: str = Field(..., description="Unique Ticket ID (e.g., TKT-101)")
+    title: str = Field(..., description="Actionable title")
+    description: str = Field(..., description="Technical acceptance criteria")
+    priority: str = Field(..., description="CRITICAL, HIGH, MEDIUM, LOW")
+    dependencies: List[str] = Field(default_factory=list, description="List of Ticket IDs that must be completed FIRST")
+    source_section_id: str = Field(..., description="The Blueprint Section ID this ticket fulfills (e.g., '2.1-Supervisor')")
+
 class TriageStatus(BaseModel):
     is_log_available: bool
     suspected_domain: str
@@ -189,6 +197,7 @@ class OrchestrationState(BaseModel):
     guidance_sop: Optional[SOPState] = None
     # The active context slice being processed
     current_context_slice: Optional[ContextSlice] = None
+    task_queue: List[Ticket] = Field(default_factory=list, description="The Product Backlog")
 
 # Layer 2: Engineering (The TDD Loop)
 class VerificationGate(BaseModel):
