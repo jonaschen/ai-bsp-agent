@@ -1,8 +1,7 @@
 import os
-import json
 import shutil
-import tempfile
 from typing import Any, Dict
+from studio.memory import StudioMemory
 
 class StudioManager:
     """
@@ -13,54 +12,32 @@ class StudioManager:
     SOLE authority for writing to studio_state.json.
     """
 
-    DEFAULT_STATE = {
-        "version": "1.0",
-        "evolution_queue": [],
-        "meta": {
-            "schema_version": "1.0",
-            "system_status": "BOOTSTRAP"
-        }
-    }
-
     def __init__(self, root_dir: str = "."):
         self.root_dir = root_dir
-        self.state_path = os.path.join(self.root_dir, "studio_state.json")
-        self.state = self._load_state()
+        self.memory = StudioMemory(file_path=os.path.join(self.root_dir, "studio_state.json"))
+        self.memory.initialize()
 
-    def _load_state(self) -> Dict[str, Any]:
-        """
-        AGENTS.md Sec 9.1: Manager is the State Owner.
-        Verify it creates a valid default state file if none exists.
-        """
-        if not os.path.exists(self.state_path):
-            state = self.DEFAULT_STATE.copy()
-            self.state = state
-            self._save_state()
-            return state
-
-        with open(self.state_path, "r") as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return self.DEFAULT_STATE.copy()
-
-    def _save_state(self):
-        """
-        AGENTS.md Sec 9: Data Sovereignty.
-        Ensure _save_state() writes to a temporary file first, then renames it (atomic write).
-        """
-        fd, temp_path = tempfile.mkstemp(dir=self.root_dir, text=True)
-        with os.fdopen(fd, 'w') as f:
-            json.dump(self.state, f, indent=4)
-
-        os.replace(temp_path, self.state_path)
+    @property
+    def state(self) -> Dict[str, Any]:
+        """Returns the current state from memory."""
+        return self.memory.get_state()
 
     def update_state(self, key: str, value: Any):
         """
         Updates a key in the state and saves it.
+        Maintained for backward compatibility.
         """
-        self.state[key] = value
-        self._save_state()
+        state = self.memory.get_state()
+        state[key] = value
+        self.memory.save()
+
+    def update_global_phase(self, phase: str):
+        """Updates the Studio's lifecycle state."""
+        self.memory.update_global_phase(phase)
+
+    def update_agent_state(self, agent_name: str, data: Dict[str, Any]):
+        """Updates specific agent slots."""
+        self.memory.update_agent_state(agent_name, data)
 
     def perform_atomic_swap(self, candidate_path: str, target_path: str):
         """

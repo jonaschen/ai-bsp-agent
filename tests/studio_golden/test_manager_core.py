@@ -31,8 +31,9 @@ def test_manager_initializes_state(temp_studio):
     assert temp_studio["state"].exists()
     with open(temp_studio["state"]) as f:
         data = json.load(f)
-        assert "version" in data
-        assert "evolution_queue" in data
+        assert "metadata" in data
+        assert "agents" in data
+        assert data["metadata"]["version"] == "5.1"
 
 def test_atomic_swap_protocol(temp_studio):
     """
