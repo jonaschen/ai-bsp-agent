@@ -1,71 +1,39 @@
 import os
-import json
 import shutil
-import tempfile
 from typing import Any, Dict
+from studio.memory import StudioMemory
 
-class StudioManager:
+class Orchestrator:
     """
-    The Manager — The Autopilot
+    The Orchestrator — The Runtime Executive.
     Monitors system health via studio_state.json.
-    Routes work to PM, Architect, or Optimizer.
-    Implements Circuit Breakers.
-    SOLE authority for writing to studio_state.json.
+    Routes work between Product Owner, Architect, and Engineer.
+    SOLE authority for writing to studio_state.json via StudioMemory.
     """
-
-    DEFAULT_STATE = {
-        "version": "1.0",
-        "evolution_queue": [],
-        "meta": {
-            "schema_version": "1.0",
-            "system_status": "BOOTSTRAP"
-        }
-    }
 
     def __init__(self, root_dir: str = "."):
         self.root_dir = root_dir
         self.state_path = os.path.join(self.root_dir, "studio_state.json")
-        self.state = self._load_state()
+        self.memory = StudioMemory(file_path=self.state_path)
 
-    def _load_state(self) -> Dict[str, Any]:
-        """
-        AGENTS.md Sec 9.1: Manager is the State Owner.
-        Verify it creates a valid default state file if none exists.
-        """
+        # AGENTS.md Sec 9.1: Ensure default state file exists
         if not os.path.exists(self.state_path):
-            state = self.DEFAULT_STATE.copy()
-            self.state = state
-            self._save_state()
-            return state
-
-        with open(self.state_path, "r") as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return self.DEFAULT_STATE.copy()
-
-    def _save_state(self):
-        """
-        AGENTS.md Sec 9: Data Sovereignty.
-        Ensure _save_state() writes to a temporary file first, then renames it (atomic write).
-        """
-        fd, temp_path = tempfile.mkstemp(dir=self.root_dir, text=True)
-        with os.fdopen(fd, 'w') as f:
-            json.dump(self.state, f, indent=4)
-
-        os.replace(temp_path, self.state_path)
+            self.state = self.memory.load()
+            self.memory.save(self.state)
+        else:
+            self.state = self.memory.load()
 
     def update_state(self, key: str, value: Any):
         """
-        Updates a key in the state and saves it.
+        Updates a key in the state and saves it via StudioMemory.
         """
         self.state[key] = value
-        self._save_state()
+        self.memory.save(self.state)
 
     def perform_atomic_swap(self, candidate_path: str, target_path: str):
         """
         AGENTS.md Sec 4 (ESL-2): The Atomic Swap.
-        Verify the Manager can swap a candidate file into production
+        Verify the Orchestrator can swap a candidate file into production
         ONLY if the file exists.
         """
         full_candidate_path = os.path.join(self.root_dir, candidate_path)
