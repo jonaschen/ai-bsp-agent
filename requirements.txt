@@ -6,3 +6,4 @@ PyGithub
 python-dotenv
 langchain-google-vertexai
 docker
+networkx
