@@ -25,27 +25,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 
 # Import Memory Schema
-from studio.memory import ArchitecturalDecisionRecord
+from studio.memory import ArchitecturalDecisionRecord, Violation, ReviewVerdict
 
 logger = logging.getLogger("studio.agents.architect")
-
-# --- DATA MODELS (Enhanced) ---
-
-class Violation(BaseModel):
-    """A specific breach of the Constitution."""
-    rule_id: str = Field(..., description="e.g., 'SRP' or 'Security-01'")
-    severity: Literal["CRITICAL", "MAJOR", "MINOR"]
-    description: str
-    file_path: str
-    line_number: Optional[int] = Field(None, description="Line number where violation occurs (for PR comments)")
-    suggested_fix: str
-
-class ReviewVerdict(BaseModel):
-    """The Architect's Final Decision."""
-    status: Literal["APPROVED", "REJECTED", "NEEDS_REFACTOR"]
-    quality_score: float = Field(..., description="0.0 to 10.0 scale")
-    violations: List[Violation] = []
-    adr_entry: Optional[ArchitecturalDecisionRecord] = Field(None, description="New rule to record if needed")
 
 # --- THE AGENT ---
 
