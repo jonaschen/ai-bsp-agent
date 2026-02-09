@@ -105,6 +105,19 @@ class CodeChangeArtifact(BaseModel):
     commit_message: Optional[str] = None
     pr_link: Optional[HttpUrl] = None
 
+class ArchitecturalDecisionRecord(BaseModel):
+    """
+    Represents an Architectural Decision Record (ADR).
+    Captures significant architectural decisions, their context, and consequences.
+    """
+    id: str = Field(..., description="Unique ADR Identifier (e.g., ADR-001)")
+    title: str = Field(..., description="Short title of the decision")
+    status: Literal["PROPOSED", "ACCEPTED", "REJECTED", "DEPRECATED"]
+    context: str = Field(..., description="Context and problem statement")
+    decision: str = Field(..., description="The decision made")
+    consequences: Optional[str] = Field(None, description="Positive and negative consequences")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
 class JulesMetadata(BaseModel):
     """
     Manages the state and lifecycle of the asynchronous Jules-style Engineer Agent.
