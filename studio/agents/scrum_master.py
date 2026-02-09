@@ -23,26 +23,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 
 # Import Studio Schemas
-from studio.memory import Ticket
+from studio.memory import Ticket, ProcessOptimization, RetrospectiveReport
 
 logger = logging.getLogger("studio.agents.scrum_master")
-
-# --- DATA MODELS (The Insight) ---
-
-class ProcessOptimization(BaseModel):
-    """A specific suggestion to improve the System."""
-    target_role: str = Field(..., description="The Agent needing improvement (e.g., 'Engineer', 'Product Owner')")
-    issue_detected: str = Field(..., description="The recurring failure pattern")
-    suggested_prompt_update: str = Field(..., description="Specific text to add/change in the Agent's System Prompt")
-    expected_impact: str = Field(..., description="Why this will help")
-
-class RetrospectiveReport(BaseModel):
-    """The Output of a Sprint Retrospective."""
-    sprint_id: str
-    success_rate: float = Field(..., description="0.0 to 1.0")
-    avg_entropy_score: float = Field(..., description="Average Semantic Entropy of the sprint")
-    key_bottlenecks: List[str]
-    optimizations: List[ProcessOptimization]
 
 # --- THE AGENT ---
 
@@ -158,6 +141,9 @@ def run_scrum_retrospective(orchestrator_state: Dict[str, Any]):
     Helper for the Orchestrator to run at the end of a Sprint (or periodically).
     """
     orch_layer = orchestrator_state.get("orchestration_layer", {})
+    if not orch_layer:
+        # Fallback to standard schema
+        orch_layer = orchestrator_state.get("orchestration", {})
 
     # Check if we have enough data to run a retrospective
     completed = orch_layer.get("completed_tasks_log", [])

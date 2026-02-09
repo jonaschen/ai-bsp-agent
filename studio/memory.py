@@ -183,6 +183,8 @@ class AgentState(TypedDict):
 
 
 # Layer 1: Orchestration (The Runtime)
+TicketStatus = Literal["OPEN", "IN_PROGRESS", "BLOCKED", "COMPLETED", "FAILED"]
+
 class Ticket(BaseModel):
     id: str = Field(..., description="Unique Ticket ID (e.g., TKT-101)")
     title: str = Field(..., description="Actionable title")
@@ -190,6 +192,12 @@ class Ticket(BaseModel):
     priority: str = Field(..., description="CRITICAL, HIGH, MEDIUM, LOW")
     dependencies: List[str] = Field(default_factory=list, description="List of Ticket IDs that must be completed FIRST")
     source_section_id: str = Field(..., description="The Blueprint Section ID this ticket fulfills (e.g., '2.1-Supervisor')")
+
+    # Execution State
+    status: TicketStatus = "OPEN"
+    failure_log: Optional[str] = None
+    retry_count: int = 0
+    closure_reason: Optional[str] = None
 
 class TriageStatus(BaseModel):
     is_log_available: bool
@@ -211,6 +219,58 @@ class OrchestrationState(BaseModel):
     # The active context slice being processed
     current_context_slice: Optional[ContextSlice] = None
     task_queue: List[Ticket] = Field(default_factory=list, description="The Product Backlog")
+
+    # Sprint Management
+    current_sprint_id: Optional[str] = None
+    completed_tasks_log: List[Ticket] = []
+    failed_tasks_log: List[Ticket] = []
+
+# --- SECTION 4: Shared Agent Artifacts ---
+
+class StudioMeta(BaseModel):
+    """Metadata about the Studio Environment."""
+    pass
+
+class SprintBoard(BaseModel):
+    """Represents the current Sprint Board state."""
+    pass
+
+class OptimizationLog(BaseModel):
+    """Log of applied optimizations."""
+    pass
+
+# From Architect Agent
+class Violation(BaseModel):
+    """A specific breach of the Constitution."""
+    rule_id: str = Field(..., description="e.g., 'SRP' or 'Security-01'")
+    severity: Literal["CRITICAL", "MAJOR", "MINOR"]
+    description: str
+    file_path: str
+    line_number: Optional[int] = Field(None, description="Line number where violation occurs (for PR comments)")
+    suggested_fix: str
+
+class ReviewVerdict(BaseModel):
+    """The Architect's Final Decision."""
+    status: Literal["APPROVED", "REJECTED", "NEEDS_REFACTOR"]
+    quality_score: float = Field(..., description="0.0 to 10.0 scale")
+    violations: List[Violation] = []
+    adr_entry: Optional[ArchitecturalDecisionRecord] = Field(None, description="New rule to record if needed")
+
+# From Scrum Master Agent
+class ProcessOptimization(BaseModel):
+    """A specific suggestion to improve the System."""
+    target_role: str = Field(..., description="The Agent needing improvement (e.g., 'Engineer', 'Product Owner')")
+    issue_detected: str = Field(..., description="The recurring failure pattern")
+    suggested_prompt_update: str = Field(..., description="Specific text to add/change in the Agent's System Prompt")
+    expected_impact: str = Field(..., description="Why this will help")
+
+class RetrospectiveReport(BaseModel):
+    """The Output of a Sprint Retrospective."""
+    sprint_id: str
+    success_rate: float = Field(..., description="0.0 to 1.0")
+    avg_entropy_score: float = Field(..., description="Average Semantic Entropy of the sprint")
+    key_bottlenecks: List[str]
+    optimizations: List[ProcessOptimization]
 
 # Layer 2: Engineering (The TDD Loop)
 class VerificationGate(BaseModel):
