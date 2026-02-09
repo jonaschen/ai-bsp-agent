@@ -30,6 +30,7 @@ from studio.utils.entropy_math import SemanticEntropyCalculator, VertexFlashJudg
 from studio.utils.sandbox import DockerSandbox
 from studio.utils.patching import apply_virtual_patch
 from studio.utils.prompts import ENGINEER_SYSTEM_PROMPT
+from studio.agents.architect import ArchitectAgent, ReviewVerdict
 
 logger = logging.getLogger("JulesProxy")
 
@@ -366,8 +367,90 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
 
     return {"jules_metadata": jules_data}
 
+# --- 5. Architect Review Node (The Design Authority) ---
 
-# --- 5. Feedback Loop Node (The Correction Engine) ---
+async def node_architect_review(state: AgentState) -> Dict[str, Any]:
+    """
+    Node: Architect_Review
+    Role: Design Authority & SOLID Enforcement.
+
+    Responsibilities:
+    1. Reviews code that has PASSED functional tests.
+    2. Enforces SOLID principles and 'AGENTS.md' compliance.
+    3. Rejects sloppy 'Green' code, forcing a refactor cycle.
+    """
+    jules_data = state["jules_metadata"]
+
+    # Only run if QA passed
+    if jules_data.status != "COMPLETED":
+        return {}
+
+    logger.info("Architect_Review: Starting architectural audit.")
+
+    # 1. Reconstruct Context (Patched Code)
+    files_to_patch = {}
+    if jules_data.active_context_slice and jules_data.active_context_slice.files:
+        for filepath in jules_data.active_context_slice.files:
+            try:
+                if os.path.exists(filepath):
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        files_to_patch[filepath] = f.read()
+            except FileNotFoundError:
+                pass
+
+    diff_content = ""
+    if jules_data.generated_artifacts:
+        diff_content = jules_data.generated_artifacts[0].diff_content
+
+    try:
+        patched_files = apply_virtual_patch(files_to_patch, diff_content)
+    except Exception as e:
+        # Should have been caught by QA, but safety net
+        logger.error(f"Architect failed to apply patch: {e}")
+        return {}
+
+    # 2. Run Architect Agent
+    architect = ArchitectAgent()
+    ticket_context = jules_data.current_task_prompt or "Unknown Task"
+
+    all_violations = []
+
+    # We review all modified files
+    # Optimization: In a real system, we might only check changed files in the diff.
+    # Here, we check the files in the context slice that were patched.
+    for filepath, full_source in patched_files.items():
+        # Skip test files? Maybe. Usually we want tests to be clean too.
+        # But 'AGENTS.md' emphasizes SOLID for the solution.
+        # For now, review everything in the slice.
+
+        verdict = architect.review_code(filepath, full_source, ticket_context)
+
+        if verdict.status in ["REJECTED", "NEEDS_REFACTOR"]:
+            all_violations.extend(verdict.violations)
+
+    # 3. Handle Verdict
+    if all_violations:
+        logger.warning(f"Architect_Review: Code REJECTED with {len(all_violations)} violations.")
+        jules_data.status = "FAILED" # Force loop back
+
+        # Format feedback
+        feedback = "ARCHITECTURAL REVIEW FAILED.\n\nVIOLATIONS:\n"
+        for v in all_violations:
+            feedback += f"- [{v.severity}] {v.rule_id} in {v.file_path}: {v.description} (Fix: {v.suggested_fix})\n"
+
+        feedback += "\nINSTRUCTION: Refactor the code to address these violations while keeping tests GREEN."
+        jules_data.feedback_log.append(feedback)
+
+        return {
+            "jules_metadata": jules_data,
+            "messages": [AIMessage(content="**SYSTEM**: Architect rejected the solution. See feedback.")]
+        }
+
+    logger.info("Architect_Review: Code APPROVED.")
+    return {"jules_metadata": jules_data}
+
+
+# --- 6. Feedback Loop Node (The Correction Engine) ---
 
 async def node_feedback_loop(state: AgentState) -> Dict[str, Any]:
     """
@@ -394,6 +477,12 @@ async def node_feedback_loop(state: AgentState) -> Dict[str, Any]:
         # Reset flag for next attempt
         jules_data.cognitive_tunneling_detected = False
 
+    # Case C: Architectural Rejection (New)
+    elif any("ARCHITECTURAL REVIEW FAILED" in log for log in jules_data.feedback_log[-1:]):
+         # The feedback is already appended by node_architect_review
+         # We just ensure we don't overwrite it or add redundant info
+         pass
+
     else:
         # Case B: Functional Failure
         latest_test = jules_data.test_results_history[-1] if jules_data.test_results_history else None
@@ -406,11 +495,16 @@ async def node_feedback_loop(state: AgentState) -> Dict[str, Any]:
             feedback = f"Functional Verification Failed.\n\nEVIDENCE SNIPPETS:\n```\n{log_snippet}\n```\n\n"
             feedback += "INSTRUCTION: Generate a fix (Virtual Patch) specifically addressing these errors. " \
                         "Ensure you adhere to the TDD Green phase requirements."
+            # Append feedback only if it's new (simple check)
+            if not jules_data.feedback_log or jules_data.feedback_log[-1] != feedback:
+                jules_data.feedback_log.append(feedback)
         else:
             feedback = "Task failed without test results."
+            if not jules_data.feedback_log or jules_data.feedback_log[-1] != feedback:
+                 jules_data.feedback_log.append(feedback)
 
     # 2. Update Feedback Log
-    jules_data.feedback_log.append(feedback)
+    # (Already updated above)
 
     # 3. Post Feedback to Jules (The Hand)
     client = JulesGitHubClient(
@@ -418,7 +512,8 @@ async def node_feedback_loop(state: AgentState) -> Dict[str, Any]:
         repo_name=os.environ.get("GITHUB_REPOSITORY", "google/jules-studio")
     )
     if jules_data.external_task_id:
-        client.post_feedback(jules_data.external_task_id, feedback, is_error=True)
+        feedback_to_send = jules_data.feedback_log[-1]
+        client.post_feedback(jules_data.external_task_id, feedback_to_send, is_error=True)
 
     # 4. Retry Logic (Self-Correction)
     if jules_data.retry_count < jules_data.max_retries:
@@ -468,9 +563,17 @@ def route_entropy_guard(state: AgentState) -> Literal["qa_verifier", "feedback_l
 
     return "watch_tower" # Default fallback
 
-def route_qa_verifier(state: AgentState) -> Literal["end", "feedback_loop"]:
+def route_qa_verifier(state: AgentState) -> Literal["architect_review", "feedback_loop"]:
     """
-    Decides if the task is done or needs correction.
+    Decides if the task is done (proceed to Architect) or needs correction.
+    """
+    if state["jules_metadata"].status == "COMPLETED":
+        return "architect_review"
+    return "feedback_loop"
+
+def route_architect_review(state: AgentState) -> Literal["end", "feedback_loop"]:
+    """
+    Decides if the task is architecturally sound.
     """
     if state["jules_metadata"].status == "COMPLETED":
         return "end"
@@ -494,6 +597,7 @@ def build_engineer_subgraph() -> StateGraph:
     workflow.add_node("watch_tower", node_watch_tower)
     workflow.add_node("entropy_guard", node_entropy_guard)
     workflow.add_node("qa_verifier", node_qa_verifier)
+    workflow.add_node("architect_review", node_architect_review)
     workflow.add_node("feedback_loop", node_feedback_loop)
 
     # Set Entry Point
@@ -526,6 +630,15 @@ def build_engineer_subgraph() -> StateGraph:
     workflow.add_conditional_edges(
         "qa_verifier",
         route_qa_verifier,
+        {
+            "architect_review": "architect_review",
+            "feedback_loop": "feedback_loop"
+        }
+    )
+
+    workflow.add_conditional_edges(
+        "architect_review",
+        route_architect_review,
         {
             "end": END,
             "feedback_loop": "feedback_loop"
