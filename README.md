@@ -78,8 +78,13 @@ pip install -r requirements.txt
 ```
 
 ### Running the Simulation
-To verify the full autonomous loop (Strategy -> Execution -> Governance -> Optimization), run the Phase 2 Simulation:
+To verify the full autonomous loop (Strategy -> Execution -> Governance -> Optimization), run the Phase 2 Simulation.
 
+**Setup Process:**
+1.  Ensure dependencies are installed: `pip install -r requirements.txt`
+2.  The simulation automatically mocks Google Cloud environment variables (e.g., `GOOGLE_CLOUD_PROJECT`), so no external API keys are required for this specific script.
+
+**Execution:**
 ```bash
 PYTHONPATH=. python tests/phase2_simulation.py
 ```
