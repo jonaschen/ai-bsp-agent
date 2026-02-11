@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from langchain_google_vertexai import ChatVertexAI
 import re
 from langchain_core.messages import HumanMessage
-from studio.schemas import ReviewSummary, ReviewResult
+from studio.memory import ReviewSummary, ReviewResult
 
 class ReviewAgentOutputError(Exception):
     """Raised when the Review Agent output cannot be parsed as JSON."""
