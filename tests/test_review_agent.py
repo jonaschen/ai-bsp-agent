@@ -9,6 +9,19 @@ sys.modules["langchain_google_vertexai"] = MagicMock()
 sys.modules["langchain_core"] = MagicMock()
 sys.modules["langchain_core.messages"] = MagicMock()
 
+class MockBaseModel:
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @classmethod
+    def model_validate(cls, data):
+        return cls(**data)
+
+mock_pydantic = MagicMock()
+mock_pydantic.BaseModel = MockBaseModel
+sys.modules["pydantic"] = mock_pydantic
+
 # Ensure studio can be imported
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
