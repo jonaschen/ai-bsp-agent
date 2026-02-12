@@ -256,6 +256,22 @@ class ReviewVerdict(BaseModel):
     violations: List[Violation] = []
     adr_entry: Optional[ArchitecturalDecisionRecord] = Field(None, description="New rule to record if needed")
 
+# Legacy / Review Agent Artifacts
+class ReviewSummary(BaseModel):
+    """
+    Summary of the semantic review from the Review Agent.
+    """
+    status: Literal["PASSED", "FAILED"]
+    root_cause: str
+    suggested_fix: str
+
+class ReviewResult(BaseModel):
+    """
+    Final result of the review process.
+    """
+    approved: bool
+    feedback: str
+
 # From Scrum Master Agent
 class ProcessOptimization(BaseModel):
     """A specific suggestion to improve the System."""
