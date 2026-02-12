@@ -1,8 +1,16 @@
+import os
 import pytest
-from studio.memory import StudioState, OrchestrationState, EngineeringState, TriageStatus
+import asyncio
+from unittest.mock import AsyncMock, patch
+from studio.memory import StudioState, OrchestrationState, EngineeringState, TriageStatus, SemanticHealthMetric
 from studio.orchestrator import Orchestrator
 
-def test_orchestrator_coding_flow():
+# Set mock project to avoid Google Auth errors
+os.environ["GOOGLE_CLOUD_PROJECT"] = "mock-project"
+
+@patch("studio.orchestrator.VertexFlashJudge")
+@patch("studio.orchestrator.GenerativeModel")
+def test_orchestrator_coding_flow(mock_gen_model, mock_vertex_judge):
     # Setup state for CODING intent
     orch_state = OrchestrationState(
         session_id="test_1",
@@ -14,8 +22,18 @@ def test_orchestrator_coding_flow():
 
     orchestrator = Orchestrator()
 
-    # Run the graph
-    final_state = orchestrator.app.invoke(state)
+    # Mock the calculator to avoid network calls and return a safe metric
+    mock_metric = SemanticHealthMetric(
+        entropy_score=0.5,
+        threshold=7.0,
+        sample_size=5,
+        is_tunneling=False,
+        cluster_distribution={}
+    )
+    orchestrator.calculator.measure_uncertainty = AsyncMock(return_value=mock_metric)
+
+    # Run the graph using async API because it contains async nodes
+    final_state = asyncio.run(orchestrator.app.ainvoke(state))
 
     # If final_state is a dict, we access keys.
     if isinstance(final_state, dict):
@@ -45,7 +63,9 @@ def test_orchestrator_coding_flow():
     # Check Circuit Breaker (Should be False as entropy is 0.5 < 7.0)
     assert not cb
 
-def test_orchestrator_sop_flow():
+@patch("studio.orchestrator.VertexFlashJudge")
+@patch("studio.orchestrator.GenerativeModel")
+def test_orchestrator_sop_flow(mock_gen_model, mock_vertex_judge):
     # Setup state for SOP intent (No Log)
     orch_state = OrchestrationState(
         session_id="test_2",
@@ -57,7 +77,8 @@ def test_orchestrator_sop_flow():
 
     orchestrator = Orchestrator()
 
-    final_state = orchestrator.app.invoke(state)
+    # Run the graph using async API because it contains async nodes
+    final_state = asyncio.run(orchestrator.app.ainvoke(state))
 
     if isinstance(final_state, dict):
         orch = final_state["orchestration"]
