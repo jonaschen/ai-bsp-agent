@@ -300,6 +300,10 @@ class EngineeringState(BaseModel):
     # Code artifacts are stored here, but only sliced versions are sent to agents
     proposed_patch: Optional[str] = None
 
+    # New Fields for Phase 2.5 Wired Subgraph
+    jules_meta: JulesMetadata = Field(default_factory=JulesMetadata)
+    code_artifacts: Dict[str, Any] = Field(default_factory=dict)
+
 # --- ROOT: Studio State ---
 class StudioState(BaseModel):
     """
