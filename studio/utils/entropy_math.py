@@ -18,9 +18,6 @@ import math
 import logging
 import asyncio
 from typing import List, Dict, Tuple, Protocol
-from collections import Counter
-from pydantic import BaseModel
-
 # Import strict schema from the Studio Memory
 from studio.memory import SemanticHealthMetric
 
