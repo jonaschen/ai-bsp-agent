@@ -45,7 +45,7 @@ classDiagram
         +node_watch_tower()
         +node_entropy_guard()
         +node_qa_verifier()
-        +node_architect_review()
+        +node_architect_gate()
         +node_feedback_loop()
     }
 
@@ -136,11 +136,11 @@ stateDiagram-v2
     EntropyGuard --> FeedbackLoop: SE > 7.0 (Tunneling)
     EntropyGuard --> QAVerifier: SE < 7.0 (Healthy)
 
-    QAVerifier --> ArchitectReview: Tests PASS
+    QAVerifier --> ArchitectGate: Tests PASS
     QAVerifier --> FeedbackLoop: Tests FAIL
 
-    ArchitectReview --> FeedbackLoop: Violations Found
-    ArchitectReview --> [*]: Approved
+    ArchitectGate --> FeedbackLoop: Violations Found
+    ArchitectGate --> [*]: Approved
 
     FeedbackLoop --> TaskDispatcher: Retry (Count < Max)
     FeedbackLoop --> [*]: Max Retries Exceeded
