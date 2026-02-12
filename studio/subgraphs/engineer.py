@@ -273,13 +273,9 @@ def build_engineer_subgraph():
     )
 
     # Architect Check (Approved/Rejected)
-    def route_architect(x):
-        logger.info(f"Architect Routing: Status = {x.verification_gate.status}")
-        return x.verification_gate.status
-
     workflow.add_conditional_edges(
         "architect",
-        route_architect,
+        lambda x: x.verification_gate.status,
         {
             "GREEN": END,        # <--- Success! Leaves Subgraph
             "RED": "feedback"    # <--- Loop back on Bad Design
