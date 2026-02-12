@@ -294,11 +294,18 @@ class VerificationGate(BaseModel):
     failure_counter: int = 0
     blocking_reason: Optional[str] = None
 
+class CodeArtifacts(BaseModel):
+    proposed_patch: Optional[str] = None
+    justification_refs: List[str] = Field(default_factory=list)
+    static_analysis_report: Optional[Dict[str, Any]] = None
+
 class EngineeringState(BaseModel):
     current_task: Optional[str] = None
     verification_gate: VerificationGate = Field(default_factory=lambda: VerificationGate(status="PENDING"))
-    # Code artifacts are stored here, but only sliced versions are sent to agents
-    proposed_patch: Optional[str] = None
+
+    # Phase 2.5: Integrated Metadata & Artifacts
+    jules_meta: JulesMetadata = Field(default_factory=JulesMetadata)
+    code_artifacts: CodeArtifacts = Field(default_factory=CodeArtifacts)
 
 # --- ROOT: Studio State ---
 class StudioState(BaseModel):
