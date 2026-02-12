@@ -17,7 +17,7 @@ Dependencies:
 
 import logging
 import hashlib
-from typing import List, Dict, Optional, Set
+from typing import List, Dict
 from pydantic import BaseModel, Field
 
 from langchain_google_vertexai import ChatVertexAI
