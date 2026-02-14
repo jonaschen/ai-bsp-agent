@@ -264,12 +264,17 @@ class Orchestrator:
         # For now, we mock the slicing logic.
         relevant_files = {"drivers/gpu/msm/mdss.c": "void main() { ... }"}
 
+        # Extract the 'Event Horizon' (last 500 lines) - Fix #3
+        full_logs = state.orchestration.full_logs or ""
+        log_lines = full_logs.splitlines()
+        sliced_logs = "\n".join(log_lines[-500:]) if log_lines else ""
+
         # Create the Ephemeral Slice
         new_slice = ContextSlice(
             slice_id="slice_" + datetime.now().isoformat(),
             intent=intent if intent in ["DIAGNOSIS", "CODING", "REVIEW"] else "CODING",
             active_files=relevant_files,
-            relevant_logs="[1456.789] Panic at...", # Mock sliced log
+            relevant_logs=sliced_logs,
             constraints=["DO NOT modify outside of drivers/"]
         )
 

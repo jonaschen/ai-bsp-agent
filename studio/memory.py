@@ -214,6 +214,7 @@ class SOPState(BaseModel):
 class OrchestrationState(BaseModel):
     session_id: str
     user_intent: str
+    full_logs: str = Field(default="", description="The complete log file uploaded by the user")
     triage_status: Optional[TriageStatus] = None
     guidance_sop: Optional[SOPState] = None
     # The active context slice being processed
