@@ -90,6 +90,14 @@ PYTHONPATH=. python tests/phase2_simulation.py
 ```
 *Note: The simulation uses mocks for Vertex AI to run without incurring costs.*
 
+### Running the Integration Heartbeat
+The Integration Heartbeat Test (the "Defibrillator") verifies the end-to-end connectivity between the **Orchestrator**, **Engineer Subgraph**, and **Memory** layers using mocked external IO.
+
+**Execution:**
+```bash
+PYTHONPATH=. python tests/integration_heartbeat.py
+```
+
 ### Running Tests
 Execute the full test suite using `pytest`:
 

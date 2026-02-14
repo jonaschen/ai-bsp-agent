@@ -299,6 +299,7 @@ class EngineeringState(BaseModel):
     verification_gate: VerificationGate = Field(default_factory=lambda: VerificationGate(status="PENDING"))
     # Code artifacts are stored here, but only sliced versions are sent to agents
     proposed_patch: Optional[str] = None
+    jules_meta: Optional[JulesMetadata] = None
 
 # --- ROOT: Studio State ---
 class StudioState(BaseModel):

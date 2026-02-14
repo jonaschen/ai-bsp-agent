@@ -13,6 +13,7 @@ Ref: [cite: 2018, 2029]
 """
 
 import logging
+import asyncio
 from typing import Dict, Any, Literal, TypedDict, Annotated, Optional
 from datetime import datetime
 from langgraph.graph import StateGraph, END, START
@@ -30,6 +31,9 @@ from studio.memory import (
 )
 from studio.utils.entropy_math import SemanticEntropyCalculator, VertexFlashJudge
 from vertexai.generative_models import GenerativeModel
+from studio.subgraphs.engineer import build_engineer_subgraph
+from langchain_core.messages import HumanMessage
+from studio.memory import JulesMetadata, VerificationGate
 
 # --- MOCK SUBGRAPHS (Placeholders for compilation) ---
 def engineer_subgraph_node(state: ContextSlice) -> Dict:
@@ -58,12 +62,15 @@ def reflector_node(state: StudioState) -> Dict:
 # --- THE ORCHESTRATOR CLASS ---
 
 class Orchestrator:
-    def __init__(self):
+    def __init__(self, engineer_app=None):
         self.logger = logging.getLogger("Orchestrator")
 
         # Initialize the Semantic Sensor
         self.judge = VertexFlashJudge(GenerativeModel("gemini-1.5-flash"))
         self.calculator = SemanticEntropyCalculator(self.judge)
+
+        # Initialize the Worker Subgraphs
+        self.engineer_app = engineer_app or build_engineer_subgraph()
 
         # Initialize the Supergraph with the Global StudioState
         self.workflow = StateGraph(StudioState)
@@ -85,29 +92,59 @@ class Orchestrator:
                     active_files={}, relevant_logs="", constraints=[]
                 )
 
-            # Invoke subgraph (mock)
-            output_data = engineer_subgraph_node(slice_obj)
+            # 1. Prepare AgentState for the Subgraph
+            agent_state = {
+                "messages": [HumanMessage(content=state.engineering.current_task or "Fix the bug")],
+                "system_constitution": "ENFORCE SOLID.",
+                "jules_metadata": state.engineering.jules_meta or JulesMetadata(session_id=state.orchestration.session_id),
+                "next_agent": None
+            }
 
-            # Enforce Semantic Entropy Guardrail
+            # 2. Invoke the REAL Engineer Subgraph
+            self.logger.info("Invoking Engineer Subgraph...")
+            result = await self.engineer_app.ainvoke(agent_state)
+
+            # 3. Process results
+            jules_meta = result["jules_metadata"]
+
+            proposed_patch = None
+            if jules_meta.generated_artifacts:
+                proposed_patch = jules_meta.generated_artifacts[0].diff_content
+
+            # Update Verification Gate based on status
+            gate_status = "PENDING"
+            if jules_meta.status == "COMPLETED":
+                gate_status = "GREEN"
+            elif jules_meta.status == "FAILED":
+                gate_status = "RED"
+
+            # 4. Enforce Semantic Entropy Guardrail
             # Real implementation using the actual calculator
             metric = await self.calculator.measure_uncertainty(slice_obj.intent, slice_obj.intent)
 
             # Parse output into AgentStepOutput
-            # Override the mock health with real calculation
+            # Use the actual content from the subgraph if available
             agent_output = AgentStepOutput(
-                content=output_data["content"],
-                thought_process=output_data["thought_process"],
+                content=proposed_patch or "No patch generated",
+                thought_process="Subgraph execution complete.",
                 cognitive_health=metric
             )
 
             updates = {}
 
             # Map output back to StudioState
-            # Updating engineering state
             if hasattr(state.engineering, "model_copy"):
-                eng_update = state.engineering.model_copy(update={"proposed_patch": agent_output.content})
+                eng_update = state.engineering.model_copy(update={
+                    "proposed_patch": agent_output.content,
+                    "jules_meta": jules_meta,
+                    "verification_gate": VerificationGate(status=gate_status)
+                })
             else:
-                eng_update = state.engineering.copy(update={"proposed_patch": agent_output.content})
+                eng_update = state.engineering.copy(update={
+                    "proposed_patch": agent_output.content,
+                    "jules_meta": jules_meta,
+                    "verification_gate": VerificationGate(status=gate_status)
+                })
 
             updates["engineering"] = eng_update
 

@@ -1,8 +1,11 @@
 import os
 import pytest
 import asyncio
-from unittest.mock import AsyncMock, patch
-from studio.memory import StudioState, OrchestrationState, EngineeringState, TriageStatus, SemanticHealthMetric
+from unittest.mock import MagicMock, AsyncMock, patch
+from studio.memory import (
+    StudioState, OrchestrationState, EngineeringState, TriageStatus,
+    SemanticHealthMetric, JulesMetadata, CodeChangeArtifact
+)
 from studio.orchestrator import Orchestrator
 
 # Set mock project to avoid Google Auth errors
@@ -20,7 +23,16 @@ def test_orchestrator_coding_flow(mock_gen_model, mock_vertex_judge):
     eng_state = EngineeringState()
     state = StudioState(orchestration=orch_state, engineering=eng_state)
 
-    orchestrator = Orchestrator()
+    # Mock the engineer subgraph to avoid external IO
+    mock_engineer_app = MagicMock()
+    mock_engineer_app.ainvoke = AsyncMock(return_value={
+        "jules_metadata": JulesMetadata(
+            status="COMPLETED",
+            generated_artifacts=[CodeChangeArtifact(diff_content="Patch applied.")]
+        )
+    })
+
+    orchestrator = Orchestrator(engineer_app=mock_engineer_app)
 
     # Mock the calculator to avoid network calls and return a safe metric
     mock_metric = SemanticHealthMetric(
