@@ -106,6 +106,7 @@ class Orchestrator:
 
             # 3. Process results
             jules_meta = result["jules_metadata"]
+            updates = {}
 
             proposed_patch = None
             if jules_meta.generated_artifacts:
@@ -117,6 +118,7 @@ class Orchestrator:
                 gate_status = "GREEN"
             elif jules_meta.status == "FAILED":
                 gate_status = "RED"
+                updates["escalation_triggered"] = True
 
             # 4. Enforce Semantic Entropy Guardrail
             # Real implementation using the actual calculator
@@ -129,8 +131,6 @@ class Orchestrator:
                 thought_process="Subgraph execution complete.",
                 cognitive_health=metric
             )
-
-            updates = {}
 
             # Map output back to StudioState
             if hasattr(state.engineering, "model_copy"):

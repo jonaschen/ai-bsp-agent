@@ -311,6 +311,7 @@ class StudioState(BaseModel):
     # Meta-Data
     system_version: str = "5.2.0"
     circuit_breaker_triggered: bool = False # Hard Stop for SE > 7.0 [cite: 733]
+    escalation_triggered: bool = False # Explicit signal for human intervention
 
     # Layers
     orchestration: OrchestrationState
