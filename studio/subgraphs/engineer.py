@@ -474,6 +474,10 @@ async def node_feedback_loop(state: AgentState) -> Dict[str, Any]:
                    "The agent is stuck in a Cognitive Tunnel. " \
                    "STOP. REFLECT. Do not repeat the same strategy. " \
                    "Propose a fundamentally different approach."
+
+        if not jules_data.feedback_log or jules_data.feedback_log[-1] != feedback:
+            jules_data.feedback_log.append(feedback)
+
         # Reset flag for next attempt
         jules_data.cognitive_tunneling_detected = False
 
