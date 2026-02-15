@@ -36,6 +36,7 @@ from langchain_core.messages import HumanMessage
 from studio.memory import JulesMetadata, VerificationGate, EngineeringState
 from studio.agents.product_owner import run_po_cycle
 from studio.agents.scrum_master import run_scrum_retrospective
+from studio.agents.optimizer import OptimizerAgent
 
 # --- MOCK SUBGRAPHS (Placeholders for compilation) ---
 def engineer_subgraph_node(state: ContextSlice) -> Dict:
@@ -197,9 +198,34 @@ class Orchestrator:
 
     # --- NODE: Scrum Master (REVIEW) ---
     async def node_scrum_master(self, state: StudioState) -> Dict:
-        self.logger.info("Orchestrator: Waking up Scrum Master for Retrospective...")
+        """
+        Invokes the Scrum Master AND the Optimizer.
+        """
+        self.logger.info("Orchestrator: Sprint Complete. Engaging Scrum Master...")
         state_dict = state.model_dump() if hasattr(state, "model_dump") else state.dict()
-        await asyncio.to_thread(run_scrum_retrospective, state_dict)
+
+        # 1. Generate Report
+        report = await asyncio.to_thread(run_scrum_retrospective, state_dict)
+
+        if report:
+            # Handle cases where report might be a MagicMock in tests
+            try:
+                success_rate = report.success_rate
+                success_rate_str = f"{success_rate:.2%}" if isinstance(success_rate, (float, int)) else str(success_rate)
+            except Exception:
+                success_rate_str = "unknown"
+
+            self.logger.info(f"Orchestrator: Optimization Report Generated (Success: {success_rate_str}).")
+
+            # 2. Engage Optimizer (The Phase 3 Addition)
+            # Only optimize if there are actual optimizations and it's not a mock from a test
+            optimizations = getattr(report, "optimizations", [])
+            if optimizations and isinstance(optimizations, list):
+                self.logger.info("Orchestrator: Engaging Optimizer to patch prompts...")
+                optimizer = OptimizerAgent()
+                # Run optimization in thread as it might involve LLM calls
+                await asyncio.to_thread(optimizer.apply_optimizations, report)
+
         return {}
 
     # --- WRAPPER: SOP Guide ---
