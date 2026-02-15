@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from studio.memory import (
     StudioState, OrchestrationState, EngineeringState, TriageStatus,
     SemanticHealthMetric, JulesMetadata, CodeChangeArtifact, ContextSlice,
-    TestResult, ReviewVerdict, Violation
+    TestResult, ReviewVerdict, Violation, Ticket
 )
 from studio.orchestrator import Orchestrator
 from studio.utils.jules_client import WorkStatus
@@ -33,11 +33,14 @@ async def test_red_green_refactor_loop():
         session_id="tdd-session",
         user_intent="CODING",
         triage_status=TriageStatus(is_log_available=True, suspected_domain="app"),
-        current_context_slice=ContextSlice(intent="CODING", files=["src/app.py", "tests/test_app.py"])
+        current_context_slice=ContextSlice(intent="CODING", files=["src/app.py", "tests/test_app.py"]),
+        task_queue=[
+            Ticket(id="TKT-TDD", title="Implement feature X", description="Follow TDD", priority="HIGH", source_section_id="1.1")
+        ]
     )
 
     eng_state = EngineeringState(
-        current_task="Implement feature X",
+        # current_task="Implement feature X",
         jules_meta=jules_meta
     )
 
@@ -77,7 +80,9 @@ async def test_red_green_refactor_loop():
 
         # Patching necessary components
         # We need to use AsyncMock for measure_uncertainty since it's an async method
-        with patch("studio.subgraphs.engineer.SemanticEntropyCalculator.measure_uncertainty", new_callable=AsyncMock) as mock_measure_sub, \
+        with patch("studio.orchestrator.run_po_cycle"), \
+             patch("studio.orchestrator.run_scrum_retrospective"), \
+             patch("studio.subgraphs.engineer.SemanticEntropyCalculator.measure_uncertainty", new_callable=AsyncMock) as mock_measure_sub, \
              patch("studio.orchestrator.SemanticEntropyCalculator.measure_uncertainty", new_callable=AsyncMock) as mock_measure_orch, \
              patch("studio.subgraphs.engineer.ArchitectAgent") as mock_architect_class, \
              patch("studio.subgraphs.engineer.VertexFlashJudge"), \
