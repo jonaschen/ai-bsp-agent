@@ -231,18 +231,6 @@ class OrchestrationState(BaseModel):
 
 # --- SECTION 4: Shared Agent Artifacts ---
 
-class StudioMeta(BaseModel):
-    """Metadata about the Studio Environment."""
-    pass
-
-class SprintBoard(BaseModel):
-    """Represents the current Sprint Board state."""
-    pass
-
-class OptimizationLog(BaseModel):
-    """Log of applied optimizations."""
-    pass
-
 # From Architect Agent
 class Violation(BaseModel):
     """A specific breach of the Constitution."""

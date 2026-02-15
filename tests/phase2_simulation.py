@@ -26,9 +26,9 @@ os.environ["GOOGLE_CLOUD_PROJECT"] = "mock-project"
 
 # Import The Team
 from studio.memory import (
-    StudioState, StudioMeta, OrchestrationState, EngineeringState,
-    SprintBoard, Ticket, TicketStatus, ContextSlice,
-    ArchitecturalDecisionRecord, OptimizationLog
+    StudioState, OrchestrationState, EngineeringState,
+    Ticket, TicketStatus, ContextSlice,
+    ArchitecturalDecisionRecord
 )
 from studio.agents.product_owner import run_po_cycle, POTicket, BlueprintAnalysis
 from studio.agents.architect import run_architect_gate, ReviewVerdict, Violation
