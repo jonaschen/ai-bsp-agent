@@ -8,7 +8,6 @@ Used by the QA Agent to prepare the sandbox environment.
 import os
 import tempfile
 import subprocess
-import shutil
 import logging
 from typing import Dict, List, Optional
 
