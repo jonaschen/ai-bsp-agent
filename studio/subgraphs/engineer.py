@@ -577,12 +577,12 @@ def route_architect_gate(state: AgentState) -> Literal["end", "feedback_loop"]:
         return "end"
     return "feedback_loop"
 
-def route_feedback_loop(state: AgentState) -> Literal["watch_tower", "end"]:
+def route_feedback_loop(state: AgentState) -> Literal["task_dispatcher", "end"]:
     """
     Decides whether to retry the loop or give up.
     """
     if state["jules_metadata"].status == "QUEUED": # Retry triggered
-        return "watch_tower"
+        return "task_dispatcher"
     return "end" # Max retries exceeded
 
 # --- Subgraph Builder ---
@@ -647,7 +647,7 @@ def build_engineer_subgraph() -> StateGraph:
         "feedback_loop",
         route_feedback_loop,
         {
-            "watch_tower": "watch_tower", # The Loop Back to WatchTower as per diagram
+            "task_dispatcher": "task_dispatcher",
             "end": END # Escalation
         }
     )
