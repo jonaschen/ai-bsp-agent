@@ -1,6 +1,6 @@
 # Android BSP AI Consultant Team (The Studio)
 
-> **Version:** v5.2.0 (Phase 2: Cognitive Awakening)
+> **Version:** v5.2.0 (Phase 3: Evolution & Reality)
 > **Status:** Active Development / Simulation
 
 ## Project Overview
@@ -10,7 +10,7 @@ This repository hosts the **Recursive Cognitive Software Factory** (also known a
 The primary product being built is the **Android BSP Consultant**, an AI agent capable of analyzing Android Kernel logs, performing root cause analysis (RCA), and suggesting fixes for complex embedded systems issues (e.g., Suspend-to-Disk failures).
 
 ### Core Philosophy: Factory vs. Product
-*   **The Studio (`studio/`):** The "Factory" infrastructure. It contains the Orchestrator, Agents (Architect, Product Owner, Engineer, Scrum Master), and the Governance rules. This is the "meta-level" system that builds the software.
+*   **The Studio (`studio/`):** The "Factory" infrastructure. It contains the Orchestrator, Agents (Architect, Product Owner, Engineer, Scrum Master, Optimizer), and the Governance rules. This is the "meta-level" system that builds the software.
 *   **The Product (`product/`):** The output of the Studio. This includes the actual source code, prompts, and configurations for the Android BSP Consultant agent.
 
 ## Architecture
@@ -22,23 +22,29 @@ The system operates as a **Hierarchical State Machine** orchestrated by LangGrap
     *   Operates the High-Level Lifecycle (Plan -> Execute -> Review) via LangGraph.
     *   Enforces **Context Slicing** to isolate agents from irrelevant data.
     *   Monitors **Semantic Entropy** to prevent "hallucinations" or cognitive tunneling.
+    *   Routes intents via **Intent Router** (Coding vs. Interactive Guide).
 2.  **Product Owner (Strategy):**
     *   Translates `PRODUCT_BLUEPRINT.md` into a dependency-aware Directed Acyclic Graph (DAG) of tickets.
     *   Maintains the Product Backlog.
 3.  **Engineer (Execution):**
     *   Jules Proxy: Manages asynchronous execution of coding tasks via remote workers.
-    *   Implements the "Micro-Loop": Plan -> Execute -> Monitor -> Verify -> Feedback.
+    *   Implements the "Micro-Loop": Dispatch -> Watch -> Monitor (Entropy) -> Verify -> Feedback.
     *   Operates within a isolated **Docker Sandbox**.
 4.  **Architect (Governance):**
     *   Reviews all code and prompts against `AGENTS.md` (The Constitution).
     *   Enforces SOLID principles and security standards.
 5.  **QA Agent (Verification):**
     *   Runs deterministic tests (`pytest`) and semantic similarity checks.
-6.  **Scrum Master (Optimization):**
+6.  **Scrum Master (Review):**
     *   Analyzes sprint logs to identify process bottlenecks.
-    *   Suggests optimizations to the Studio's prompts or workflows (OPRO).
+    *   Triggers the **Optimizer** for OPRO.
+7.  **Optimizer (Evolution):**
+    *   Implements **OPRO (Optimization by PROmpting)**.
+    *   Surgically patches agent prompts to fix recurring behavioral failures.
 
 ### Key Features
+*   **Optimization by PROmpting (OPRO):** The system self-corrects its own instructions (`prompts.json`) based on retrospective analysis, allowing it to "learn" from mistakes.
+*   **Interactive Debugging (SOP Guide):** A specialized subgraph for handling "No-Log" scenarios where the user needs guidance to extract data before analysis can begin.
 *   **Semantic Entropy Guardrail:** Uses `VertexFlashJudge` to measure the uncertainty of agent outputs. If entropy (SE) exceeds 7.0, the "Circuit Breaker" triggers to prevent compounding errors and "Cognitive Tunneling".
 *   **Context Slicing:** Dynamically filters the file system and logs presented to each agent (Event Horizon), ensuring they only see what is relevant to their current task to prevent context collapse.
 *   **Evolution Safety Levels (ESL):**
@@ -57,7 +63,8 @@ The system operates as a **Hierarchical State Machine** orchestrated by LangGrap
 │   ├── bsp_agent/          # Core logic of the product.
 │   └── prompts/            # Product prompts (optimized by Scrum Master).
 ├── studio/                 # The Factory: The AI Software Studio.
-│   ├── agents/             # Agent implementations (Architect, PO, Scrum Master, etc.).
+│   ├── agents/             # Agent implementations (Architect, PO, Scrum Master, Optimizer).
+│   ├── subgraphs/          # Subgraph definitions (Engineer, SOP Guide).
 │   ├── memory.py           # Pydantic models and State definitions.
 │   ├── orchestrator.py     # Main runtime logic and StateGraph definition.
 │   ├── manager.py          # State persistence and management.

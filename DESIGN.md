@@ -5,7 +5,8 @@ The Studio is a "Recursive Cognitive Software Factory" designed to automate soft
 -   **Context Slicing**: Isolating agents with only the necessary information to prevent context collapse.
 -   **Circuit Breakers**: Using "Semantic Entropy" to detect and interrupt cognitive tunneling (hallucination loops).
 -   **State Sovereignty**: A single `StudioManager` owns the persistence layer (`studio_state.json`), ensuring data integrity.
--   **Micro-Loop Architecture**: The engineering process follows a strict Plan -> Execute -> Monitor -> Verify -> Feedback loop.
+-   **Micro-Loop Architecture**: The engineering process follows a strict Dispatch -> Watch -> Monitor -> Verify -> Feedback loop.
+-   **Optimization by PROmpting (OPRO)**: The system self-corrects via the `OptimizerAgent`, which patches agent prompts based on retrospective insights.
 
 ## System Architecture
 
@@ -52,6 +53,11 @@ classDiagram
         +node_feedback_loop()
     }
 
+    class SOPGuideSubgraph {
+        +StateGraph workflow
+        +handle_interactive_debugging()
+    }
+
     class Agent {
         <<Interface>>
         +run()
@@ -69,15 +75,22 @@ classDiagram
         +conduct_retrospective(sprint_data)
     }
 
+    class OptimizerAgent {
+        +apply_optimizations(report)
+    }
+
     StudioManager "1" *-- "1" StudioState : Owns
     Orchestrator "1" -- "1" StudioState : Operates On
     Orchestrator "1" *-- "1" EngineerSubgraph : Invokes
+    Orchestrator "1" *-- "1" SOPGuideSubgraph : Invokes
     EngineerSubgraph ..> ArchitectAgent : Uses
     Orchestrator ..> ProductOwnerAgent : Routes Planning
     Orchestrator ..> ScrumMasterAgent : Routes Optimization
+    ScrumMasterAgent ..> OptimizerAgent : Triggers
     Agent <|-- ArchitectAgent
     Agent <|-- ProductOwnerAgent
     Agent <|-- ScrumMasterAgent
+    Agent <|-- OptimizerAgent
 ```
 
 ### Key Components
@@ -94,12 +107,15 @@ classDiagram
 4.  **EngineerSubgraph (`studio/subgraphs/engineer.py`)**:
     -   **Role**: The "Worker" implementation.
     -   **Responsibilities**: Manages the lifecycle of an engineering task, from dispatch to verification and review.
+5.  **OptimizerAgent (`studio/agents/optimizer.py`)**:
+    -   **Role**: The "Evolutionary Engine".
+    -   **Responsibilities**: Applies OPRO techniques to update prompts based on Scrum Master's retrospective reports.
 
 ## Workflows
 
-### 1. Orchestration Flow (Phase 2 Lifecycle)
+### 1. Orchestration Flow (Phase 3 Lifecycle)
 
-The Orchestrator implements the full sprint lifecycle: PLAN (Product Owner) -> EXECUTE Loop (Backlog Dispatcher & Engineer) -> REVIEW (Scrum Master).
+The Orchestrator implements the full sprint lifecycle: PLAN (Product Owner) -> EXECUTE Loop (Backlog Dispatcher & Engineer) -> REVIEW (Scrum Master) -> EVOLVE (Optimizer).
 
 ```mermaid
 stateDiagram-v2
@@ -122,7 +138,8 @@ stateDiagram-v2
     EngineerSubgraph --> Reflector: SE > 7.0 (Breaker)
     Reflector --> [*]: Circuit Breaker Triggered
 
-    ScrumMaster --> [*]
+    ScrumMaster --> Optimizer: Report Generated
+    Optimizer --> [*]
     SOPGuide --> [*]
 ```
 
@@ -138,12 +155,12 @@ stateDiagram-v2
 
     state WatchTower <<choice>>
     WatchTower --> WatchTower: Status = WORKING/QUEUED/PLANNING
-    WatchTower --> EntropyGuard: Status = COMPLETED/REVIEW_READY
-    WatchTower --> HumanInterrupt: Status = BLOCKED
+    WatchTower --> EntropyGuard: Status = COMPLETED/REVIEW_READY/BLOCKED
+    WatchTower --> HumanInterrupt: Status = BLOCKED (if enabled)
 
     state EntropyGuard <<choice>>
-    EntropyGuard --> FeedbackLoop: SE > 7.0 (Tunneling)
-    EntropyGuard --> QAVerifier: SE < 7.0 (Healthy)
+    EntropyGuard --> FeedbackLoop: SE > 7.0 (Tunneling) or Status=FAILED
+    EntropyGuard --> QAVerifier: SE < 7.0 (Healthy) & Status=VERIFYING
 
     QAVerifier --> ArchitectGate: Tests PASS
     QAVerifier --> FeedbackLoop: Tests FAIL
@@ -152,7 +169,7 @@ stateDiagram-v2
     ArchitectGate --> FeedbackLoop: Violations Found
     ArchitectGate --> [*]: Approved
 
-    FeedbackLoop --> WatchTower: Retry (Count < Max)
+    FeedbackLoop --> TaskDispatcher: Retry (Count < Max)
     FeedbackLoop --> [*]: Max Retries Exceeded
 ```
 
@@ -198,15 +215,25 @@ stateDiagram-v2
     -   **Architect Gate**: Enforces SOLID principles on the patched source code.
     -   **Feedback Loop**: Performs Root Cause Analysis on failures and manages the self-correction loop.
 
+### 5. Optimizer Agent (`studio/agents/optimizer.py`)
+-   **Role**: The Evolutionary Engine.
+-   **Responsibility**: Implementing OPRO (Optimization by PROmpting).
+-   **Key Logic**:
+    -   Receives `RetrospectiveReport` from Scrum Master.
+    -   Surgically patches `prompts.json` or `AGENTS.md` (if permitted) to integrate new rules.
+    -   Validates that the patch does not break existing JSON structure.
+
 ## Data Models (`studio/memory.py`)
 
 The system relies on strict Pydantic schemas to enforce state integrity.
 
 -   **StudioState**: The root state object. Includes `system_version`, `circuit_breaker_triggered`, and `escalation_triggered` flags.
--   **OrchestrationState**: Manages the sprint lifecycle, `task_queue` (Backlog), and logs (`completed_tasks_log`, `failed_tasks_log`).
+-   **OrchestrationState**: Manages the sprint lifecycle, `task_queue` (Backlog), logs (`completed_tasks_log`, `failed_tasks_log`), and `triage_status`.
 -   **EngineeringState**: Tracks the `current_task`, `proposed_patch`, and the `JulesMetadata` for the active worker.
 -   **ContextSlice**: Ephemeral data bundle (files, logs, constraints) passed to agents to prevent "Context Collapse". Includes the **Event Horizon** (sliced logs).
 -   **SemanticHealthMetric**: Tracks `entropy_score` (0.0-10.0) and `is_tunneling` status to trigger the circuit breaker.
 -   **Ticket**: Represents a unit of work with fields for `id`, `dependencies`, `status`, and `source_section_id`.
 -   **ReviewVerdict**: The output of the Architect's review, containing a list of `Violation`s and an optional `ArchitecturalDecisionRecord`.
 -   **JulesMetadata**: Manages the lifecycle of the asynchronous Jules worker, including `external_task_id`, `entropy_history`, and `test_results_history`.
+-   **TriageStatus**: Tracks the initial log analysis outcome and routing decision (Coding vs. SOP).
+-   **SOPState**: Manages the state of the Interactive Debugging session (current step, pending steps).
