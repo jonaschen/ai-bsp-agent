@@ -4,7 +4,7 @@ import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 from studio.memory import (
     StudioState, OrchestrationState, EngineeringState, TriageStatus,
-    SemanticHealthMetric, JulesMetadata, CodeChangeArtifact
+    SemanticHealthMetric, JulesMetadata, CodeChangeArtifact, Ticket
 )
 from studio.orchestrator import Orchestrator
 
@@ -13,7 +13,9 @@ os.environ["GOOGLE_CLOUD_PROJECT"] = "mock-project"
 
 @patch("studio.orchestrator.VertexFlashJudge")
 @patch("studio.orchestrator.GenerativeModel")
-def test_context_slicing_large_log(mock_gen_model, mock_vertex_judge):
+@patch("studio.orchestrator.run_po_cycle")
+@patch("studio.orchestrator.run_scrum_retrospective")
+def test_context_slicing_large_log(mock_run_retrospective, mock_run_po, mock_gen_model, mock_vertex_judge):
     """
     測試目標： 驗證 Orchestrator 的 Context Slicing 邏輯是否生效 (特別是針對大檔案)。
     情境： 用戶上傳了一個 100MB 的 Log 檔案。
@@ -26,7 +28,10 @@ def test_context_slicing_large_log(mock_gen_model, mock_vertex_judge):
         session_id="test_slicing",
         user_intent="UNKNOWN",
         full_logs=log_content,
-        triage_status=TriageStatus(is_log_available=True, suspected_domain="drivers")
+        triage_status=TriageStatus(is_log_available=True, suspected_domain="drivers"),
+        task_queue=[
+            Ticket(id="TKT-SLICE", title="Test Task", description="Test", priority="LOW", source_section_id="1.1")
+        ]
     )
     eng_state = EngineeringState()
     state = StudioState(orchestration=orch_state, engineering=eng_state)

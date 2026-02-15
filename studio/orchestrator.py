@@ -127,7 +127,8 @@ class Orchestrator:
             self._check_semantic_health,
             {
                 "healthy": "backlog_dispatcher",
-                "tunneling": "reflector"
+                "tunneling": "reflector",
+                "retry": "engineer_subgraph"
             }
         )
 
@@ -175,8 +176,8 @@ class Orchestrator:
                 new_queue.append(t)
             orch.task_queue = new_queue
 
-        # 2. Pick the next OPEN ticket
-        next_ticket = next((t for t in orch.task_queue if t.status == "OPEN"), None)
+        # 2. Pick the next ticket that is OPEN or IN_PROGRESS (if resuming)
+        next_ticket = next((t for t in orch.task_queue if t.status in ["OPEN", "IN_PROGRESS"]), None)
 
         if next_ticket:
             next_ticket.status = "IN_PROGRESS"
@@ -357,11 +358,17 @@ class Orchestrator:
         return {"orchestration": updated_orch}
 
     # --- CONDITIONAL: Circuit Breaker (Semantic Entropy) ---
-    def _check_semantic_health(self, state: StudioState) -> Literal["healthy", "tunneling"]:
+    def _check_semantic_health(self, state: StudioState) -> Literal["healthy", "tunneling", "retry"]:
         """
         The Mathematical Guardrail.
         Checks if circuit breaker was triggered by last agent output.
+        Also checks if the Engineer Subgraph needs to retry.
         """
         if state.circuit_breaker_triggered:
             return "tunneling"
+
+        jules_meta = state.engineering.jules_meta
+        if jules_meta and jules_meta.status == "QUEUED":
+            return "retry"
+
         return "healthy"

@@ -4,7 +4,7 @@ import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 from studio.memory import (
     StudioState, OrchestrationState, EngineeringState, TriageStatus,
-    SemanticHealthMetric, JulesMetadata, CodeChangeArtifact, ContextSlice
+    SemanticHealthMetric, JulesMetadata, CodeChangeArtifact, ContextSlice, Ticket
 )
 from studio.orchestrator import Orchestrator
 from studio.utils.jules_client import WorkStatus
@@ -41,11 +41,14 @@ async def test_cognitive_tunneling_interception():
         session_id="test-session",
         user_intent="CODING",
         triage_status=TriageStatus(is_log_available=True, suspected_domain="drivers"),
-        current_context_slice=ContextSlice(intent="CODING", files=["src/auth.py"])
+        current_context_slice=ContextSlice(intent="CODING", files=["src/auth.py"]),
+        task_queue=[
+            Ticket(id="TKT-TUNNEL", title="Fix the bug", description="Fix it", priority="HIGH", source_section_id="1.1")
+        ]
     )
 
     eng_state = EngineeringState(
-        current_task="Fix the bug",
+        # current_task="Fix the bug",
         jules_meta=jules_meta
     )
 
@@ -80,7 +83,9 @@ async def test_cognitive_tunneling_interception():
 
         # Patch the calculator in both engineer subgraph and orchestrator
         # Also patch GenerativeModel and VertexFlashJudge in both modules to avoid Google Auth errors
-        with patch("studio.subgraphs.engineer.SemanticEntropyCalculator.measure_uncertainty", new_callable=AsyncMock) as mock_measure_sub, \
+        with patch("studio.orchestrator.run_po_cycle"), \
+             patch("studio.orchestrator.run_scrum_retrospective"), \
+             patch("studio.subgraphs.engineer.SemanticEntropyCalculator.measure_uncertainty", new_callable=AsyncMock) as mock_measure_sub, \
              patch("studio.orchestrator.SemanticEntropyCalculator.measure_uncertainty", new_callable=AsyncMock) as mock_measure_orch, \
              patch("studio.subgraphs.engineer.VertexFlashJudge"), \
              patch("studio.orchestrator.VertexFlashJudge"), \
@@ -126,7 +131,7 @@ async def test_cognitive_tunneling_interception():
             assert status == "FAILED"
 
             # C. 驗證 Entropy_Guard 紀錄了高語意熵
-            assert len(entropy_history) == 1
+            assert len(entropy_history) >= 1
             # If history items are dicts
             first_record = entropy_history[0]
             if isinstance(first_record, dict):
