@@ -15,7 +15,7 @@ Dependencies:
 """
 
 import logging
-from typing import Protocol, List, Dict, Optional, Literal, Union
+from typing import Protocol, List, Dict, Optional, Literal
 from enum import Enum
 from pydantic import BaseModel, Field, SecretStr
 
