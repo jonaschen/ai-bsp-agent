@@ -1,5 +1,4 @@
 import re
-from typing import List, Union
 from langchain_google_vertexai import ChatVertexAI
 from product.bsp_agent.core.state import AgentState
 
