@@ -367,11 +367,11 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
 
     return {"jules_metadata": jules_data}
 
-# --- 5. Architect Review Node (The Design Authority) ---
+# --- 5. Architect Gate Node (The Design Authority) ---
 
-async def node_architect_review(state: AgentState) -> Dict[str, Any]:
+async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
     """
-    Node: Architect_Review
+    Node: Architect_Gate
     Role: Design Authority & SOLID Enforcement.
 
     Responsibilities:
@@ -416,13 +416,7 @@ async def node_architect_review(state: AgentState) -> Dict[str, Any]:
     all_violations = []
 
     # We review all modified files
-    # Optimization: In a real system, we might only check changed files in the diff.
-    # Here, we check the files in the context slice that were patched.
     for filepath, full_source in patched_files.items():
-        # Skip test files? Maybe. Usually we want tests to be clean too.
-        # But 'AGENTS.md' emphasizes SOLID for the solution.
-        # For now, review everything in the slice.
-
         verdict = architect.review_code(filepath, full_source, ticket_context)
 
         if verdict.status in ["REJECTED", "NEEDS_REFACTOR"]:
@@ -430,7 +424,7 @@ async def node_architect_review(state: AgentState) -> Dict[str, Any]:
 
     # 3. Handle Verdict
     if all_violations:
-        logger.warning(f"Architect_Review: Code REJECTED with {len(all_violations)} violations.")
+        logger.warning(f"Architect_Gate: Code REJECTED with {len(all_violations)} violations.")
         jules_data.status = "FAILED" # Force loop back
 
         # Format feedback
@@ -567,15 +561,15 @@ def route_entropy_guard(state: AgentState) -> Literal["qa_verifier", "feedback_l
 
     return "watch_tower" # Default fallback
 
-def route_qa_verifier(state: AgentState) -> Literal["architect_review", "feedback_loop"]:
+def route_qa_verifier(state: AgentState) -> Literal["architect_gate", "feedback_loop"]:
     """
     Decides if the task is done (proceed to Architect) or needs correction.
     """
     if state["jules_metadata"].status == "COMPLETED":
-        return "architect_review"
+        return "architect_gate"
     return "feedback_loop"
 
-def route_architect_review(state: AgentState) -> Literal["end", "feedback_loop"]:
+def route_architect_gate(state: AgentState) -> Literal["end", "feedback_loop"]:
     """
     Decides if the task is architecturally sound.
     """
@@ -583,12 +577,12 @@ def route_architect_review(state: AgentState) -> Literal["end", "feedback_loop"]
         return "end"
     return "feedback_loop"
 
-def route_feedback_loop(state: AgentState) -> Literal["task_dispatcher", "end"]:
+def route_feedback_loop(state: AgentState) -> Literal["watch_tower", "end"]:
     """
     Decides whether to retry the loop or give up.
     """
     if state["jules_metadata"].status == "QUEUED": # Retry triggered
-        return "task_dispatcher"
+        return "watch_tower"
     return "end" # Max retries exceeded
 
 # --- Subgraph Builder ---
@@ -601,7 +595,7 @@ def build_engineer_subgraph() -> StateGraph:
     workflow.add_node("watch_tower", node_watch_tower)
     workflow.add_node("entropy_guard", node_entropy_guard)
     workflow.add_node("qa_verifier", node_qa_verifier)
-    workflow.add_node("architect_review", node_architect_review)
+    workflow.add_node("architect_gate", node_architect_gate)
     workflow.add_node("feedback_loop", node_feedback_loop)
 
     # Set Entry Point
@@ -635,14 +629,14 @@ def build_engineer_subgraph() -> StateGraph:
         "qa_verifier",
         route_qa_verifier,
         {
-            "architect_review": "architect_review",
+            "architect_gate": "architect_gate",
             "feedback_loop": "feedback_loop"
         }
     )
 
     workflow.add_conditional_edges(
-        "architect_review",
-        route_architect_review,
+        "architect_gate",
+        route_architect_gate,
         {
             "end": END,
             "feedback_loop": "feedback_loop"
@@ -653,7 +647,7 @@ def build_engineer_subgraph() -> StateGraph:
         "feedback_loop",
         route_feedback_loop,
         {
-            "task_dispatcher": "task_dispatcher", # The Loop Back
+            "watch_tower": "watch_tower", # The Loop Back to WatchTower as per diagram
             "end": END # Escalation
         }
     )

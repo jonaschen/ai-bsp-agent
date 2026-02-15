@@ -4,7 +4,7 @@ import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 from studio.memory import (
     StudioState, OrchestrationState, EngineeringState, TriageStatus,
-    SemanticHealthMetric, JulesMetadata, CodeChangeArtifact
+    SemanticHealthMetric, JulesMetadata, CodeChangeArtifact, Ticket
 )
 from studio.orchestrator import Orchestrator
 
@@ -13,12 +13,17 @@ os.environ["GOOGLE_CLOUD_PROJECT"] = "mock-project"
 
 @patch("studio.orchestrator.VertexFlashJudge")
 @patch("studio.orchestrator.GenerativeModel")
-def test_orchestrator_coding_flow(mock_gen_model, mock_vertex_judge):
+@patch("studio.orchestrator.run_po_cycle")
+@patch("studio.orchestrator.run_scrum_retrospective")
+def test_orchestrator_coding_flow(mock_run_retrospective, mock_run_po, mock_gen_model, mock_vertex_judge):
     # Setup state for CODING intent
     orch_state = OrchestrationState(
         session_id="test_1",
         user_intent="UNKNOWN", # Router should set this
-        triage_status=TriageStatus(is_log_available=True, suspected_domain="drivers")
+        triage_status=TriageStatus(is_log_available=True, suspected_domain="drivers"),
+        task_queue=[
+            Ticket(id="TKT-1", title="Fix the bug", description="Fix it", priority="HIGH", source_section_id="1.1")
+        ]
     )
     eng_state = EngineeringState()
     state = StudioState(orchestration=orch_state, engineering=eng_state)
