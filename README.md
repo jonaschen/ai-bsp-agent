@@ -19,15 +19,16 @@ The system operates as a **Hierarchical State Machine** orchestrated by LangGrap
 
 ### The Agent Team
 1.  **Orchestrator (The Executive):**
-    *   Manages the global state (`studio_state.json`) and routes tasks.
+    *   Operates the High-Level Lifecycle (Plan -> Execute -> Review) via LangGraph.
     *   Enforces **Context Slicing** to isolate agents from irrelevant data.
     *   Monitors **Semantic Entropy** to prevent "hallucinations" or cognitive tunneling.
 2.  **Product Owner (Strategy):**
-    *   Reads `PRODUCT_BLUEPRINT.md` and generates development tickets (User Stories).
+    *   Translates `PRODUCT_BLUEPRINT.md` into a dependency-aware Directed Acyclic Graph (DAG) of tickets.
     *   Maintains the Product Backlog.
 3.  **Engineer (Execution):**
-    *   Implements code and fixes based on tickets.
-    *   Operates within a sandboxed environment (`_workspace/`).
+    *   Jules Proxy: Manages asynchronous execution of coding tasks via remote workers.
+    *   Implements the "Micro-Loop": Plan -> Execute -> Monitor -> Verify -> Feedback.
+    *   Operates within a isolated **Docker Sandbox**.
 4.  **Architect (Governance):**
     *   Reviews all code and prompts against `AGENTS.md` (The Constitution).
     *   Enforces SOLID principles and security standards.
@@ -38,8 +39,8 @@ The system operates as a **Hierarchical State Machine** orchestrated by LangGrap
     *   Suggests optimizations to the Studio's prompts or workflows (OPRO).
 
 ### Key Features
-*   **Semantic Entropy Guardrail:** Uses `VertexFlashJudge` to measure the uncertainty of agent outputs. If entropy exceeds a threshold, the "Circuit Breaker" triggers to prevent compounding errors.
-*   **Context Slicing:** Dynamically filters the file system and logs presented to each agent, ensuring they only see what is relevant to their current task.
+*   **Semantic Entropy Guardrail:** Uses `VertexFlashJudge` to measure the uncertainty of agent outputs. If entropy (SE) exceeds 7.0, the "Circuit Breaker" triggers to prevent compounding errors and "Cognitive Tunneling".
+*   **Context Slicing:** Dynamically filters the file system and logs presented to each agent (Event Horizon), ensuring they only see what is relevant to their current task to prevent context collapse.
 *   **Evolution Safety Levels (ESL):**
     *   **ESL-1 (Product):** Automatic evolution of the product (prompts/code) via the Optimizer.
     *   **ESL-2 (Studio):** Manual review required for changes to the Studio's core logic or `AGENTS.md`.

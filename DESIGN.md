@@ -28,7 +28,10 @@ classDiagram
         +SemanticEntropyCalculator calculator
         +VertexFlashJudge judge
         +route_intent()
+        +node_product_owner()
+        +node_backlog_dispatcher()
         +slice_context()
+        +node_scrum_master()
         +check_semantic_health()
     }
 
@@ -45,7 +48,7 @@ classDiagram
         +node_watch_tower()
         +node_entropy_guard()
         +node_qa_verifier()
-        +node_architect_review()
+        +node_architect_gate()
         +node_feedback_loop()
     }
 
@@ -55,7 +58,7 @@ classDiagram
     }
 
     class ArchitectAgent {
-        +review_code(file_path, content, ticket)
+        +review_code(file_path, full_source, ticket_context, governance_hash)
     }
 
     class ProductOwnerAgent {
@@ -94,26 +97,32 @@ classDiagram
 
 ## Workflows
 
-### 1. Orchestration Flow
+### 1. Orchestration Flow (Phase 2 Lifecycle)
 
-The Orchestrator determines the high-level intent based on the triage status and routes to the appropriate subgraph. It uses Context Slicing to prepare data for the Engineer.
+The Orchestrator implements the full sprint lifecycle: PLAN (Product Owner) -> EXECUTE Loop (Backlog Dispatcher & Engineer) -> REVIEW (Scrum Master).
 
 ```mermaid
 stateDiagram-v2
     [*] --> IntentRouter
 
-    IntentRouter --> ContextSlicer: Intent = CODING
+    IntentRouter --> ProductOwner: Intent = SPRINT
+    IntentRouter --> BacklogDispatcher: Intent = CODING
     IntentRouter --> SOPGuide: Intent = INTERACTIVE_GUIDE
+
+    ProductOwner --> BacklogDispatcher: Generate Backlog
+
+    state BacklogDispatcher <<choice>>
+    BacklogDispatcher --> ContextSlicer: Next Ticket Available
+    BacklogDispatcher --> ScrumMaster: Backlog Empty
 
     ContextSlicer --> EngineerSubgraph: Sliced Context
 
-    EngineerSubgraph --> CircuitBreakerCheck: AgentStepOutput
+    EngineerSubgraph --> BacklogDispatcher: Task Success/Fail
 
-    state CircuitBreakerCheck <<choice>>
-    CircuitBreakerCheck --> Reflector: SE > 7.0 (Tunneling)
-    CircuitBreakerCheck --> [*]: Healthy
-
+    EngineerSubgraph --> Reflector: SE > 7.0 (Breaker)
     Reflector --> [*]: Circuit Breaker Triggered
+
+    ScrumMaster --> [*]
     SOPGuide --> [*]
 ```
 
@@ -128,7 +137,7 @@ stateDiagram-v2
     TaskDispatcher --> WatchTower: Dispatch Task (Async)
 
     state WatchTower <<choice>>
-    WatchTower --> WatchTower: Status = WORKING/QUEUED
+    WatchTower --> WatchTower: Status = WORKING/QUEUED/PLANNING
     WatchTower --> EntropyGuard: Status = COMPLETED/REVIEW_READY
     WatchTower --> HumanInterrupt: Status = BLOCKED
 
@@ -136,13 +145,14 @@ stateDiagram-v2
     EntropyGuard --> FeedbackLoop: SE > 7.0 (Tunneling)
     EntropyGuard --> QAVerifier: SE < 7.0 (Healthy)
 
-    QAVerifier --> ArchitectReview: Tests PASS
+    QAVerifier --> ArchitectGate: Tests PASS
     QAVerifier --> FeedbackLoop: Tests FAIL
 
-    ArchitectReview --> FeedbackLoop: Violations Found
-    ArchitectReview --> [*]: Approved
+    state ArchitectGate <<choice>>
+    ArchitectGate --> FeedbackLoop: Violations Found
+    ArchitectGate --> [*]: Approved
 
-    FeedbackLoop --> TaskDispatcher: Retry (Count < Max)
+    FeedbackLoop --> WatchTower: Retry (Count < Max)
     FeedbackLoop --> [*]: Max Retries Exceeded
 ```
 
@@ -154,7 +164,8 @@ stateDiagram-v2
 -   **Key Logic**:
     -   Analyzes the Blueprint using Gemini-1.5-Pro.
     -   Generates a dependency-aware graph of tickets (`Ticket` objects).
-    -   Performs **Topological Sort** to ensure tickets are executed in the correct order (Parents before Children).
+    -   Ensures **Traceability** by citing `source_section_id` from the Blueprint.
+    -   Performs **Topological Sort** (via `networkx`) to ensure tickets are executed in the correct order.
     -   Checks for duplicate tickets against the existing backlog.
 
 ### 2. Architect Agent (`studio/agents/architect.py`)
@@ -163,15 +174,16 @@ stateDiagram-v2
 -   **Key Logic**:
     -   Reads the system constitution (`AGENTS.md`) and hashes it for integrity.
     -   Reviews the **FULL** source code (not just diffs) to ensure holistic correctness.
+    -   Identifies **Violations** with line-level granularity and suggested fixes.
     -   Uses a strict Pydantic parser to generate a `ReviewVerdict`.
-    -   Rejects code that violates specific rules (SRP, DIP, Security), acting as a gatekeeper before merge.
+    -   Rejects code that violates specific rules (SRP, DIP, Security), acting as a gatekeeper (`ArchitectGate`).
 
 ### 3. Scrum Master Agent (`studio/agents/scrum_master.py`)
 -   **Role**: The Optimizer.
 -   **Responsibility**: Continuous improvement (Kaizen) of the agentic process.
 -   **Key Logic**:
     -   Analyzes Sprint Logs (Success/Failure rates, Entropy Scores).
-    -   Identifies recurring failure patterns (e.g., "Engineer ignores security").
+    -   Identifies recurring failure patterns (e.g., "Engineer keeps forgetting TDD").
     -   Generates `ProcessOptimization` suggestions (OPRO) to update system prompts.
     -   Produces a `RetrospectiveReport` at the end of each sprint.
 
@@ -179,19 +191,22 @@ stateDiagram-v2
 -   **Role**: The Worker.
 -   **Responsibility**: Asynchronous implementation of coding tasks.
 -   **Key Logic**:
-    -   **Task Dispatcher**: Context Slicing to prepare a minimal effective context.
-    -   **Watch Tower**: Polls the remote Jules worker for status updates.
-    -   **Entropy Guard**: Calculates Semantic Entropy (SE) to detect cognitive tunneling.
-    -   **QA Verifier**: Runs functional tests in a `DockerSandbox`.
-    -   **Feedback Loop**: Analyzes failures and retries with specific instructions.
+    -   **Task Dispatcher**: Initializes sessions and dispatches tasks to remote Jules workers.
+    -   **Watch Tower**: Polls remote status (WORKING, COMPLETED, BLOCKED).
+    -   **Entropy Guard**: Calculates Semantic Entropy (SE) to detect "Cognitive Tunneling".
+    -   **QA Verifier**: Runs functional tests in a `DockerSandbox` and generates evidence snippets.
+    -   **Architect Gate**: Enforces SOLID principles on the patched source code.
+    -   **Feedback Loop**: Performs Root Cause Analysis on failures and manages the self-correction loop.
 
 ## Data Models (`studio/memory.py`)
 
 The system relies on strict Pydantic schemas to enforce state integrity.
 
--   **StudioState**: The root state object containing `OrchestrationState` and `EngineeringState`.
--   **ContextSlice**: A subset of files and logs passed to agents to prevent context collapse.
--   **SemanticHealthMetric**: Tracks `entropy_score` (0.0-10.0) and `is_tunneling` status.
--   **Ticket**: Represents a unit of work with fields for `id`, `dependencies`, and `status`.
--   **ReviewVerdict**: The output of the Architect's review, containing a list of `Violation`s.
--   **JulesMetadata**: Tracks the state of the asynchronous engineer session (`session_id`, `status`, `retry_count`).
+-   **StudioState**: The root state object. Includes `system_version`, `circuit_breaker_triggered`, and `escalation_triggered` flags.
+-   **OrchestrationState**: Manages the sprint lifecycle, `task_queue` (Backlog), and logs (`completed_tasks_log`, `failed_tasks_log`).
+-   **EngineeringState**: Tracks the `current_task`, `proposed_patch`, and the `JulesMetadata` for the active worker.
+-   **ContextSlice**: Ephemeral data bundle (files, logs, constraints) passed to agents to prevent "Context Collapse". Includes the **Event Horizon** (sliced logs).
+-   **SemanticHealthMetric**: Tracks `entropy_score` (0.0-10.0) and `is_tunneling` status to trigger the circuit breaker.
+-   **Ticket**: Represents a unit of work with fields for `id`, `dependencies`, `status`, and `source_section_id`.
+-   **ReviewVerdict**: The output of the Architect's review, containing a list of `Violation`s and an optional `ArchitecturalDecisionRecord`.
+-   **JulesMetadata**: Manages the lifecycle of the asynchronous Jules worker, including `external_task_id`, `entropy_history`, and `test_results_history`.
