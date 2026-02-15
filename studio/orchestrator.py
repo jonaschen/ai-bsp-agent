@@ -183,7 +183,10 @@ class Orchestrator:
             next_ticket.status = "IN_PROGRESS"
             new_eng = EngineeringState(
                 current_task=f"{next_ticket.title}: {next_ticket.description}",
-                jules_meta=JulesMetadata(session_id=orch.session_id)
+                jules_meta=JulesMetadata(
+                    session_id=orch.session_id,
+                    max_retries=orch.task_max_retries
+                )
             )
             return {
                 "orchestration": orch,

@@ -221,6 +221,9 @@ class OrchestrationState(BaseModel):
     current_context_slice: Optional[ContextSlice] = None
     task_queue: List[Ticket] = Field(default_factory=list, description="The Product Backlog")
 
+    # Global Config
+    task_max_retries: int = 5
+
     # Sprint Management
     current_sprint_id: Optional[str] = None
     completed_tasks_log: List[Ticket] = []
