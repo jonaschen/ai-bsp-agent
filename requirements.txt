@@ -7,3 +7,4 @@ python-dotenv
 langchain-google-vertexai
 docker
 networkx
+pydantic-settings
