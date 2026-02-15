@@ -32,7 +32,7 @@ logger = logging.getLogger("studio.agents.architect")
 # --- THE AGENT ---
 
 class ArchitectAgent:
-    def __init__(self, model_name: str = "gemini-2.5-pro"):
+    def __init__(self, model_name: str = "gemini-1.5-pro"):
         self.llm = ChatVertexAI(
             model_name=model_name,
             temperature=0.0, # Strict Determinism
