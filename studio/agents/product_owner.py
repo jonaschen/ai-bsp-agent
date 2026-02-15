@@ -122,18 +122,14 @@ class ProductOwnerAgent:
                 if dep_id in ticket_map:
                     graph.add_edge(dep_id, t.id)
 
-        if not nx.is_directed_acyclic_graph(graph):
-            logger.error("Circular dependency detected in PO suggestions! Breaking cycles...")
-            # Fallback: Remove edges that cause cycles or return raw list
-            return tickets
-
         try:
             # Return in execution order
             execution_order = list(nx.topological_sort(graph))
-            return [ticket_map[tid] for tid in execution_order]
+            # Validate IDs to prevent crash if graph contains external nodes
+            return [ticket_map[tid] for tid in execution_order if tid in ticket_map]
         except nx.NetworkXUnfeasible:
-            # Should be caught by is_directed_acyclic_graph, but safe fallback
-             logger.error("Topological sort failed despite DAG check.")
+            # Cycle detected
+             logger.error("Circular dependency detected in PO suggestions! Returning unsorted list.")
              return tickets
 
 # --- Integration Helper (Patched) ---
