@@ -17,15 +17,14 @@ Dependencies:
 
 import logging
 import hashlib
-from typing import List, Optional, Literal, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any
 
 from langchain_google_vertexai import ChatVertexAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 
 # Import Memory Schema
-from studio.memory import ArchitecturalDecisionRecord, Violation, ReviewVerdict
+from studio.memory import Violation, ReviewVerdict
 
 logger = logging.getLogger("studio.agents.architect")
 
