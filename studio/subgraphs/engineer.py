@@ -29,7 +29,6 @@ from vertexai.generative_models import GenerativeModel
 from studio.utils.entropy_math import SemanticEntropyCalculator, VertexFlashJudge
 from studio.utils.sandbox import DockerSandbox
 from studio.utils.patching import apply_virtual_patch
-from studio.utils.prompts import ENGINEER_SYSTEM_PROMPT
 from studio.agents.architect import ArchitectAgent, ReviewVerdict
 
 logger = logging.getLogger("JulesProxy")
