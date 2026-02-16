@@ -2,7 +2,6 @@ import os
 import re
 import sys
 import logging
-import ast
 from pathlib import Path
 from dotenv import load_dotenv
 from langchain_google_vertexai import ChatVertexAI
@@ -13,32 +12,6 @@ load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-def find_system_prompt_node(code_string: str):
-    """
-    Parses a Python code string and finds the AST node for the top-level
-    SYSTEM_PROMPT or PROMPT_TEMPLATE variable assignment.
-
-    Args:
-        code_string: The Python code to parse.
-
-    Returns:
-        The ast.Assign node if found, otherwise None.
-    """
-    try:
-        tree = ast.parse(code_string)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Assign):
-                for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id in ["SYSTEM_PROMPT", "PROMPT_TEMPLATE"]:
-                        # Check if it's a top-level assignment
-                        # This is a simplification; a more robust check might be needed
-                        # to confirm it's not inside a function or class.
-                        # For now, we'll assume the first one found is the right one.
-                        return node
-    except SyntaxError:
-        return None
-    return None
 
 class OptimizerAgent:
     """
