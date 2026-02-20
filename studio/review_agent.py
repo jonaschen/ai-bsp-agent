@@ -186,47 +186,61 @@ class ReviewAgent:
         if not raw_text:
             raise ReviewAgentOutputError("Failed to parse Review Agent output: Empty response from LLM.")
 
-        # Extract JSON using regex
-        json_match = re.search(r'(\{.*\})', raw_text, re.DOTALL)
-        if not json_match:
+        # Robust extraction: Scan for valid JSON objects (dicts) in the text
+        candidates = []
+        decoder = json.JSONDecoder()
+        pos = 0
+        while True:
+            pos = raw_text.find('{', pos)
+            if pos == -1:
+                break
+            try:
+                obj, end_pos = decoder.raw_decode(raw_text, idx=pos)
+                if isinstance(obj, dict):
+                    candidates.append(obj)
+                pos = end_pos # Move past this object
+            except json.JSONDecodeError:
+                pos += 1 # Move past this { and try again
+                continue
+
+        if not candidates:
             logging.error(f"No JSON found in LLM output: {raw_text}")
             raise ReviewAgentOutputError(f"Failed to parse Review Agent output: No valid JSON found in response. Raw output: {raw_text}")
 
-        cleaned_text = json_match.group(1)
+        # Select the best candidate based on schema matching
+        def score_candidate(c):
+            score = 0
+            if "status" in c or "verdict" in c: score += 2
+            if "root_cause" in c or "comments" in c or "feedback" in c: score += 2
+            if "suggested_fix" in c: score += 1
+            if "approved" in c: score += 1
+            return score
 
-        # Remove potential Markdown fences inside the match if any (unlikely with this regex but safe)
-        if cleaned_text.startswith("```json"):
-            cleaned_text = cleaned_text[7:]
-        if cleaned_text.endswith("```"):
-            cleaned_text = cleaned_text[:-3]
-        cleaned_text = cleaned_text.strip()
+        # Prioritize high score, then length (assuming more content is better)
+        best_candidate = max(candidates, key=lambda c: (score_candidate(c), len(json.dumps(c))))
+        data = best_candidate
 
-        try:
-            data = json.loads(cleaned_text)
-            # Normalization to support both ReviewSummary and ReviewResult schemas
-            if "verdict" in data and "status" not in data:
-                v = str(data["verdict"]).upper()
-                data["status"] = "PASSED" if "PASS" in v else "FAILED"
-            if "comments" in data and "root_cause" not in data:
-                data["root_cause"] = data["comments"]
+        # Normalization to support both ReviewSummary and ReviewResult schemas
+        if "verdict" in data and "status" not in data:
+            v = str(data["verdict"]).upper()
+            data["status"] = "PASSED" if "PASS" in v else "FAILED"
+        if "comments" in data and "root_cause" not in data:
+            data["root_cause"] = data["comments"]
 
-            if "approved" in data and "status" not in data:
-                data["status"] = "PASSED" if data["approved"] else "FAILED"
-            if "feedback" in data and "root_cause" not in data:
-                data["root_cause"] = data["feedback"]
+        if "approved" in data and "status" not in data:
+            data["status"] = "PASSED" if data["approved"] else "FAILED"
+        if "feedback" in data and "root_cause" not in data:
+            data["root_cause"] = data["feedback"]
 
-            if "status" in data and "approved" not in data:
-                data["approved"] = data["status"] == "PASSED"
-            if "root_cause" in data and "feedback" not in data:
-                data["feedback"] = data["root_cause"]
+        if "status" in data and "approved" not in data:
+            data["approved"] = data["status"] == "PASSED"
+        if "root_cause" in data and "feedback" not in data:
+            data["feedback"] = data["root_cause"]
 
-            if "status" in data and "suggested_fix" not in data:
-                data["suggested_fix"] = "N/A"
+        if "status" in data and "suggested_fix" not in data:
+            data["suggested_fix"] = "N/A"
 
-            return data
-        except json.JSONDecodeError as e:
-            logging.error(f"JSON decoding failed for: {cleaned_text}. Error: {e}")
-            raise ReviewAgentOutputError(f"Failed to parse Review Agent output: {str(e)}. Raw output: {raw_text}")
+        return data
 
     def analyze(self, diff_content: str) -> ReviewSummary:
         """
