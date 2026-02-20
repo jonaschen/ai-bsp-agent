@@ -2,6 +2,8 @@
 
 > **Version:** v5.2.0 (Phase 3: Evolution & Reality)
 > **Status:** Active Development / Simulation
+>
+> *Note: While the system design targets Phase 3 (v5.2.0), the codebase currently initializes with a "Cold Start" version of v1.0.0 via `main.py`.*
 
 ## Project Overview
 
@@ -27,24 +29,26 @@ The system operates as a **Hierarchical State Machine** orchestrated by LangGrap
     *   Translates `PRODUCT_BLUEPRINT.md` into a dependency-aware Directed Acyclic Graph (DAG) of tickets.
     *   Maintains the Product Backlog.
 3.  **Engineer (Execution):**
-    *   Jules Proxy: Manages asynchronous execution of coding tasks via remote workers.
+    *   Jules Proxy: Manages asynchronous execution of coding tasks via remote workers using `JulesGitHubClient`.
     *   Implements the "Micro-Loop": Dispatch -> Watch -> Monitor (Entropy) -> Verify -> Feedback.
     *   Operates within a isolated **Docker Sandbox**.
 4.  **Architect (Governance):**
-    *   Reviews all code and prompts against `AGENTS.md` (The Constitution).
+    *   Reviews full source code against `AGENTS.md` (The Constitution) using `studio/agents/architect.py`.
     *   Enforces SOLID principles and security standards.
-5.  **QA Agent (Verification):**
-    *   Runs deterministic tests (`pytest`) and semantic similarity checks.
+5.  **QA Verifier (Verification):**
+    *   Implemented as a node within the Engineer Subgraph (`studio/subgraphs/engineer.py`).
+    *   Runs deterministic tests (`pytest`) in a `DockerSandbox`.
+    *   *(Note: `studio/qa_agent.py` exists as a standalone utility).*
 6.  **Scrum Master (Review):**
     *   Analyzes sprint logs to identify process bottlenecks.
     *   Triggers the **Optimizer** for OPRO.
 7.  **Optimizer (Evolution):**
     *   Implements **OPRO (Optimization by PROmpting)**.
-    *   Surgically patches agent prompts to fix recurring behavioral failures.
+    *   Surgically patches agent prompts in `prompts.json` to fix recurring behavioral failures.
 
 ### Key Features
 *   **Optimization by PROmpting (OPRO):** The system self-corrects its own instructions (`prompts.json`) based on retrospective analysis, allowing it to "learn" from mistakes.
-*   **Interactive Debugging (SOP Guide):** A specialized subgraph for handling "No-Log" scenarios where the user needs guidance to extract data before analysis can begin.
+*   **Interactive Debugging (SOP Guide):** A logical subgraph (within the Orchestrator) for handling "No-Log" scenarios where the user needs guidance to extract data before analysis can begin.
 *   **Semantic Entropy Guardrail:** Uses `VertexFlashJudge` to measure the uncertainty of agent outputs. If entropy (SE) exceeds 7.0, the "Circuit Breaker" triggers to prevent compounding errors and "Cognitive Tunneling".
 *   **Context Slicing:** Dynamically filters the file system and logs presented to each agent (Event Horizon), ensuring they only see what is relevant to their current task to prevent context collapse.
 *   **Evolution Safety Levels (ESL):**
@@ -64,11 +68,13 @@ The system operates as a **Hierarchical State Machine** orchestrated by LangGrap
 │   └── prompts/            # Product prompts (optimized by Scrum Master).
 ├── studio/                 # The Factory: The AI Software Studio.
 │   ├── agents/             # Agent implementations (Architect, PO, Scrum Master, Optimizer).
-│   ├── subgraphs/          # Subgraph definitions (Engineer, SOP Guide).
+│   ├── subgraphs/          # Subgraph definitions (Engineer).
 │   ├── memory.py           # Pydantic models and State definitions.
 │   ├── orchestrator.py     # Main runtime logic and StateGraph definition.
 │   ├── manager.py          # State persistence and management.
-│   └── utils/              # Utilities (Entropy Math, Sandbox, Patching).
+│   ├── review_agent.py     # Review utility (Alternative/Legacy).
+│   ├── qa_agent.py         # QA utility (Standalone).
+│   └── utils/              # Utilities (Entropy Math, Sandbox, Patching, Prompts).
 └── tests/                  # Test suite and Simulations.
     └── phase2_simulation.py # End-to-end simulation of the Studio workflow.
 ```
