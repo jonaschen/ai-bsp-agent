@@ -54,7 +54,7 @@ classDiagram
     }
 
     class SOPGuideSubgraph {
-        +StateGraph workflow
+        <<Logical Subgraph>>
         +handle_interactive_debugging()
     }
 
@@ -208,7 +208,7 @@ stateDiagram-v2
 -   **Role**: The Worker.
 -   **Responsibility**: Asynchronous implementation of coding tasks.
 -   **Key Logic**:
-    -   **Task Dispatcher**: Initializes sessions and dispatches tasks to remote Jules workers.
+    -   **Task Dispatcher**: Initializes sessions and dispatches tasks to remote Jules workers (`JulesGitHubClient`).
     -   **Watch Tower**: Polls remote status (WORKING, COMPLETED, BLOCKED).
     -   **Entropy Guard**: Calculates Semantic Entropy (SE) to detect "Cognitive Tunneling".
     -   **QA Verifier**: Runs functional tests in a `DockerSandbox` and generates evidence snippets.
@@ -220,7 +220,7 @@ stateDiagram-v2
 -   **Responsibility**: Implementing OPRO (Optimization by PROmpting).
 -   **Key Logic**:
     -   Receives `RetrospectiveReport` from Scrum Master.
-    -   Surgically patches `prompts.json` or `AGENTS.md` (if permitted) to integrate new rules.
+    -   Surgically patches `prompts.json` (via `studio/utils/prompts.py`) to integrate new rules.
     -   Validates that the patch does not break existing JSON structure.
 
 ## Data Models (`studio/memory.py`)
