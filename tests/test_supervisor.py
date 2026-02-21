@@ -88,3 +88,41 @@ def test_supervisor_routing(mock_chat):
 
     next_node = agent.route(state)
     assert next_node == "kernel_pathologist"
+
+@patch("product.bsp_agent.agents.supervisor.ChatVertexAI")
+@patch("product.bsp_agent.agents.supervisor.get_settings")
+def test_supervisor_dynamic_chunking(mock_settings, mock_chat):
+    """Verify chunking threshold is derived from settings.context_window."""
+    mock_settings.return_value.context_window = 1000 # Small window
+
+    agent = SupervisorAgent()
+    # 1000 tokens * 4 bytes = 4000 bytes
+    # Create a log that is > 4000 bytes AND has a failure pattern to trigger slicing
+    log_lines = [f"[{i}.000000] some log line" for i in range(1000)]
+    log_lines.append("[1000.000000] Kernel panic - not syncing: Fatal exception")
+    log_lines.extend([f"[{i}.000000] post panic log" for i in range(1001, 1100)])
+
+    large_log = "\n".join(log_lines)
+    assert len(large_log) > 4000
+
+    chunked = agent.chunk_log(large_log)
+    assert len(chunked) < len(large_log)
+    assert "Kernel panic" in chunked
+
+@pytest.mark.asyncio
+@patch("product.bsp_agent.agents.supervisor.SecureSandbox")
+@patch("product.bsp_agent.agents.supervisor.ChatVertexAI")
+async def test_supervisor_secure_triage(mock_chat, mock_sandbox):
+    """Test the secure_triage method uses SecureSandbox."""
+    mock_sb_instance = MagicMock()
+    mock_sandbox.return_value = mock_sb_instance
+
+    agent = SupervisorAgent()
+    log_content = "[    1.234567] Kernel panic"
+
+    await agent.secure_triage(log_content)
+
+    mock_sandbox.assert_called_once()
+    mock_sb_instance.setup_workspace.assert_called_once()
+    mock_sb_instance.run_command.assert_called()
+    mock_sb_instance.teardown.assert_called_once()

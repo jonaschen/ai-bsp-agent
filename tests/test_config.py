@@ -20,3 +20,7 @@ def test_model_stratification():
     settings = get_settings()
     assert settings.thinking_model == "gemini-1.5-pro"
     assert settings.doing_model == "gemini-1.5-flash"
+
+def test_context_window_setting():
+    settings = get_settings()
+    assert settings.context_window == 1000000

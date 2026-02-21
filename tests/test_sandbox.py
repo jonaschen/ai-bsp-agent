@@ -14,7 +14,37 @@ sys.modules["docker.errors"] = mock_docker.errors
 sys.modules["docker.models.containers"] = MagicMock()
 
 # Now it is safe to import
-from studio.utils.sandbox import DockerSandbox, CommandResult, TestRunResult
+from studio.utils.sandbox import DockerSandbox, SecureSandbox, CommandResult, TestRunResult
+
+class TestSecureSandbox:
+    @pytest.fixture
+    def mock_client(self):
+        with patch("studio.utils.sandbox.docker") as patched_docker:
+            client = MagicMock()
+            patched_docker.from_env.return_value = client
+            yield client
+
+    def test_secure_init_starts_restrictive_container(self, mock_client):
+        # Arrange
+        mock_container = MagicMock()
+        mock_client.containers.run.return_value = mock_container
+
+        # Act
+        sandbox = SecureSandbox(image="test-secure-image")
+
+        # Assert
+        mock_client.containers.run.assert_called_once()
+        args, kwargs = mock_client.containers.run.call_args
+
+        assert args[0] == "test-secure-image"
+        assert kwargs["read_only"] is True
+        assert kwargs["network_disabled"] is True
+        assert kwargs["mem_limit"] == "256m"
+        assert kwargs["auto_remove"] is True
+        assert "tmpfs" in kwargs
+        assert kwargs["tmpfs"]["/tmp"] == "size=64m"
+        assert kwargs["tmpfs"]["/workspace"] == "size=128m"
+
 
 class TestDockerSandbox:
     @pytest.fixture

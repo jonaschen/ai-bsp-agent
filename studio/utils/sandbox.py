@@ -214,3 +214,31 @@ class DockerSandbox:
 
     def __del__(self):
         self.teardown()
+
+
+class SecureSandbox(DockerSandbox):
+    """
+    A highly restrictive version of DockerSandbox for log processing and triage.
+    Enforces 'Read-Only' model and 'Transient' lifecycle.
+    """
+    def _start_container(self):
+        """Boots a locked-down ephemeral container."""
+        try:
+            logger.info(f"Booting Secure Sandbox ({self.image})...")
+            self.container = self.client.containers.run(
+                self.image,
+                command="tail -f /dev/null",
+                detach=True,
+                auto_remove=True,  # Transient
+                read_only=True,    # Read-Only Security Model
+                network_disabled=True, # Privacy / Isolation
+                mem_limit="256m",  # Resource constraints
+                tmpfs={
+                    "/tmp": "size=64m",
+                    "/workspace": "size=128m"
+                }
+            )
+            # No mkdir needed here as /workspace is handled by tmpfs
+        except DockerException as e:
+            logger.critical(f"Failed to start Secure Sandbox: {e}")
+            raise

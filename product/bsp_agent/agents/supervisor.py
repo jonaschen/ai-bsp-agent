@@ -1,11 +1,22 @@
 import re
+import logging
 from langchain_google_vertexai import ChatVertexAI
 from product.bsp_agent.core.state import AgentState
+from studio.config import get_settings
+from studio.utils.sandbox import SecureSandbox
+
+logger = logging.getLogger("studio.product.supervisor")
 
 class SupervisorAgent:
-    def __init__(self, model_name: str = "gemini-1.5-pro", chunk_threshold_mb: int = 50):
+    def __init__(self, model_name: str = "gemini-1.5-pro", chunk_threshold_mb: int = None):
         self.llm = ChatVertexAI(model_name=model_name)
-        self.chunk_threshold = chunk_threshold_mb * 1024 * 1024
+        settings = get_settings()
+
+        # Dynamic chunking based on context window (4x byte multiplier heuristic)
+        if chunk_threshold_mb is not None:
+            self.chunk_threshold = chunk_threshold_mb * 1024 * 1024
+        else:
+            self.chunk_threshold = settings.context_window * 4
 
     def validate_input(self, text: str) -> bool:
         """Check if input is valid (e.g., is it a log?)."""
@@ -45,6 +56,22 @@ class SupervisorAgent:
         if len(lines) > 5000:
             return "\n".join(lines[-5000:])
         return text
+
+    async def secure_triage(self, log_content: str):
+        """
+        Implements secure log processing via the SecureSandbox.
+        Ensures privacy by analyzing logs in a transient, read-only container.
+        """
+        logger.info("Initializing secure triage in transient container...")
+        sandbox = SecureSandbox()
+        try:
+            sandbox.setup_workspace({"input_log.txt": log_content})
+            # Simulate log analysis / grep for patterns
+            result = sandbox.run_command("grep -iE 'panic|oops|null pointer' input_log.txt")
+            logger.info(f"Secure Triage Pattern Match: {result.stdout[:100]}")
+            return result
+        finally:
+            sandbox.teardown()
 
     def route(self, state: AgentState) -> str:
         """Route the case to the Specialist or return CLARIFY_NEEDED."""

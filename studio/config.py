@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     thinking_model: str = "gemini-1.5-pro"
     doing_model: str = "gemini-1.5-flash"
 
+    # Cognitive Capacity (1M tokens)
+    context_window: int = Field(default=1000000, description="Max token capacity for the cognitive context window.")
+
     # Polling Configuration
     jules_poll_interval: float = Field(
         default_factory=lambda: 0.1 if (
