@@ -3,7 +3,7 @@ from langchain_google_vertexai import ChatVertexAI
 from product.bsp_agent.core.state import AgentState
 
 class SupervisorAgent:
-    def __init__(self, model_name: str = "gemini-1.5-pro", chunk_threshold_mb: int = 50):
+    def __init__(self, model_name: str = "gemini-2.5-pro", chunk_threshold_mb: int = 50):
         self.llm = ChatVertexAI(model_name=model_name)
         self.chunk_threshold = chunk_threshold_mb * 1024 * 1024
 

@@ -18,5 +18,5 @@ def test_settings_singleton():
 
 def test_model_stratification():
     settings = get_settings()
-    assert settings.thinking_model == "gemini-1.5-pro"
-    assert settings.doing_model == "gemini-1.5-flash"
+    assert settings.thinking_model == "gemini-2.5-pro"
+    assert settings.doing_model == "gemini-2.5-flash"
