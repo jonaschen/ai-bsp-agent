@@ -1,11 +1,19 @@
 import re
 from langchain_google_vertexai import ChatVertexAI
 from product.bsp_agent.core.state import AgentState
+from studio.config import get_settings
 
 class SupervisorAgent:
-    def __init__(self, model_name: str = "gemini-1.5-pro", chunk_threshold_mb: int = 50):
-        self.llm = ChatVertexAI(model_name=model_name)
-        self.chunk_threshold = chunk_threshold_mb * 1024 * 1024
+    def __init__(self, model_name: str = None, chunk_threshold_mb: int = None):
+        settings = get_settings()
+        self.model_name = model_name or settings.thinking_model
+        self.llm = ChatVertexAI(model_name=self.model_name)
+
+        if chunk_threshold_mb is not None:
+            self.chunk_threshold = chunk_threshold_mb * 1024 * 1024
+        else:
+            # 1M tokens approx 4MB. Use the provisioned context window.
+            self.chunk_threshold = settings.context_window * 4
 
     def validate_input(self, text: str) -> bool:
         """Check if input is valid (e.g., is it a log?)."""

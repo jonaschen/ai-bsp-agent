@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # Model Stratification Strategy
     thinking_model: str = "gemini-1.5-pro"
     doing_model: str = "gemini-1.5-flash"
+    context_window: int = 1000000
 
     # Polling Configuration
     jules_poll_interval: float = Field(
