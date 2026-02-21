@@ -11,6 +11,7 @@ Plan -> Execute -> Monitor (Entropy) -> Verify (TDD) -> Feedback.
 import asyncio
 import logging
 import os
+import re
 from typing import Literal, Dict, Any, List
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
@@ -28,7 +29,7 @@ from studio.utils.jules_client import JulesGitHubClient, TaskPayload, WorkStatus
 from vertexai.generative_models import GenerativeModel
 from studio.utils.entropy_math import SemanticEntropyCalculator, VertexFlashJudge
 from studio.utils.sandbox import DockerSandbox
-from studio.utils.patching import apply_virtual_patch
+from studio.utils.patching import apply_virtual_patch, extract_affected_files
 from studio.agents.architect import ArchitectAgent, ReviewVerdict
 from studio.config import get_settings
 
@@ -59,14 +60,45 @@ async def node_task_dispatcher(state: AgentState) -> Dict[str, Any]:
     # Save the prompt for entropy check later
     jules_data.current_task_prompt = task_description
 
-    # 2. Context Slicing Strategy
-    # We purposefully limit the context to avoid 'Inference Load' issues.
-    # In a full implementation, this uses a retrieval step (RAG).
-    # For this specification, we assume a helper function `get_relevant_context`.
-    # This aligns with the "Context Isolation" requirement.
-    # context_slice = await get_relevant_context(task_description)
+    # 2. Dynamic Context Slicing Strategy
+    # Extract potential file paths from the task description to provide targeted context.
+    # This avoids 'Context Collapse' while ensuring Jules has what it needs.
+
+    # Heuristic: Find strings that look like file paths
+    potential_files = re.findall(r'([\w/\-]+\.(?:py|txt|md|yml|yaml|json|c|h|cpp))', task_description)
+
+    # If it's a retry, we might want to include files mentioned in the feedback too
+    if is_retry and jules_data.feedback_log:
+        feedback_files = re.findall(r'([\w/\-]+\.(?:py|txt|md|yml|yaml|json|c|h|cpp))', jules_data.feedback_log[-1])
+        potential_files.extend(feedback_files)
+
+    # Filter and ensure existence (Fix 1 requirement)
+    target_files = []
+    for f in set(potential_files):
+        # We only care about paths that look internal (not http:// etc)
+        if "://" in f: continue
+
+        if not os.path.exists(f):
+            # If it's a new file task, create empty placeholder so Jules knows where to work
+            logger.info(f"Task_Dispatcher: Creating placeholder for new file {f}")
+            try:
+                dirname = os.path.dirname(f)
+                if dirname:
+                    os.makedirs(dirname, exist_ok=True)
+                with open(f, "w", encoding="utf-8") as f_out:
+                    f_out.write("") # Empty placeholder
+            except Exception as e:
+                logger.warning(f"Failed to create placeholder {f}: {e}")
+                continue
+
+        target_files.append(f)
+
+    # Fallback to a basic context if nothing identified
+    if not target_files:
+        target_files = ["README.md"] # Minimal anchor
+
     context_slice = ContextSlice(
-        files=["src/auth/login.py", "tests/auth/test_login.py"],
+        files=target_files,
         issues=[]
     )
     jules_data.active_context_slice = context_slice
@@ -286,27 +318,33 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
     files_to_patch = {}
     test_files = []
 
-    # Identify files from context slice
+    # 1. Gather files from context slice
+    all_target_files = set()
     if jules_data.active_context_slice and jules_data.active_context_slice.files:
-        for filepath in jules_data.active_context_slice.files:
-            try:
-                # In a real deployment, we'd fetch these from the repo
-                if os.path.exists(filepath):
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        files_to_patch[filepath] = f.read()
+        all_target_files.update(jules_data.active_context_slice.files)
 
-                # Assume tests are in 'tests/' directory or similar
-                if "test" in filepath or "spec" in filepath:
-                    test_files.append(filepath)
-            except FileNotFoundError:
-                logger.warning(f"Context file not found: {filepath}")
-
-    # Get the diff
+    # 2. Get the diff and extract ALL affected files (Dynamic Context Sync)
     diff_content = ""
     if jules_data.generated_artifacts:
         diff_content = jules_data.generated_artifacts[0].diff_content
+        affected_files = extract_affected_files(diff_content)
+        all_target_files.update(affected_files)
 
-    # Apply Patch
+    # 3. Load files from disk to populate the Sandbox
+    for filepath in all_target_files:
+        try:
+            # In a real deployment, we'd fetch these from the repo
+            if os.path.exists(filepath):
+                with open(filepath, "r", encoding="utf-8") as f:
+                    files_to_patch[filepath] = f.read()
+
+            # Identify tests to run
+            if "test" in filepath or "spec" in filepath:
+                test_files.append(filepath)
+        except FileNotFoundError:
+            logger.warning(f"File not found during sandbox prep: {filepath}")
+
+    # 4. Apply Patch
     try:
         patched_files = apply_virtual_patch(files_to_patch, diff_content)
     except Exception as e:
@@ -402,18 +440,23 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
 
     # 1. Reconstruct Context (Patched Code)
     files_to_patch = {}
+    all_target_files = set()
     if jules_data.active_context_slice and jules_data.active_context_slice.files:
-        for filepath in jules_data.active_context_slice.files:
-            try:
-                if os.path.exists(filepath):
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        files_to_patch[filepath] = f.read()
-            except FileNotFoundError:
-                pass
+        all_target_files.update(jules_data.active_context_slice.files)
 
     diff_content = ""
     if jules_data.generated_artifacts:
         diff_content = jules_data.generated_artifacts[0].diff_content
+        affected_files = extract_affected_files(diff_content)
+        all_target_files.update(affected_files)
+
+    for filepath in all_target_files:
+        try:
+            if os.path.exists(filepath):
+                with open(filepath, "r", encoding="utf-8") as f:
+                    files_to_patch[filepath] = f.read()
+        except Exception:
+            pass
 
     try:
         patched_files = apply_virtual_patch(files_to_patch, diff_content)

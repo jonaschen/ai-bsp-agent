@@ -69,10 +69,11 @@ import studio.config
 from studio.subgraphs import engineer
 
 # Mock settings
-with patch('studio.config.get_settings') as mock_settings:
+with patch('studio.subgraphs.engineer.get_settings') as mock_settings:
     mock_settings.return_value.github_token = "mock_token"
     mock_settings.return_value.github_repository = "mock_repo"
     mock_settings.return_value.jules_username = "mock_user"
+    mock_settings.return_value.jules_poll_interval = 0.1
 
     # Mock JulesGitHubClient inside engineer module
     class MockJulesGitHubClient:
