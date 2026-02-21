@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     thinking_model: str = "gemini-1.5-pro"
     doing_model: str = "gemini-1.5-flash"
 
+    # Polling Configuration
+    jules_poll_interval: int = 600
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
