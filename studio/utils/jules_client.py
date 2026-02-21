@@ -128,8 +128,7 @@ class JulesGitHubClient:
             issue = self.repo.create_issue(
                 title=f"[Studio Task] {payload.intent} ({payload.task_id})",
                 body=body,
-                labels=["ai-studio", f"priority:{payload.priority.value.lower()}"],
-                assignees=[self.jules_username] # Tag Jules directly
+                labels=["ai-studio", f"priority:{payload.priority.value.lower()}", "jules"]
             )
             logger.info(f"Task dispatched. Issue #{issue.number} created.")
             return str(issue.number)
