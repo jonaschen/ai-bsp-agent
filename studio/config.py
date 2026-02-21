@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import SecretStr, Field
 from typing import Optional
 import logging
+import os
 
 class Settings(BaseSettings):
     """
@@ -18,7 +19,9 @@ class Settings(BaseSettings):
     doing_model: str = "gemini-1.5-flash"
 
     # Polling Configuration
-    jules_poll_interval: int = 600
+    jules_poll_interval: float = Field(
+        default_factory=lambda: 1.0 if os.getenv("PYTEST_CURRENT_TEST") else 600.0
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
