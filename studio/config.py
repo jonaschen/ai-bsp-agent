@@ -2,6 +2,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import SecretStr, Field
 from typing import Optional
 import logging
+import os
+import sys
 
 class Settings(BaseSettings):
     """
@@ -16,6 +18,15 @@ class Settings(BaseSettings):
     # Model Stratification Strategy
     thinking_model: str = "gemini-1.5-pro"
     doing_model: str = "gemini-1.5-flash"
+
+    # Polling Configuration
+    jules_poll_interval: float = Field(
+        default_factory=lambda: 0.1 if (
+            os.getenv("PYTEST_CURRENT_TEST") or
+            "pytest" in sys.modules or
+            any("pytest" in arg for arg in sys.argv)
+        ) else 600.0
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
