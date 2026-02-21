@@ -139,7 +139,7 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
 
     # 1. Fetch Remote Status
     try:
-        remote_status: WorkStatus = client.get_status(jules_data.external_task_id)
+        remote_status: WorkStatus = await asyncio.to_thread(client.get_status, jules_data.external_task_id)
     except Exception as e:
         logger.error(f"Polling failed: {e}")
         # Transient error handling strategy could be implemented here
