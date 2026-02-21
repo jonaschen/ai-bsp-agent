@@ -128,7 +128,10 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
 
     # 0. Wait for the configured interval before polling
     # Because jules need time to finish PR implementation
-    logger.info(f"Watch_Tower: Waiting {settings.jules_poll_interval} seconds before polling...")
+    logger.info(
+        f"Watch_Tower: Waiting {settings.jules_poll_interval} "
+        "seconds before polling..."
+    )
     await asyncio.sleep(settings.jules_poll_interval)
 
     client = JulesGitHubClient(
