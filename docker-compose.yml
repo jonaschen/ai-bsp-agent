@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  studio:
+    build: .
+    volumes:
+      - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+    command: python main.py run

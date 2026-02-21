@@ -214,3 +214,29 @@ class DockerSandbox:
 
     def __del__(self):
         self.teardown()
+
+class SecureSandbox(DockerSandbox):
+    """
+    A highly restrictive Docker-based environment for log processing.
+    Ensures 'Read-Only' security constraint.
+    """
+    def _start_container(self):
+        """Boots a highly restricted ephemeral container."""
+        try:
+            logger.info(f"Booting Secure Sandbox ({self.image})...")
+            self.container = self.client.containers.run(
+                self.image,
+                command="tail -f /dev/null",
+                detach=True,
+                auto_remove=True,
+                read_only=True,
+                network_disabled=True,
+                mem_limit="256m",
+                tmpfs={
+                    "/tmp": "size=64m",
+                    "/workspace": "size=128m"
+                }
+            )
+        except DockerException as e:
+            logger.critical(f"Failed to start Secure Sandbox: {e}")
+            raise

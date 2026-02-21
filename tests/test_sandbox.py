@@ -14,7 +14,7 @@ sys.modules["docker.errors"] = mock_docker.errors
 sys.modules["docker.models.containers"] = MagicMock()
 
 # Now it is safe to import
-from studio.utils.sandbox import DockerSandbox, CommandResult, TestRunResult
+from studio.utils.sandbox import DockerSandbox, CommandResult, TestRunResult, SecureSandbox
 
 class TestDockerSandbox:
     @pytest.fixture
@@ -136,3 +136,35 @@ test_foo.py::test_3 FAILED
         # Assert
         mock_container.stop.assert_called_once()
         assert sandbox.container is None
+
+class TestSecureSandbox:
+    @pytest.fixture
+    def mock_client(self):
+        with patch("studio.utils.sandbox.docker") as patched_docker:
+            client = MagicMock()
+            patched_docker.from_env.return_value = client
+            yield client
+
+    def test_secure_init_constraints(self, mock_client):
+        # Arrange
+        mock_container = MagicMock()
+        mock_client.containers.run.return_value = mock_container
+
+        # Act
+        sandbox = SecureSandbox(image="secure-image")
+
+        # Assert
+        mock_client.containers.run.assert_called_once()
+        args, kwargs = mock_client.containers.run.call_args
+
+        assert args[0] == "secure-image"
+        assert kwargs["read_only"] is True
+        assert kwargs["network_disabled"] is True
+        assert kwargs["mem_limit"] == "256m"
+        assert kwargs["auto_remove"] is True
+
+        # Verify tmpfs mounts
+        assert "tmpfs" in kwargs
+        tmpfs = kwargs["tmpfs"]
+        assert tmpfs["/tmp"] == "size=64m"
+        assert tmpfs["/workspace"] == "size=128m"
