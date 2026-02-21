@@ -30,6 +30,7 @@ from studio.utils.entropy_math import SemanticEntropyCalculator, VertexFlashJudg
 from studio.utils.sandbox import DockerSandbox
 from studio.utils.patching import apply_virtual_patch
 from studio.agents.architect import ArchitectAgent, ReviewVerdict
+from studio.config import get_settings
 
 logger = logging.getLogger("JulesProxy")
 
@@ -80,9 +81,11 @@ async def node_task_dispatcher(state: AgentState) -> Dict[str, Any]:
 
     # 4. Asynchronous Handoff to Remote Jules
     # We use a client wrapper to abstract the A2A or MCP protocol details.[6]
+    settings = get_settings()
     client = JulesGitHubClient(
-        github_token=SecretStr(os.environ.get("GITHUB_TOKEN", "")),
-        repo_name=os.environ.get("GITHUB_REPOSITORY", "google/jules-studio")
+        github_token=settings.github_token,
+        repo_name=settings.github_repository,
+        jules_username=settings.jules_username
     )
 
     # Ideally, we only start a new task if we aren't already working.
@@ -121,9 +124,11 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
     3. Identifies 'NEEDS_INFO' states to trigger Human-in-the-loop interrupts.
     """
     jules_data = state["jules_metadata"]
+    settings = get_settings()
     client = JulesGitHubClient(
-        github_token=SecretStr(os.environ.get("GITHUB_TOKEN", "")),
-        repo_name=os.environ.get("GITHUB_REPOSITORY", "google/jules-studio")
+        github_token=settings.github_token,
+        repo_name=settings.github_repository,
+        jules_username=settings.jules_username
     )
 
     if not jules_data.external_task_id:
@@ -504,9 +509,11 @@ async def node_feedback_loop(state: AgentState) -> Dict[str, Any]:
     # (Already updated above)
 
     # 3. Post Feedback to Jules (The Hand)
+    settings = get_settings()
     client = JulesGitHubClient(
-        github_token=SecretStr(os.environ.get("GITHUB_TOKEN", "")),
-        repo_name=os.environ.get("GITHUB_REPOSITORY", "google/jules-studio")
+        github_token=settings.github_token,
+        repo_name=settings.github_repository,
+        jules_username=settings.jules_username
     )
     if jules_data.external_task_id:
         feedback_to_send = jules_data.feedback_log[-1]

@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     Implements 12-Factor App principles.
     """
     github_token: SecretStr = Field(default=SecretStr("mock-token"))
+    github_repository: str = Field(default="google/jules-studio")
+    jules_username: str = Field(default="google-jules")
     google_cloud_project: str = Field(default="mock-project")
 
     # Model Stratification Strategy
@@ -32,4 +34,6 @@ except Exception as e:
 def get_settings() -> Settings:
     """Returns the singleton settings instance."""
     global _settings
+    if _settings is None:
+        _settings = Settings()
     return _settings
