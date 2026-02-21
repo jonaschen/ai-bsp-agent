@@ -27,6 +27,18 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
     if not diff_content.strip():
         return files.copy()
 
+    # Normalize the diff to fix common "malformed patch" issues
+    # (e.g., missing leading spaces on context lines or empty context lines)
+    fixed_lines = []
+    for line in diff_content.splitlines():
+        if line.startswith(('+', '-', '@@', '\\', ' ')):
+            fixed_lines.append(line)
+        elif not line:
+            fixed_lines.append(' ')
+        else:
+            fixed_lines.append(' ' + line)
+    diff_content = "\n".join(fixed_lines) + "\n"
+
     with tempfile.TemporaryDirectory() as tmpdir:
         # 1. Write original files to temp dir
         for filepath, content in files.items():
