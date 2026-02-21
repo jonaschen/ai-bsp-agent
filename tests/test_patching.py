@@ -117,3 +117,20 @@ def test_apply_patch_p0_fallback():
         args, kwargs = mock_run.call_args_list[1]
         cmd = args[0]
         assert "-p0" in cmd
+
+def test_apply_patch_malformed_resilience():
+    files = {"hello.py": "print('hello')\n\nprint('world')\n"}
+    # Malformed diff: missing space on context lines (line 1 and empty line 2)
+    diff = """--- a/hello.py
++++ b/hello.py
+@@ -1,3 +1,3 @@
+print('hello')
+
+-print('world')
++print('fixed')
+"""
+    if not shutil.which("patch"):
+        pytest.skip("patch command not found")
+
+    result = apply_virtual_patch(files, diff)
+    assert result["hello.py"] == "print('hello')\n\nprint('fixed')\n"

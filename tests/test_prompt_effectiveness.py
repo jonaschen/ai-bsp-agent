@@ -45,7 +45,7 @@ The Studio must instantiate the following Multi-Agent System:
     * Compile the final **RCA Report**.
         """
 
-        po = ProductOwnerAgent(model_name="gemini-1.5-pro")
+        po = ProductOwnerAgent(model_name="gemini-2.5-pro")
 
         # We don't mock the LLM here.
         result = po.analyze_specs(blueprint_snippet, [])
@@ -96,7 +96,7 @@ class SystemManager:
 
         return True
 """
-        architect = ArchitectAgent(model_name="gemini-1.5-pro")
+        architect = ArchitectAgent(model_name="gemini-2.5-pro")
 
         verdict = architect.review_code(
             file_path="system_manager.py",

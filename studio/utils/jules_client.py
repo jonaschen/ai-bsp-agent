@@ -168,7 +168,26 @@ class JulesGitHubClient:
             # Fetch the diff for Entropy Calculation
             # Note: For massive diffs, we might need to truncate or fetch file-by-file
             diff_files = list(pr.get_files())
-            diff_text = "\n".join([f"--- {f.filename}\n+++ {f.filename}\n{f.patch}" for f in diff_files if f.patch])
+
+            diff_parts = []
+            for f in diff_files:
+                if not f.patch:
+                    continue
+
+                # Fix malformed patches from GitHub (missing leading spaces on context lines)
+                fixed_patch = []
+                for line in f.patch.splitlines():
+                    if line.startswith(('+', '-', '@@', '\\', ' ')):
+                        fixed_patch.append(line)
+                    elif not line:
+                        fixed_patch.append(' ')
+                    else:
+                        fixed_patch.append(' ' + line)
+
+                patch_content = "\n".join(fixed_patch) + "\n"
+                diff_parts.append(f"--- a/{f.filename}\n+++ b/{f.filename}\n{patch_content}")
+
+            diff_text = "".join(diff_parts)
 
             return WorkStatus(
                 tracking_id=external_id,
