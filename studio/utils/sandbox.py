@@ -18,7 +18,7 @@ import logging
 import tarfile
 import io
 import time
-from typing import Protocol, List, Dict, Optional, Tuple
+from typing import Protocol, List, Dict, Optional, Tuple, Any
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("studio.utils.sandbox")
@@ -30,6 +30,10 @@ try:
     from docker.models.containers import Container
 except ImportError:
     docker = None
+    # Define stubs for type hints if docker is missing
+    class DockerException(Exception): pass
+    class ContainerError(Exception): pass
+    class Container: pass
 
 # --- SECTION 1: Data Models (The Result Contracts) ---
 
@@ -84,13 +88,29 @@ class DockerSandbox:
     A disposable Docker container for running untrusted AI code.
     """
     def __init__(self, image: str = "python:3.10-slim", timeout_sec: int = 60):
+        # Initialize attributes to None first to avoid AttributeError in __del__ if init fails
+        self.client: Any = None
+        self.container: Any = None
+        self.image = image
+        self.timeout = timeout_sec
+
         if not docker:
             raise ImportError("Docker SDK not found. Run `pip install docker`.")
 
-        self.client = docker.from_env()
-        self.image = image
-        self.timeout = timeout_sec
-        self.container: Optional[Container] = None
+        try:
+            self.client = docker.from_env()
+            # Basic heartbeat to ensure the daemon is actually reachable
+            self.client.ping()
+        except Exception as e:
+            error_str = str(e)
+            if "FileNotFoundError" in error_str or "Connection aborted" in error_str:
+                logger.error(f"Docker daemon unreachable (socket not found). Error: {e}")
+                raise RuntimeError(
+                    "Docker Sandbox failure: Connection to Docker daemon failed. "
+                    "Ensure the Docker socket is mounted and the daemon is running."
+                ) from e
+            raise
+
         self._start_container()
 
     def _start_container(self):
