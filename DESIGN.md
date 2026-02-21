@@ -135,7 +135,7 @@ stateDiagram-v2
 
     EngineerSubgraph --> BacklogDispatcher: Task Success/Fail
 
-    EngineerSubgraph --> Reflector: SE > 7.0 (Breaker)
+    EngineerSubgraph --> Reflector: SE > 2.0 (Breaker)
     Reflector --> [*]: Circuit Breaker Triggered
 
     ScrumMaster --> Optimizer: Report Generated
@@ -159,8 +159,8 @@ stateDiagram-v2
     WatchTower --> HumanInterrupt: Status = BLOCKED (if enabled)
 
     state EntropyGuard <<choice>>
-    EntropyGuard --> FeedbackLoop: SE > 7.0 (Tunneling) or Status=FAILED
-    EntropyGuard --> QAVerifier: SE < 7.0 (Healthy) & Status=VERIFYING
+    EntropyGuard --> FeedbackLoop: SE > 2.0 (Tunneling) or Status=FAILED
+    EntropyGuard --> QAVerifier: SE < 2.0 (Healthy) & Status=VERIFYING
 
     QAVerifier --> ArchitectGate: Tests PASS
     QAVerifier --> FeedbackLoop: Tests FAIL

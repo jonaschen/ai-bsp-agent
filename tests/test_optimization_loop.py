@@ -51,6 +51,7 @@ def test_prompts_update_and_persistence():
 
     assert fetch_system_prompt("engineer") == new_prompt
 
+@patch.dict(os.environ, {"GITHUB_TOKEN": "test-token"})
 @patch("studio.agents.optimizer.ChatVertexAI")
 def test_optimizer_apply_optimizations(mock_chat):
     # Mock LLM response

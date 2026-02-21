@@ -1,97 +1,203 @@
+import os
+import re
+import sys
 import logging
-from typing import Dict, Any, List
+from pathlib import Path
+from dotenv import load_dotenv
 from langchain_google_vertexai import ChatVertexAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from studio.utils.prompts import update_system_prompt, fetch_system_prompt
 
-from studio.utils.prompts import fetch_system_prompt, update_system_prompt
-from studio.memory import RetrospectiveReport, ProcessOptimization
+load_dotenv()
 
-logger = logging.getLogger("studio.agents.optimizer")
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class OptimizerAgent:
     """
-    The Optimizer Agent (The Surgeon).
+    The Evolver Agent.
     Implements OPRO (Optimization by PROmpting).
-    It reads RetrospectiveReports and updates agent system prompts.
+    It reads failure logs and optimizes the SYSTEM_PROMPT of other agents.
+    Adheres to SOLID: Focuses solely on prompt optimization (SRP).
     """
-    def __init__(self, model_name: str = "gemini-2.5-flash"):
+    def __init__(self, logger=None):
+        self.logger = logger or logging.getLogger(__name__)
+        token = os.getenv("GITHUB_TOKEN")
+        if not token:
+            raise ValueError("GITHUB_TOKEN not found.")
+
+        # Use a high-reasoning model for meta-prompting
         self.llm = ChatVertexAI(
-            model_name=model_name,
-            temperature=0.1,  # Precise and conservative updates
-            max_output_tokens=4096
+            model_name="gemini-2.5-pro",
+            temperature=0.4, # Slightly creative to find better prompts
+            max_output_tokens=8192
         )
 
-        # Mapping from Scrum Master role names to prompt registry keys
-        self.role_mapping = {
-            "The Engineer": "engineer",
-            "Engineer": "engineer",
-            "The Architect": "architect",
-            "Architect": "architect",
-            "The Product Owner": "product_owner",
-            "Product Owner": "product_owner",
-            "The Scrum Master": "scrum_master",
-            "Scrum Master": "scrum_master"
-        }
+        self.history_path = "studio/review_history.md"
 
-    def _get_registry_key(self, role_name: str) -> str:
-        """Maps a role name to its registry key."""
-        return self.role_mapping.get(role_name, role_name.lower().replace(" ", "_"))
+    def apply_prompt_update(self, target_file_path: str, new_content: str):
+        """
+        Writes the optimized prompt content to the shadow deployment directory.
+        """
+        original_path = Path(target_file_path)
+        candidate_dir = Path("studio/_candidate")
+        candidate_path = candidate_dir / original_path.name
 
-    def apply_optimizations(self, report: RetrospectiveReport):
+        # Ensure the candidate directory exists
+        self.logger.info(f"Ensuring candidate directory exists: {candidate_dir}")
+        os.makedirs(candidate_dir, exist_ok=True)
+
+        # Write the new content to the candidate file
+        self.logger.info(f"Writing new prompt for {original_path.name} to {candidate_path}")
+        candidate_path.write_text(new_content)
+
+        # Log for the Manager/Reviewer
+        self.logger.info(
+            f"Candidate written to {candidate_path}. Waiting for Reviewer verification."
+        )
+
+    def analyze_failures(self, target_file: str) -> str:
         """
-        Iterates through the optimizations in the report and updates the prompts.
+        Reads the review history to find failures related to the target file.
         """
-        logger.info(f"Optimizer: Applying optimizations from report {report.sprint_id}...")
+        if not os.path.exists(self.history_path):
+            return "No history available."
+
+        with open(self.history_path, "r") as f:
+            history = f.read()
+
+        # Simple filter: In a real system, this would use LLM to extract relevant context
+        # For now, we assume the history contains relevant keywords (like filename)
+        # Rudimentary filter to get last few KBs of history
+        return history[-5000:]
+
+    def apply_optimizations(self, report):
+        """
+        Processes a RetrospectiveReport and updates system prompts via OPRO.
+        """
+        self.logger.info(f"Applying {len(report.optimizations)} optimizations from Scrum Master.")
+
         for opt in report.optimizations:
-            registry_key = self._get_registry_key(opt.target_role)
-            current_prompt = fetch_system_prompt(registry_key)
+            # Map role names to keys (e.g., "The Engineer" -> "engineer")
+            role_key = opt.target_role.lower().replace("the ", "").replace(" agent", "").replace(" ", "_")
 
-            logger.info(f"Optimizer: Updating prompt for {opt.target_role} ({registry_key})...")
-            new_prompt = self._rewrite_prompt(current_prompt, opt)
+            current_prompt = fetch_system_prompt(role_key)
 
-            if new_prompt:
-                update_system_prompt(registry_key, new_prompt)
-            else:
-                logger.warning(f"Optimizer: Failed to rewrite prompt for {opt.target_role}.")
+            # Meta-Prompting to integrate feedback
+            opro_prompt = f"""
+            You are a Meta-Prompt Optimizer.
+            Update the following agent prompt to address the detected issue.
 
-    def _rewrite_prompt(self, current_prompt: str, optimization: ProcessOptimization) -> str:
-        """
-        Uses meta-prompting to integrate a new rule into the existing prompt.
-        """
-        meta_prompt = ChatPromptTemplate.from_messages([
-            ("system", """
-            You are an AI Prompt Engineer specializing in OPRO (Optimization by PROmpting).
-            Your goal is to integrate a NEW RULE into an existing AI System Prompt.
-
-            **CRITICAL CONSTRAINTS:**
-            1. Preserve the core identity and existing instructions of the agent.
-            2. Integrate the NEW RULE organically into the appropriate section.
-            3. Do NOT just append the rule at the end if it can be merged with existing rules.
-            4. Keep the output clean and concise.
-            5. Output ONLY the updated prompt text.
-            """),
-            ("user", """
-            **EXISTING PROMPT:**
+            CURRENT PROMPT:
             {current_prompt}
 
-            **NEW RULE TO INTEGRATE:**
-            Issue Detected: {issue_detected}
-            Suggested Update: {suggested_prompt_update}
+            ISSUE DETECTED: {opt.issue_detected}
+            SUGGESTED UPDATE: {opt.suggested_prompt_update}
 
-            **UPDATED PROMPT:**
-            """)
-        ])
+            INSTRUCTIONS:
+            1. Keep the original role and responsibilities.
+            2. Surgically integrate the suggested update.
+            3. Ensure the output is a high-quality system prompt.
 
-        chain = meta_prompt | self.llm | StrOutputParser()
+            Output ONLY the new prompt content.
+            """
 
-        try:
-            new_prompt = chain.invoke({
-                "current_prompt": current_prompt,
-                "issue_detected": optimization.issue_detected,
-                "suggested_prompt_update": optimization.suggested_prompt_update
-            })
-            return new_prompt.strip()
-        except Exception as e:
-            logger.error(f"Optimizer failed to rewrite prompt: {e}")
-            return None
+            try:
+                # We use invoke directly here to match the expected test mock
+                response = self.llm.invoke(opro_prompt)
+                new_prompt = response.content if hasattr(response, 'content') else str(response)
+
+                update_system_prompt(role_key, new_prompt.strip())
+                self.logger.info(f"✅ Successfully optimized prompt for role: {role_key}")
+            except Exception as e:
+                self.logger.error(f"Failed to optimize prompt for {role_key}: {e}")
+
+    def optimize_prompt(self, target_file_path: str):
+        """
+        Reads the target python file, extracts the SYSTEM_PROMPT,
+        and generates an optimized version based on failure history.
+        """
+        logging.info(f"🧬 Optimizing prompt for: {target_file_path}")
+
+        if not os.path.exists(target_file_path):
+            logging.error(f"Target file {target_file_path} not found.")
+            return
+
+        with open(target_file_path, "r") as f:
+            code_content = f.read()
+
+        # 1. Extract current prompt using Regex (Assumes CAPITALIZED_VAR = """)
+        # Looking for variable assignment like: SYSTEM_PROMPT = """...""" or PROMPT = f"""..."""
+        # This regex looks for a variable name in ALL_CAPS followed by triple quotes
+        match = re.search(r'([A-Z_]+_PROMPT)\s*=\s*(f?\"\"\".*?\"\"\")', code_content, re.DOTALL)
+
+        if not match:
+            logging.warning(f"No optimization target (SYSTEM_PROMPT) found in {target_file_path}. Skipping.")
+            return
+
+        var_name = match.group(1)
+        current_prompt = match.group(2)
+
+        # 2. Get Failure Context
+        failure_context = self.analyze_failures(target_file_path)
+
+        # 3. Meta-Prompting (OPRO)
+        opro_prompt = """
+        You are an AI Optimization Engineer implementing OPRO (Optimization by PROmpting).
+
+        Your Goal: Optimize the System Prompt for an AI Agent to prevent future failures.
+
+        === TARGET AGENT SOURCE ===
+        File: {filename}
+        Variable: {var_name}
+        Current Content:
+        {current_prompt}
+
+        === FAILURE HISTORY & FEEDBACK ===
+        {failure_context}
+
+        === INSTRUCTIONS ===
+        1. Analyze why the current prompt failed based on the history (e.g., hallucinations, JSON errors).
+        2. Generate a NEW, IMPROVED prompt that addresses these specific edge cases.
+        3. Maintain the original intent but strengthen the constraints.
+        4. Apply SOLID principles: ensure the prompt focuses on the agent's Single Responsibility.
+
+        Output ONLY the new python code block for the variable assignment.
+        Example:
+        {var_name} = \"\"\"
+        New optimized content...
+        \"\"\"
+        """
+
+        chain = ChatPromptTemplate.from_template(opro_prompt) | self.llm | StrOutputParser()
+
+        optimized_assignment = chain.invoke({
+            "filename": target_file_path,
+            "var_name": var_name,
+            "current_prompt": current_prompt,
+            "failure_context": failure_context
+        })
+
+        # Clean up Markdown formatting if present
+        optimized_assignment = optimized_assignment.replace("```python", "").replace("```", "").strip()
+
+        # 4. Apply the Patch (Surgical Replacement)
+        if optimized_assignment and var_name in optimized_assignment:
+            new_code_content = code_content.replace(match.group(0), optimized_assignment)
+
+            self.apply_prompt_update(target_file_path, new_code_content)
+
+            self.logger.info(f"✅ Created candidate for {target_file_path}")
+            # In Level 5, we would now trigger a git commit or PR creation here.
+            # For now, we assume the user/Manager triggers the commit loop.
+        else:
+            logging.error("Optimization failed to produce valid code.")
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python -m studio.optimizer <target_file_path>")
+        sys.exit(1)
+
+    optimizer = OptimizerAgent()
+    optimizer.optimize_prompt(sys.argv[1])

@@ -22,8 +22,8 @@ class SemanticHealthMetric(BaseModel):
     Used by Orchestrator to trigger Circuit Breakers.
     Ref: [cite: 722]
     """
-    entropy_score: float = Field(..., description="Calculated uncertainty (0.0 - 10.0)")
-    threshold: float = 7.0
+    entropy_score: float = Field(..., description="Calculated uncertainty (Shannon Entropy)")
+    threshold: float = 2.0
     sample_size: int = Field(default=5, description="Number of parallel generations")
     is_tunneling: bool = Field(..., description="True if entropy_score > threshold")
     cluster_distribution: Dict[str, float] = Field(default={}, description="Distribution of semantic meanings")
@@ -43,11 +43,11 @@ class SemanticEntropyReading(BaseModel):
     A specific measurement of the agent's cognitive uncertainty.
     Used by the Entropy_Guard node to detect 'Cognitive Tunneling'.
 
-    Research Threshold: SE > 7.0 typically indicates hallucination or
-    reasoning loop collapse.
+    Research Threshold: SE > 2.0 typically indicates hallucination or
+    reasoning loop collapse (for N=5 samples).
     """
     score: float = Field(..., ge=0.0, description="The calculated entropy score (SE)")
-    threshold: float = Field(default=7.0, description="The breaker threshold at time of reading")
+    threshold: float = Field(default=2.0, description="The breaker threshold at time of reading")
     triggered_breaker: bool = Field(..., description="Whether this reading forced an interruption")
     context_hash: str = Field(..., description="Hash of the context slice used for this generation")
     reasoning_trace_summary: Optional[str] = Field(None, description="Summary of thoughts analyzed")
@@ -302,7 +302,7 @@ class StudioState(BaseModel):
     """
     # Meta-Data
     system_version: str = "5.2.0"
-    circuit_breaker_triggered: bool = False # Hard Stop for SE > 7.0 [cite: 733]
+    circuit_breaker_triggered: bool = False # Hard Stop for SE > 2.0 [cite: 733]
     escalation_triggered: bool = False # Explicit signal for human intervention
 
     # Layers

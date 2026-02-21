@@ -25,6 +25,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 
 from studio.memory import Ticket
+from studio.config import get_settings
 
 # We align the PO's view of a Ticket with the global memory schema.
 # Note: The original snippet defined POTicket locally.
@@ -40,9 +41,11 @@ class BlueprintAnalysis(BaseModel):
 logger = logging.getLogger("studio.agents.po")
 
 class ProductOwnerAgent:
-    def __init__(self, model_name: str = "gemini-3-pro-preview"):
+    def __init__(self, model_name: str = None):
+        settings = get_settings()
+        actual_model = model_name or settings.thinking_model
         self.llm = ChatVertexAI(
-            model_name=model_name,
+            model_name=actual_model,
             temperature=0.1, # Minimized entropy for strict dependency logic
             location="global",
             max_output_tokens=8192

@@ -31,13 +31,13 @@ The system operates as a **Hierarchical State Machine** orchestrated by LangGrap
 3.  **Engineer (Execution):**
     *   Jules Proxy: Manages asynchronous execution of coding tasks via remote workers using `JulesGitHubClient`.
     *   Implements the "Micro-Loop": Dispatch -> Watch -> Monitor (Entropy) -> Verify -> Feedback.
-    *   Operates within a isolated **Docker Sandbox**.
+    *   *Note: Does not run code locally; delegates execution to Jules.*
 4.  **Architect (Governance):**
     *   Reviews full source code against `AGENTS.md` (The Constitution) using `studio/agents/architect.py`.
     *   Enforces SOLID principles and security standards.
 5.  **QA Verifier (Verification):**
     *   Implemented as a node within the Engineer Subgraph (`studio/subgraphs/engineer.py`).
-    *   Runs deterministic tests (`pytest`) in a `DockerSandbox`.
+    *   Runs deterministic tests (`pytest`) in an isolated **Docker Sandbox**.
     *   *(Note: `studio/qa_agent.py` exists as a standalone utility).*
 6.  **Scrum Master (Review):**
     *   Analyzes sprint logs to identify process bottlenecks.
@@ -49,7 +49,7 @@ The system operates as a **Hierarchical State Machine** orchestrated by LangGrap
 ### Key Features
 *   **Optimization by PROmpting (OPRO):** The system self-corrects its own instructions (`prompts.json`) based on retrospective analysis, allowing it to "learn" from mistakes.
 *   **Interactive Debugging (SOP Guide):** A logical subgraph (within the Orchestrator) for handling "No-Log" scenarios where the user needs guidance to extract data before analysis can begin.
-*   **Semantic Entropy Guardrail:** Uses `VertexFlashJudge` to measure the uncertainty of agent outputs. If entropy (SE) exceeds 7.0, the "Circuit Breaker" triggers to prevent compounding errors and "Cognitive Tunneling".
+*   **Semantic Entropy Guardrail:** Uses `VertexFlashJudge` to measure the uncertainty of agent outputs. If entropy (SE) exceeds 2.0 (for N=5 samples), the "Circuit Breaker" triggers to prevent compounding errors and "Cognitive Tunneling".
 *   **Context Slicing:** Dynamically filters the file system and logs presented to each agent (Event Horizon), ensuring they only see what is relevant to their current task to prevent context collapse.
 *   **Evolution Safety Levels (ESL):**
     *   **ESL-1 (Product):** Automatic evolution of the product (prompts/code) via the Optimizer.
@@ -67,7 +67,7 @@ The system operates as a **Hierarchical State Machine** orchestrated by LangGrap
 │   ├── bsp_agent/          # Core logic of the product.
 │   └── prompts/            # Product prompts (optimized by Scrum Master).
 ├── studio/                 # The Factory: The AI Software Studio.
-│   ├── agents/             # Agent implementations (Architect, PO, Scrum Master, Optimizer).
+│   ├── agents/             # Agent implementations (Architect, PO, SM, Optimizer).
 │   ├── subgraphs/          # Subgraph definitions (Engineer).
 │   ├── memory.py           # Pydantic models and State definitions.
 │   ├── orchestrator.py     # Main runtime logic and StateGraph definition.
