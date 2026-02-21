@@ -185,7 +185,16 @@ class JulesGitHubClient:
                         fixed_patch.append(' ' + line)
 
                 patch_content = "\n".join(fixed_patch) + "\n"
-                diff_parts.append(f"--- a/{f.filename}\n+++ b/{f.filename}\n{patch_content}")
+
+                # Determine header based on status
+                if f.status == "added":
+                    header = f"--- /dev/null\n+++ b/{f.filename}\n"
+                elif f.status == "removed":
+                    header = f"--- a/{f.filename}\n+++ /dev/null\n"
+                else:
+                    header = f"--- a/{f.filename}\n+++ b/{f.filename}\n"
+
+                diff_parts.append(header + patch_content)
 
             diff_text = "".join(diff_parts)
 

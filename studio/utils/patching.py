@@ -13,6 +13,26 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger("studio.utils.patching")
 
+def extract_affected_files(diff_content: str) -> List[str]:
+    """
+    Extracts all file paths affected by a unified diff.
+    """
+    files = set()
+    for line in diff_content.splitlines():
+        if line.startswith('--- a/'):
+            path = line[6:].strip()
+            if path != '/dev/null':
+                files.add(path)
+        elif line.startswith('+++ b/'):
+            path = line[6:].strip()
+            if path != '/dev/null':
+                files.add(path)
+        elif line.startswith('--- /dev/null'):
+            continue # New file, nothing to load
+        elif line.startswith('+++ /dev/null'):
+            continue # Deleted file, but path should be in --- a/
+    return sorted(list(files))
+
 def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, str]:
     """
     Applies a unified diff to a set of files in memory.
@@ -67,19 +87,8 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
             )
 
             if result.returncode != 0:
-                logger.warning(f"Patch failed with -p1: {result.stderr or result.stdout}")
-                # Fallback? Maybe -p0?
-                cmd[1] = "-p0"
-                result = subprocess.run(
-                    cmd,
-                    cwd=tmpdir,
-                    capture_output=True,
-                    text=True,
-                    check=False
-                )
-                if result.returncode != 0:
-                     logger.error(f"Patch failed with -p0 as well: {result.stderr or result.stdout}")
-                     raise RuntimeError(f"Failed to apply patch: {result.stderr or result.stdout}")
+                logger.error(f"Patch failed with -p1: {result.stderr or result.stdout}")
+                raise RuntimeError(f"Failed to apply patch: {result.stderr or result.stdout}")
 
             logger.info("Patch applied successfully.")
 
