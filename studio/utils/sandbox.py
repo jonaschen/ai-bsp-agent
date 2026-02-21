@@ -84,13 +84,16 @@ class DockerSandbox:
     A disposable Docker container for running untrusted AI code.
     """
     def __init__(self, image: str = "python:3.10-slim", timeout_sec: int = 60):
+        # Initialize attributes to None first to avoid AttributeError during teardown if init fails
+        self.client = None
+        self.container = None
+
         if not docker:
             raise ImportError("Docker SDK not found. Run `pip install docker`.")
 
         self.client = docker.from_env()
         self.image = image
         self.timeout = timeout_sec
-        self.container: Optional[Container] = None
         self._start_container()
 
     def _start_container(self):
