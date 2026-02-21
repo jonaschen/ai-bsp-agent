@@ -28,7 +28,7 @@ from studio.utils.jules_client import JulesGitHubClient, TaskPayload, WorkStatus
 from vertexai.generative_models import GenerativeModel
 from studio.utils.entropy_math import SemanticEntropyCalculator, VertexFlashJudge
 from studio.utils.sandbox import DockerSandbox
-from studio.utils.patching import apply_virtual_patch
+from studio.utils.patching import apply_virtual_patch, extract_affected_files
 from studio.agents.architect import ArchitectAgent, ReviewVerdict
 from studio.config import get_settings
 
@@ -286,25 +286,31 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
     files_to_patch = {}
     test_files = []
 
-    # Identify files from context slice
-    if jules_data.active_context_slice and jules_data.active_context_slice.files:
-        for filepath in jules_data.active_context_slice.files:
-            try:
-                # In a real deployment, we'd fetch these from the repo
-                if os.path.exists(filepath):
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        files_to_patch[filepath] = f.read()
-
-                # Assume tests are in 'tests/' directory or similar
-                if "test" in filepath or "spec" in filepath:
-                    test_files.append(filepath)
-            except FileNotFoundError:
-                logger.warning(f"Context file not found: {filepath}")
-
     # Get the diff
     diff_content = ""
     if jules_data.generated_artifacts:
         diff_content = jules_data.generated_artifacts[0].diff_content
+
+    # Identify files from context slice AND from the diff itself
+    affected_files = set()
+    if jules_data.active_context_slice and jules_data.active_context_slice.files:
+        affected_files.update(jules_data.active_context_slice.files)
+
+    if diff_content:
+        affected_files.update(extract_affected_files(diff_content))
+
+    for filepath in affected_files:
+        try:
+            # In a real deployment, we'd fetch these from the repo
+            if os.path.exists(filepath):
+                with open(filepath, "r", encoding="utf-8") as f:
+                    files_to_patch[filepath] = f.read()
+
+            # Assume tests are in 'tests/' directory or similar
+            if "test" in filepath or "spec" in filepath:
+                test_files.append(filepath)
+        except FileNotFoundError:
+            logger.warning(f"Context/Affected file not found: {filepath}")
 
     # Apply Patch
     try:
@@ -402,18 +408,26 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
 
     # 1. Reconstruct Context (Patched Code)
     files_to_patch = {}
-    if jules_data.active_context_slice and jules_data.active_context_slice.files:
-        for filepath in jules_data.active_context_slice.files:
-            try:
-                if os.path.exists(filepath):
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        files_to_patch[filepath] = f.read()
-            except FileNotFoundError:
-                pass
 
     diff_content = ""
     if jules_data.generated_artifacts:
         diff_content = jules_data.generated_artifacts[0].diff_content
+
+    # Identify files from context slice AND from the diff itself
+    affected_files = set()
+    if jules_data.active_context_slice and jules_data.active_context_slice.files:
+        affected_files.update(jules_data.active_context_slice.files)
+
+    if diff_content:
+        affected_files.update(extract_affected_files(diff_content))
+
+    for filepath in affected_files:
+        try:
+            if os.path.exists(filepath):
+                with open(filepath, "r", encoding="utf-8") as f:
+                    files_to_patch[filepath] = f.read()
+        except FileNotFoundError:
+            pass
 
     try:
         patched_files = apply_virtual_patch(files_to_patch, diff_content)

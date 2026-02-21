@@ -13,6 +13,20 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger("studio.utils.patching")
 
+def extract_affected_files(diff_content: str) -> List[str]:
+    """
+    Extracts all unique file paths affected by a unified diff.
+    Supports both '--- a/path' and '+++ b/path' formats.
+    """
+    affected_files = set()
+    for line in diff_content.splitlines():
+        if line.startswith('--- a/') or line.startswith('+++ b/'):
+            # Strip '--- a/' or '+++ b/'
+            path = line[6:].strip()
+            if path and path != "/dev/null":
+                affected_files.add(path)
+    return sorted(list(affected_files))
+
 def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, str]:
     """
     Applies a unified diff to a set of files in memory.
@@ -54,7 +68,7 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
             f.write(diff_content)
 
         # 3. Apply patch
-        # We try -p1 first (standard for git diffs a/file b/file)
+        # We use -p1 strictly (standard for git diffs a/file b/file)
         cmd = ["patch", "-p1", "--input", "changes.patch"]
 
         try:
@@ -67,19 +81,8 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
             )
 
             if result.returncode != 0:
-                logger.warning(f"Patch failed with -p1: {result.stderr or result.stdout}")
-                # Fallback? Maybe -p0?
-                cmd[1] = "-p0"
-                result = subprocess.run(
-                    cmd,
-                    cwd=tmpdir,
-                    capture_output=True,
-                    text=True,
-                    check=False
-                )
-                if result.returncode != 0:
-                     logger.error(f"Patch failed with -p0 as well: {result.stderr or result.stdout}")
-                     raise RuntimeError(f"Failed to apply patch: {result.stderr or result.stdout}")
+                logger.error(f"Patch failed with -p1: {result.stderr or result.stdout}")
+                raise RuntimeError(f"Failed to apply patch: {result.stderr or result.stdout}")
 
             logger.info("Patch applied successfully.")
 

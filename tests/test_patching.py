@@ -3,7 +3,29 @@ import os
 import shutil
 import unittest.mock
 from unittest.mock import MagicMock
-from studio.utils.patching import apply_virtual_patch
+from studio.utils.patching import apply_virtual_patch, extract_affected_files
+
+def test_extract_affected_files():
+    diff = """--- a/file1.py
++++ b/file1.py
+@@ -1 +1 @@
+-old
++new
+--- /dev/null
++++ b/new_file.py
+@@ -0,0 +1 @@
++content
+--- a/deleted_file.py
++++ /dev/null
+@@ -1 +0,0 @@
+-content
+"""
+    files = extract_affected_files(diff)
+    assert "file1.py" in files
+    assert "new_file.py" in files
+    assert "deleted_file.py" in files
+    assert "/dev/null" not in files
+    assert len(files) == 3
 
 def test_apply_patch_success():
     files = {"hello.py": "print('hello')\n"}
@@ -81,8 +103,8 @@ def test_apply_patch_failure():
             apply_virtual_patch(files, diff)
 
         assert "Failed to apply patch" in str(excinfo.value)
-        # Should have tried twice (-p1 then -p0)
-        assert mock_run.call_count == 2
+        # Should have tried only once (-p1)
+        assert mock_run.call_count == 1
 
 def test_patch_command_not_found():
     files = {"file.py": "content"}
@@ -95,28 +117,6 @@ def test_patch_command_not_found():
             apply_virtual_patch(files, diff)
 
         assert "patch command not found" in str(excinfo.value)
-
-def test_apply_patch_p0_fallback():
-    files = {"file.py": "content"}
-    diff = "diff"
-
-    with unittest.mock.patch("subprocess.run") as mock_run:
-        # First call (-p1) fails, second call (-p0) succeeds
-        mock_run.side_effect = [
-            MagicMock(returncode=1, stderr="hunk failed"),
-            MagicMock(returncode=0)
-        ]
-
-        # Since we mock success but don't actually modify files on disk (mocked subprocess),
-        # the result will be the original files. This is expected in this mock scenario.
-        # We are testing the fallback logic here.
-        apply_virtual_patch(files, diff)
-
-        assert mock_run.call_count == 2
-        # Check second call arguments
-        args, kwargs = mock_run.call_args_list[1]
-        cmd = args[0]
-        assert "-p0" in cmd
 
 def test_apply_patch_malformed_resilience():
     files = {"hello.py": "print('hello')\n\nprint('world')\n"}
