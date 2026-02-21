@@ -13,6 +13,30 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger("studio.utils.patching")
 
+def extract_affected_files(diff_content: str) -> List[str]:
+    """
+    Extracts all unique file paths mentioned in a unified diff.
+    Supports both standard and git-style diffs.
+    """
+    affected_files = set()
+    for line in diff_content.splitlines():
+        # Unified diff headers: --- a/path/to/file or +++ b/path/to/file
+        if line.startswith("--- ") or line.startswith("+++ "):
+            # Extract path, removing '--- ' or '+++ '
+            path = line[4:].split('\t')[0].strip()
+
+            # Skip special markers
+            if path in ["/dev/null", ""]:
+                continue
+
+            # Strip git-style prefixes (a/ or b/)
+            if path.startswith("a/") or path.startswith("b/"):
+                path = path[2:]
+
+            affected_files.add(path)
+
+    return sorted(list(affected_files))
+
 def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, str]:
     """
     Applies a unified diff to a set of files in memory.
