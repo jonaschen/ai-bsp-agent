@@ -69,7 +69,7 @@ class Orchestrator:
         self.logger = logging.getLogger("Orchestrator")
 
         # Initialize the Semantic Sensor
-        self.judge = VertexFlashJudge(GenerativeModel("gemini-1.5-flash"))
+        self.judge = VertexFlashJudge(GenerativeModel("gemini-2.5-pro"))
         self.calculator = SemanticEntropyCalculator(self.judge)
 
         # Initialize the Worker Subgraphs
