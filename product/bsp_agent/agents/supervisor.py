@@ -50,7 +50,7 @@ class SupervisorAgent:
         """Route the case to the Specialist or return CLARIFY_NEEDED."""
         log_content = state.get("current_log_chunk", "")
 
-        if not self.validate_input(log_content):
+        if not log_content or not self.validate_input(log_content):
             return "clarify_needed"
 
         prompt = f"""
@@ -74,3 +74,90 @@ class SupervisorAgent:
             return "hardware_advisor"
         else:
             return "clarify_needed"
+
+    async def run(self, state: AgentState) -> AgentState:
+        """
+        Main loop for the Supervisor Agent (Agent A).
+        Handles user chat and case files, performing triage and routing.
+        """
+        messages = state.get("messages", [])
+        if not messages:
+            return state
+
+        last_message = messages[-1]
+        if isinstance(last_message, tuple):
+            role, content = last_message
+        else:
+            role, content = "user", last_message
+
+        # Triage Logic: Is this a log or a chat?
+        if self.validate_input(content):
+            # Input is a log file
+            processed_log = self.chunk_log(content)
+            state["current_log_chunk"] = processed_log
+
+            # Use SecureSandbox for initial triage (demonstrates secure processing)
+            specialist = self.secure_triage(processed_log)
+
+            # If secure triage is unsure, use LLM for deeper routing
+            if specialist == "clarify_needed":
+                specialist = self.route(state)
+
+            if specialist == "clarify_needed":
+                response_text = "Log received, but I'm unable to determine the cause. Could you provide more context or a different log section?"
+            else:
+                response_text = f"Log received and validated. I've routed this case to the {specialist.replace('_', ' ').title()} specialist."
+
+            state["messages"].append(("assistant", response_text))
+        else:
+            # Input is a chat message
+            prompt = f"""
+            You are the Supervisor Agent (Agent A) for the Android BSP Consultant squad.
+            Your role is to triage user inputs and logs.
+
+            User said: {content}
+
+            If they are asking for help without providing a log, ask them to upload a dmesg or kernel log.
+            If they are greeting you, respond politely and explain your role.
+            """
+            response = self.llm.invoke(prompt)
+            state["messages"].append(("assistant", response.content))
+
+        return state
+
+    def secure_triage(self, log_content: str) -> str:
+        """
+        Process logs in a SecureSandbox for privacy and isolation.
+        This demonstrates the implementation of secure log processing.
+        """
+        from studio.utils.sandbox import SecureSandbox
+
+        # Initialize the secure environment
+        sandbox = SecureSandbox()
+
+        try:
+            # Inject the log into the isolated workspace
+            sandbox.setup_workspace({"kernel.log": log_content})
+
+            # Run a basic analysis command in the sandbox
+            # In production, this would be a more complex analyzer script
+            result = sandbox.run_command("grep -Ei 'panic|null pointer|oops' kernel.log")
+
+            if result.exit_code == 0:
+                return "kernel_pathologist"
+
+            result = sandbox.run_command("grep -Ei 'watchdog|timeout|hang' kernel.log")
+            if result.exit_code == 0:
+                return "hardware_advisor"
+
+            return "clarify_needed"
+
+        except Exception as e:
+            # Fallback if Docker is unavailable
+            return "clarify_needed"
+        finally:
+            # Ensure the sandbox is destroyed
+            try:
+                sandbox.teardown()
+            except:
+                pass

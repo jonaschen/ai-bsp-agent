@@ -214,3 +214,36 @@ class DockerSandbox:
 
     def __del__(self):
         self.teardown()
+
+class SecureSandbox(DockerSandbox):
+    """
+    A highly restrictive version of the DockerSandbox for processing sensitive logs.
+    Features:
+    - Read-only root filesystem.
+    - Network disabled.
+    - Lower memory limit (256MB).
+    - In-memory ephemeral storage (tmpfs) for /tmp and /workspace.
+    """
+    def _start_container(self):
+        if not docker:
+            raise ImportError("Docker SDK not found. Run `pip install docker`.")
+
+        try:
+            logger.info(f"Booting Secure Sandbox ({self.image})...")
+            self.container = self.client.containers.run(
+                self.image,
+                command="tail -f /dev/null",
+                detach=True,
+                auto_remove=True,
+                mem_limit="256m",
+                network_disabled=True,
+                read_only=True,
+                tmpfs={
+                    '/tmp': 'size=64m',
+                    '/workspace': 'size=128m'
+                }
+            )
+            # Note: /workspace is writable because it's a tmpfs mount.
+        except Exception as e:
+            logger.critical(f"Failed to start Secure Sandbox: {e}")
+            raise
