@@ -119,5 +119,12 @@ Execute the full test suite using `pytest`:
 PYTHONPATH=. pytest tests/
 ```
 
+
+### Running the Factory
+``bash
+sudo systemctl start docker
+PYTHONPATH=. python main.py run
+```
+
 ## License
 [License Information Here]
