@@ -156,7 +156,7 @@ class VertexFlashJudge:
     Optimized for speed and cost.
     """
     def __init__(self, vertex_model):
-        self.model = vertex_model # e.g., GenerativeModel("gemini-1.5-flash")
+        self.model = vertex_model # e.g., GenerativeModel("gemini-2.5-flash")
 
     async def generate_samples(self, prompt: str, n: int, temperature: float = 0.7) -> List[str]:
         # Note: In production, use asyncio.gather for parallel calls

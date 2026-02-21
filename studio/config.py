@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     google_cloud_project: str = Field(default="mock-project")
 
     # Model Stratification Strategy
-    thinking_model: str = "gemini-1.5-pro"
-    doing_model: str = "gemini-1.5-flash"
+    thinking_model: str = "gemini-2.5-pro"
+    doing_model: str = "gemini-2.5-flash"
 
     # Polling Configuration
     jules_poll_interval: float = Field(

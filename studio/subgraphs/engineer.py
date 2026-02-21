@@ -219,7 +219,7 @@ async def node_entropy_guard(state: AgentState) -> Dict[str, Any]:
     # High SE means the model is oscillating between semantically distinct options.
 
     # Initialize the Sensor
-    judge = VertexFlashJudge(GenerativeModel("gemini-1.5-flash"))
+    judge = VertexFlashJudge(GenerativeModel("gemini-2.5-flash"))
     calculator = SemanticEntropyCalculator(judge)
 
     prompt = jules_data.current_task_prompt or "Unknown Intent"
