@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     github_repository: str = Field(default="google/jules-studio")
     jules_username: str = Field(default="google-jules")
     google_cloud_project: str = Field(default="mock-project")
+    vector_store_path: str = Field(default="data/vector_store")
+    context_window: int = Field(default=1000000)
 
     # Model Stratification Strategy
     thinking_model: str = "gemini-2.5-pro"

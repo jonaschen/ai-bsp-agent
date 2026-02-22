@@ -8,3 +8,8 @@ langchain-google-vertexai
 docker
 networkx
 pydantic-settings
+langchain-chroma
+chromadb
+langchain-community
+langchain-text-splitters
+pypdf
