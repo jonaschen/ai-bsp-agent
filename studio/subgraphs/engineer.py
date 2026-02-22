@@ -365,6 +365,10 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
     if jules_data.active_context_slice and jules_data.active_context_slice.files:
         all_target_files.update(jules_data.active_context_slice.files)
 
+    # Ensure pytest.ini is included in the sandbox context if it exists locally
+    if os.path.exists("pytest.ini"):
+        all_target_files.add("pytest.ini")
+
     # 2. Get the diff and extract ALL affected files (Dynamic Context Sync)
     diff_content = ""
     if jules_data.generated_artifacts:
@@ -380,8 +384,8 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
                 with open(filepath, "r", encoding="utf-8") as f:
                     files_to_patch[filepath] = f.read()
 
-            # Identify tests to run
-            if "test" in filepath or "spec" in filepath:
+            # Identify tests to run (Must be .py files)
+            if (".py" in filepath) and ("test" in filepath or "spec" in filepath):
                 test_files.append(filepath)
         except FileNotFoundError:
             logger.warning(f"File not found during sandbox prep: {filepath}")
