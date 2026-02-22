@@ -122,7 +122,13 @@ PYTHONPATH=. pytest tests/
 
 ### Running the Factory
 ``bash
-sudo systemctl start docker
+# To start the Docker daemon (the engine) before you try to apply group permissions or interact with it.
+sudo systemctl start docker 
+# Logging into a new shell session where your primary group ID is temporarily changed to the docker group.
+newgrp docker
+# Activate the Python virtual environment.
+source venv/bin/activate
+# Execute the production entry point.
 PYTHONPATH=. python main.py run
 ```
 
