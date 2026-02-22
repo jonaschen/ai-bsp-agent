@@ -28,7 +28,7 @@ from studio.memory import (
 from studio.utils.jules_client import JulesGitHubClient, TaskPayload, WorkStatus, TaskPriority
 from vertexai.generative_models import GenerativeModel
 from studio.utils.entropy_math import SemanticEntropyCalculator, VertexFlashJudge
-from studio.utils.sandbox import DockerSandbox
+from studio.utils.sandbox import DockerSandbox, TestRunResult
 from studio.utils.patching import apply_virtual_patch, extract_affected_files
 from studio.agents.architect import ArchitectAgent, ReviewVerdict
 from studio.config import get_settings
@@ -373,18 +373,22 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
         all_target_files.update(affected_files)
 
     # 3. Load files from disk to populate the Sandbox
+    # Ensure pytest.ini is included for proper configuration
+    if os.path.exists("pytest.ini"):
+        all_target_files.add("pytest.ini")
+
     for filepath in all_target_files:
         try:
             # In a real deployment, we'd fetch these from the repo
-            if os.path.exists(filepath):
+            if os.path.exists(filepath) and os.path.isfile(filepath):
                 with open(filepath, "r", encoding="utf-8") as f:
                     files_to_patch[filepath] = f.read()
 
-            # Identify tests to run
-            if "test" in filepath or "spec" in filepath:
-                test_files.append(filepath)
-        except FileNotFoundError:
-            logger.warning(f"File not found during sandbox prep: {filepath}")
+                # Identify tests to run (Must be .py files)
+                if filepath.endswith(".py") and ("test" in filepath or "spec" in filepath):
+                    test_files.append(filepath)
+        except Exception as e:
+            logger.warning(f"Failed to process file {filepath} for sandbox: {e}")
 
     # 4. Apply Patch
     try:
@@ -424,7 +428,26 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
         if test_files:
              target = " ".join(test_files)
 
-        test_output = sandbox.run_pytest(target)
+        # Guard: If targeting "tests/" but no files in tests/ were uploaded,
+        # pytest will fail with "file or directory not found".
+        # We check if any file in tests/ exists in our patched set.
+        has_tests_in_sandbox = any(k.startswith("tests/") for k in patched_files.keys())
+
+        if target == "tests/" and not has_tests_in_sandbox:
+            logger.warning("No tests found in tests/ directory for sandbox.")
+            # In TDD mode, this is a failure
+            status = "FAIL"
+            logs = "No tests found to run. Ensure you have created a test file in 'tests/' directory to satisfy TDD requirements."
+            test_output = TestRunResult(
+                test_id="tests/",
+                passed=False,
+                total_tests=0,
+                failed_tests=0,
+                error_log=logs,
+                duration_ms=0
+            )
+        else:
+            test_output = sandbox.run_pytest(target)
 
         sandbox.teardown()
         sandbox = None
