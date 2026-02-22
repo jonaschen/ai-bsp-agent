@@ -390,9 +390,22 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
         status = "PASS" if test_output.passed else "FAIL"
         logs = test_output.error_log or "Tests Passed"
 
-    except Exception as e:
+    except PermissionError as e:
         status = "ERROR"
-        logs = str(e)
+        logs = f"INFRASTRUCTURE_ERROR: PermissionError - {str(e)}"
+        if sandbox:
+            try:
+                sandbox.teardown()
+            except Exception:
+                pass
+    except Exception as e:
+        if "PermissionError" in str(e):
+            status = "ERROR"
+            logs = f"INFRASTRUCTURE_ERROR: {str(e)}"
+        else:
+            status = "ERROR"
+            logs = str(e)
+
         if sandbox:
             try:
                 sandbox.teardown()
@@ -572,13 +585,24 @@ async def node_feedback_loop(state: AgentState) -> Dict[str, Any]:
         client.post_feedback(jules_data.external_task_id, feedback_to_send, is_error=True)
 
     # 4. Retry Logic (Self-Correction)
-    if jules_data.retry_count < jules_data.max_retries:
+    is_infra_error = False
+    latest_test = jules_data.test_results_history[-1] if jules_data.test_results_history else None
+    if latest_test and "INFRASTRUCTURE_ERROR" in latest_test.logs:
+        is_infra_error = True
+
+    if not is_infra_error and jules_data.retry_count < jules_data.max_retries:
         jules_data.retry_count += 1
         jules_data.status = "QUEUED" # Reset status to trigger Task_Dispatcher
         logger.info(f"Feedback_Loop: Triggering Retry {jules_data.retry_count}/{jules_data.max_retries}")
 
         # Add a message to the conversation history so the Orchestrator is aware of the churn
         messages.append(HumanMessage(content=f"Retry {jules_data.retry_count}: Automated feedback generated based on failure."))
+    elif is_infra_error:
+        # Infrastructure failure - Stop loop to prevent wasting retries
+        jules_data.status = "FAILED"
+        error_msg = f"**SYSTEM**: Infrastructure error detected ({latest_test.logs if latest_test else 'Unknown'}). Stopping retries."
+        messages.append(AIMessage(content=error_msg))
+        logger.error(f"Feedback_Loop: {error_msg}")
     else:
         # Max retries exceeded - Escalation
         jules_data.status = "FAILED"
