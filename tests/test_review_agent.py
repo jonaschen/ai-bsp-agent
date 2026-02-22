@@ -1,13 +1,10 @@
 import unittest
 import sys
 import os
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
-# Mock dotenv before importing studio.review_agent
-sys.modules["dotenv"] = MagicMock()
-sys.modules["langchain_google_vertexai"] = MagicMock()
-sys.modules["langchain_core"] = MagicMock()
-sys.modules["langchain_core.messages"] = MagicMock()
+# Ensure studio can be imported
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 class MockBaseModel:
     def __init__(self, **kwargs):
@@ -18,14 +15,21 @@ class MockBaseModel:
     def model_validate(cls, data):
         return cls(**data)
 
-mock_pydantic = MagicMock()
-mock_pydantic.BaseModel = MockBaseModel
-sys.modules["pydantic"] = mock_pydantic
-
-# Ensure studio can be imported
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 class TestReviewAgentImport(unittest.TestCase):
+    def setUp(self):
+        # Local mock to avoid global pollution
+        self.modules_patcher = patch.dict(sys.modules, {
+            "dotenv": MagicMock(),
+            "langchain_google_vertexai": MagicMock(),
+            "langchain_core": MagicMock(),
+            "langchain_core.messages": MagicMock(),
+            "pydantic": MagicMock(BaseModel=MockBaseModel)
+        })
+        self.modules_patcher.start()
+
+    def tearDown(self):
+        self.modules_patcher.stop()
+
     def test_import_review_agent(self):
         """Test that studio.review_agent can be imported."""
         try:
@@ -41,7 +45,7 @@ class TestReviewAgentImport(unittest.TestCase):
         from studio.review_agent import ReviewAgent
 
         # Mock environment variables
-        with unittest.mock.patch.dict(os.environ, {"PROJECT_ID": "test-project"}):
+        with patch.dict(os.environ, {"PROJECT_ID": "test-project"}):
              agent = ReviewAgent()
              # Manually mock LLM since it's disabled in tests by default logic
              agent.llm = MagicMock()
