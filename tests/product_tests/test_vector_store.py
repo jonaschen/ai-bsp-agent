@@ -64,3 +64,60 @@ async def test_vector_store_manager_add_and_search(temp_vector_store):
         assert len(results) > 0
         # Since [0.1]*10 is exactly the same as the first doc's embedding, it should be the top result
         assert "PMIC" in results[0].page_content
+
+@pytest.mark.asyncio
+async def test_vector_store_persistence(temp_vector_store):
+    # Mock settings and embeddings
+    with patch("product.bsp_agent.core.vector_store.get_settings") as mock_get_settings, \
+         patch("product.bsp_agent.core.vector_store.VertexAIEmbeddings") as mock_embeddings:
+
+        mock_settings = MagicMock()
+        mock_settings.vector_store_path = temp_vector_store
+        mock_settings.google_cloud_project = "test-project"
+        mock_settings.embedding_model = "test-model"
+        mock_get_settings.return_value = mock_settings
+
+        mock_emb_inst = MagicMock()
+        mock_emb_inst.embed_documents.return_value = [[0.1] * 10]
+        mock_emb_inst.embed_query.return_value = [0.1] * 10
+        mock_embeddings.return_value = mock_emb_inst
+
+        # Instance 1: Add data
+        manager1 = VectorStoreManager()
+        await manager1.aadd_texts(["Persistent Data"], metadatas=[{"id": 1}])
+
+    # Instance 2: Retrieve data (re-mocking to ensure separate instance)
+    with patch("product.bsp_agent.core.vector_store.get_settings") as mock_get_settings, \
+         patch("product.bsp_agent.core.vector_store.VertexAIEmbeddings") as mock_embeddings:
+
+        mock_settings = MagicMock()
+        mock_settings.vector_store_path = temp_vector_store
+        mock_settings.google_cloud_project = "test-project"
+        mock_settings.embedding_model = "test-model"
+        mock_get_settings.return_value = mock_settings
+
+        mock_emb_inst = MagicMock()
+        mock_emb_inst.embed_documents.return_value = [[0.1] * 10]
+        mock_emb_inst.embed_query.return_value = [0.1] * 10
+        mock_embeddings.return_value = mock_emb_inst
+
+        manager2 = VectorStoreManager()
+        results = await manager2.asimilarity_search("Persistent", k=1)
+
+        assert len(results) > 0
+        assert "Persistent Data" in results[0].page_content
+
+@pytest.mark.asyncio
+async def test_invalid_settings():
+    """Test behavior when settings are invalid."""
+    with patch("product.bsp_agent.core.vector_store.get_settings") as mock_get_settings:
+        mock_settings = MagicMock()
+        mock_settings.vector_store_path = "/tmp/invalid_path"
+        mock_settings.google_cloud_project = None # Invalid
+        mock_settings.embedding_model = None # Invalid
+        mock_get_settings.return_value = mock_settings
+
+        # VertexAIEmbeddings usually raises error if project or model is None
+        with patch("product.bsp_agent.core.vector_store.VertexAIEmbeddings", side_effect=ValueError("Invalid config")):
+            with pytest.raises(ValueError, match="Invalid config"):
+                VectorStoreManager()
