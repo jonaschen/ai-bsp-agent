@@ -372,7 +372,23 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
         affected_files = extract_affected_files(diff_content)
         all_target_files.update(affected_files)
 
-    # 3. Load files from disk to populate the Sandbox
+    # 3. Ensure core testing infrastructure is included
+    # This prevents sandbox crashes when Jules doesn't touch tests
+    infra_files = ["pytest.ini", "requirements.txt"]
+    for f in infra_files:
+        if os.path.exists(f):
+            all_target_files.add(f)
+
+    # If no tests are currently identified, pull in the tests/ directory
+    # to ensure 'pytest tests/' has targets.
+    has_tests = any(f.endswith(".py") and ("test" in f or "spec" in f) for f in all_target_files)
+    if not has_tests and os.path.exists("tests"):
+        for root, _, files in os.walk("tests"):
+            for file in files:
+                if file.endswith(".py") and ("test" in file or "spec" in file):
+                    all_target_files.add(os.path.join(root, file))
+
+    # 4. Load files from disk to populate the Sandbox
     for filepath in all_target_files:
         try:
             # In a real deployment, we'd fetch these from the repo
