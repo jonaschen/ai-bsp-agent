@@ -11,3 +11,4 @@ PyGithub
 python-dotenv
 docker
 networkx
+langgraph
