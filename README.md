@@ -49,7 +49,7 @@ The system operates as a **Hierarchical State Machine** orchestrated by LangGrap
 ### Key Features
 *   **Optimization by PROmpting (OPRO):** The system self-corrects its own instructions (`prompts.json`) based on retrospective analysis, allowing it to "learn" from mistakes.
 *   **Interactive Debugging (SOP Guide):** A logical subgraph (within the Orchestrator) for handling "No-Log" scenarios where the user needs guidance to extract data before analysis can begin.
-*   **Semantic Entropy Guardrail:** Uses `VertexFlashJudge` to measure the uncertainty of agent outputs. If entropy (SE) exceeds 7.0, the "Circuit Breaker" triggers to prevent compounding errors and "Cognitive Tunneling".
+*   **Semantic Entropy Guardrail:** Uses `VertexFlashJudge` to measure the uncertainty of agent outputs. If entropy (SE) exceeds 2.0, the "Circuit Breaker" triggers to prevent compounding errors and "Cognitive Tunneling".
 *   **Context Slicing:** Dynamically filters the file system and logs presented to each agent (Event Horizon), ensuring they only see what is relevant to their current task to prevent context collapse.
 *   **Evolution Safety Levels (ESL):**
     *   **ESL-1 (Product):** Automatic evolution of the product (prompts/code) via the Optimizer.

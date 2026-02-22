@@ -72,7 +72,7 @@ async def test_architect_veto():
         # Mock Entropy Calculator to return LOW ENTROPY
         low_entropy_metric = SemanticHealthMetric(
             entropy_score=0.5,
-            threshold=7.0,
+            threshold=2.0,
             sample_size=5,
             is_tunneling=False,
             cluster_distribution={"Cluster_0": 1.0}

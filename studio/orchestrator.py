@@ -47,7 +47,7 @@ def engineer_subgraph_node(state: ContextSlice) -> Dict:
         "thought_process": "Analyzed dependencies and applied fix.",
         "cognitive_health": {
             "entropy_score": 0.5,
-            "threshold": 7.0,
+            "threshold": 2.0,
             "sample_size": 5,
             "is_tunneling": False,
             "cluster_distribution": {}

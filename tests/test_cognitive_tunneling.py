@@ -74,8 +74,8 @@ async def test_cognitive_tunneling_interception():
 
         # Mock Entropy Calculator to return HIGH ENTROPY
         high_entropy_metric = SemanticHealthMetric(
-            entropy_score=8.5,
-            threshold=7.0,
+            entropy_score=2.5,
+            threshold=2.0,
             sample_size=5,
             is_tunneling=True,
             cluster_distribution={"Cluster_0": 0.2, "Cluster_1": 0.2, "Cluster_2": 0.2, "Cluster_3": 0.2, "Cluster_4": 0.2}
@@ -135,10 +135,10 @@ async def test_cognitive_tunneling_interception():
             # If history items are dicts
             first_record = entropy_history[0]
             if isinstance(first_record, dict):
-                assert first_record.get("score") == 8.5
+                assert first_record.get("score") == 2.5
                 assert first_record.get("triggered_breaker") is True
             else:
-                assert first_record.score == 8.5
+                assert first_record.score == 2.5
                 assert first_record.triggered_breaker is True
 
             # D. 流程 不應該 進入 QA_Verifier (DockerSandbox should not be called)
