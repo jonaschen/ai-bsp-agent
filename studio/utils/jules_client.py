@@ -227,6 +227,28 @@ class JulesGitHubClient:
             logger.error(f"Failed to post feedback to #{external_id}: {e}")
             return False
 
+    def merge_pr(self, pr_number: int) -> bool:
+        """
+        Merges the specified Pull Request.
+        """
+        try:
+            pr = self.repo.get_pull(pr_number)
+            if pr.merged:
+                logger.info(f"PR #{pr_number} is already merged.")
+                return True
+
+            status = pr.merge(merge_method="merge")
+            if status.merged:
+                logger.info(f"Successfully merged PR #{pr_number}")
+                return True
+            else:
+                logger.error(f"Failed to merge PR #{pr_number}: {status.message}")
+                return False
+
+        except GithubException as e:
+            logger.error(f"GitHub error while merging PR #{pr_number}: {e}")
+            return False
+
     # --- Internal Helpers ---
 
     def _construct_issue_body(self, payload: TaskPayload) -> str:

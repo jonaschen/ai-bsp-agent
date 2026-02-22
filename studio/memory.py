@@ -150,6 +150,8 @@ class JulesMetadata(BaseModel):
 
     # Feedback & Control
     feedback_log: List[str] = Field(default_factory=list, description="Accumulated feedback from QA and Architect")
+    last_verified_commit: Optional[str] = Field(None, description="The last commit hash that was sent to verification")
+    last_verified_pr_number: Optional[int] = Field(None, description="The PR number associated with the last verified commit")
     retry_count: int = 0
     max_retries: int = 5
 
