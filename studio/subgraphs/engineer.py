@@ -397,7 +397,7 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
                     files_to_patch[filepath] = f.read()
 
             # Identify tests to run
-            if "test" in filepath or "spec" in filepath:
+            if filepath.endswith(".py") and ("test" in filepath or "spec" in filepath):
                 test_files.append(filepath)
         except FileNotFoundError:
             logger.warning(f"File not found during sandbox prep: {filepath}")
