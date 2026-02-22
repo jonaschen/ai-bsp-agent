@@ -1,10 +1,13 @@
 langchain
 langchain-google-vertexai
+langchain-community
+langchain-chroma
+chromadb
 pydantic
+pydantic-settings
 pytest
+pytest-asyncio
 PyGithub
 python-dotenv
-langchain-google-vertexai
 docker
 networkx
-pydantic-settings
