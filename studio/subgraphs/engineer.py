@@ -35,6 +35,44 @@ from studio.config import get_settings
 
 logger = logging.getLogger("JulesProxy")
 
+def is_valid_local_path(path: str) -> bool:
+    """
+    Validates if a string that looks like a path is a safe, local project path.
+    Prevents Orchestrator from accidentally creating garbage folders or
+    trying to write to absolute paths (e.g., /workspace).
+    """
+    # 1. Ignore absolute paths (Safety & Permission issues)
+    if path.startswith("/"):
+        return False
+    # 2. Ignore paths with double slashes (often malformed or // protocol)
+    if "//" in path:
+        return False
+    # 3. Ignore paths escaping current directory
+    if ".." in path:
+        return False
+    # 4. Ignore common noise patterns from pytest/docs/stdlib
+    noise_patterns = [
+        "org/en/stable",
+        "unittest/mock.py",
+        "workspace/",
+        "http:",
+        "https:"
+    ]
+    for pattern in noise_patterns:
+        if pattern in path:
+            return False
+
+    # 5. Reject spaces (Safety & Convention)
+    if " " in path:
+        return False
+
+    # 6. Extension check (Must be one of the supported source types)
+    supported_extensions = ('.py', '.txt', '.md', '.yml', '.yaml', '.json', '.c', '.h', '.cpp')
+    if not path.endswith(supported_extensions):
+        return False
+
+    return True
+
 # --- 1. Task Dispatcher Node ---
 
 async def node_task_dispatcher(state: AgentState) -> Dict[str, Any]:
@@ -65,18 +103,22 @@ async def node_task_dispatcher(state: AgentState) -> Dict[str, Any]:
     # This avoids 'Context Collapse' while ensuring Jules has what it needs.
 
     # Heuristic: Find strings that look like file paths
-    potential_files = re.findall(r'([\w/\-]+\.(?:py|txt|md|yml|yaml|json|c|h|cpp))', task_description)
+    # Improved regex: avoids matching leading slashes or dots
+    path_regex = r'(?<![\w/\-.])([\w\-]+(?:/[\w\-]+)*\.(?:py|txt|md|yml|yaml|json|c|h|cpp))'
+    potential_files = re.findall(path_regex, task_description)
 
     # If it's a retry, we might want to include files mentioned in the feedback too
     if is_retry and jules_data.feedback_log:
-        feedback_files = re.findall(r'([\w/\-]+\.(?:py|txt|md|yml|yaml|json|c|h|cpp))', jules_data.feedback_log[-1])
+        feedback_files = re.findall(path_regex, jules_data.feedback_log[-1])
         potential_files.extend(feedback_files)
 
     # Filter and ensure existence (Fix 1 requirement)
     target_files = []
     for f in set(potential_files):
-        # We only care about paths that look internal (not http:// etc)
-        if "://" in f: continue
+        # Apply strict validation
+        if not is_valid_local_path(f):
+            logger.info(f"Task_Dispatcher: Skipping invalid path {f}")
+            continue
 
         if not os.path.exists(f):
             # If it's a new file task, create empty placeholder so Jules knows where to work
