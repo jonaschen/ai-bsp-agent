@@ -20,3 +20,9 @@ def test_model_stratification():
     settings = get_settings()
     assert settings.thinking_model == "gemini-2.5-pro"
     assert settings.doing_model == "gemini-2.5-flash"
+
+def test_rag_configuration():
+    settings = get_settings()
+    assert settings.vector_store_path == "data/vector_store"
+    assert settings.embedding_model == "textembedding-gecko@003"
+    assert settings.context_window == 1000000

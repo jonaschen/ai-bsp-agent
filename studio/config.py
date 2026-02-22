@@ -15,9 +15,16 @@ class Settings(BaseSettings):
     jules_username: str = Field(default="google-jules")
     google_cloud_project: str = Field(default="mock-project")
 
+    # RAG Configuration
+    vector_store_path: str = Field(default="data/vector_store")
+    embedding_model: str = Field(default="textembedding-gecko@003")
+
     # Model Stratification Strategy
     thinking_model: str = "gemini-2.5-pro"
     doing_model: str = "gemini-2.5-flash"
+
+    # Context Configuration
+    context_window: int = Field(default=1000000)
 
     # Polling Configuration
     jules_poll_interval: float = Field(

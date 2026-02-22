@@ -432,7 +432,11 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
              raise RuntimeError("Failed to setup workspace")
 
         # 3. Install Deps
-        sandbox.install_dependencies(["pytest", "mock"]) # Basic deps
+        deps = ["pytest", "mock"]
+        if "requirements.txt" in patched_files:
+            deps.append("-r requirements.txt")
+
+        sandbox.install_dependencies(deps)
 
         # 4. Run Tests
         # If no specific tests identified, run all in tests/
