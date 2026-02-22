@@ -91,7 +91,16 @@ class DockerSandbox:
         if not docker:
             raise ImportError("Docker SDK not found. Run `pip install docker`.")
 
-        self.client = docker.from_env()
+        try:
+            # Robust daemon connectivity handling
+            self.client = docker.from_env()
+            # Verify connectivity immediately to catch permission errors or daemon issues
+            self.client.ping()
+        except Exception as e:
+            logger.error(f"Docker connection failed: {e}")
+            # Raise a cleaner error for the QA Agent feedback loop
+            raise RuntimeError(f"Docker Sandbox unavailable: {e}")
+
         self.image = image
         self.timeout = timeout_sec
         self._start_container()

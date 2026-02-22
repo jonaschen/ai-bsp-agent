@@ -136,3 +136,27 @@ test_foo.py::test_3 FAILED
         # Assert
         mock_container.stop.assert_called_once()
         assert sandbox.container is None
+
+    def test_init_fails_on_permission_error(self, mock_client):
+        # Arrange
+        error_msg = "Error while fetching server API version: Permission denied"
+        with patch("studio.utils.sandbox.docker.from_env") as mock_from_env:
+             mock_from_env.side_effect = Exception(error_msg)
+
+             # Act & Assert
+             with pytest.raises(RuntimeError) as excinfo:
+                 DockerSandbox()
+
+             assert "Docker Sandbox unavailable" in str(excinfo.value)
+             assert "Permission denied" in str(excinfo.value)
+
+    def test_init_fails_on_ping_error(self, mock_client):
+        # Arrange
+        mock_client.ping.side_effect = Exception("Daemon unreachable")
+
+        # Act & Assert
+        with pytest.raises(RuntimeError) as excinfo:
+            DockerSandbox()
+
+        assert "Docker Sandbox unavailable" in str(excinfo.value)
+        assert "Daemon unreachable" in str(excinfo.value)
