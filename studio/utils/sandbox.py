@@ -217,3 +217,139 @@ class DockerSandbox:
 
     def __del__(self):
         self.teardown()
+
+class SecureSandbox:
+    """
+    A highly restrictive Docker container for sensitive log processing.
+    - Read-only root filesystem
+    - No networking
+    - 256MB memory limit
+    - Ephemeral (auto-remove)
+    """
+    def __init__(self, image: str = "python:3.10-slim", timeout_sec: int = 60):
+        # Initialize attributes to None first to avoid AttributeError during teardown if init fails
+        self.client = None
+        self.container = None
+
+        if not docker:
+            raise ImportError("Docker SDK not found. Run `pip install docker`.")
+
+        self.client = docker.from_env()
+        self.image = image
+        self.timeout = timeout_sec
+        self._start_container()
+
+    def _start_container(self):
+        """Boots a highly restricted ephemeral container."""
+        try:
+            logger.info(f"Booting Secure Sandbox ({self.image})...")
+            self.container = self.client.containers.run(
+                self.image,
+                command="tail -f /dev/null", # Keep alive
+                detach=True,
+                auto_remove=True, # Cleanup on stop
+                mem_limit="256m", # Resource constraint
+                network_disabled=True, # Privacy constraint
+                read_only=True, # Security constraint
+                # Mount a small tmpfs for the workspace so we can still inject data
+                tmpfs={'/workspace': 'rw,size=64m'}
+            )
+        except DockerException as e:
+            logger.critical(f"Failed to start Secure Docker Sandbox: {e}")
+            raise
+
+    def setup_workspace(self, files: Dict[str, str]) -> bool:
+        """
+        Injects code/logs into the restricted workspace.
+        """
+        if not self.container:
+            raise RuntimeError("Sandbox not running.")
+
+        stream = io.BytesIO()
+        with tarfile.open(fileobj=stream, mode='w') as tar:
+            for filename, content in files.items():
+                encoded = content.encode('utf-8')
+                info = tarfile.TarInfo(name=filename)
+                info.size = len(encoded)
+                tar.addfile(info, io.BytesIO(encoded))
+
+        stream.seek(0)
+
+        try:
+            self.container.put_archive("/workspace", stream)
+            logger.info(f"Injected {len(files)} files into secure workspace.")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to upload to secure workspace: {e}")
+            return False
+
+    def install_dependencies(self, requirements: List[str]) -> CommandResult:
+        """
+        Fails intentionally as networking is disabled.
+        """
+        return CommandResult(
+            exit_code=1,
+            stdout="",
+            stderr="Network disabled in SecureSandbox. Cannot install dependencies.",
+            duration_ms=0
+        )
+
+    def run_command(self, command: str, timeout: int = 30) -> CommandResult:
+        """
+        Executes a shell command inside the container.
+        """
+        if not self.container:
+            raise RuntimeError("Sandbox not running.")
+
+        start_time = time.time()
+        try:
+            exit_code, output = self.container.exec_run(
+                f"bash -c 'cd /workspace && {command}'",
+                demux=True
+            )
+            duration = (time.time() - start_time) * 1000
+
+            stdout = output[0].decode('utf-8') if output[0] else ""
+            stderr = output[1].decode('utf-8') if output[1] else ""
+
+            return CommandResult(
+                exit_code=exit_code,
+                stdout=stdout,
+                stderr=stderr,
+                duration_ms=duration
+            )
+        except Exception as e:
+            return CommandResult(exit_code=-1, stdout="", stderr=str(e), duration_ms=0)
+
+    def run_pytest(self, test_path: str) -> TestRunResult:
+        """
+        Runs pytest in the restricted environment.
+        """
+        cmd = f"pytest {test_path} -v"
+        result = self.run_command(cmd)
+        passed = (result.exit_code == 0)
+        failed_count = result.stdout.count("FAILED")
+        passed_count = result.stdout.count("PASSED")
+        total = failed_count + passed_count
+
+        return TestRunResult(
+            test_id=test_path,
+            passed=passed,
+            total_tests=total,
+            failed_tests=failed_count,
+            error_log=result.stderr or result.stdout if not passed else None,
+            duration_ms=result.duration_ms
+        )
+
+    def teardown(self):
+        """Kills the container."""
+        if self.container:
+            try:
+                self.container.stop()
+                logger.info("Secure Sandbox destroyed.")
+            except Exception:
+                pass
+            self.container = None
+
+    def __del__(self):
+        self.teardown()

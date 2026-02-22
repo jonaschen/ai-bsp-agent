@@ -1,6 +1,7 @@
 import re
 from langchain_google_vertexai import ChatVertexAI
 from product.bsp_agent.core.state import AgentState
+from studio.utils.sandbox import SecureSandbox
 
 class SupervisorAgent:
     def __init__(self, model_name: str = "gemini-2.5-pro", chunk_threshold_mb: int = 50):
@@ -45,6 +46,34 @@ class SupervisorAgent:
         if len(lines) > 5000:
             return "\n".join(lines[-5000:])
         return text
+
+    def secure_triage(self, state: AgentState) -> str:
+        """
+        Processes logs in a transient, secure environment as per privacy constraints.
+        Uses SecureSandbox for log analysis.
+        """
+        log_content = state.get("current_log_chunk", "")
+        if not log_content:
+            return "clarify_needed"
+
+        # Initialize Secure Sandbox (Isolation Protocol)
+        sandbox = SecureSandbox()
+        try:
+            # Inject log into sandbox
+            sandbox.setup_workspace({"input_log.txt": log_content})
+
+            # Validate input inside the sandbox (simulating remote execution)
+            # A simple heuristic check for kernel timestamp pattern
+            result = sandbox.run_command("grep -E '\\[\\s*\\d+\\.\\d+\\]' input_log.txt")
+
+            if result.exit_code != 0:
+                return "clarify_needed"
+
+            # Perform routing decision
+            return self.route(state)
+
+        finally:
+            sandbox.teardown()
 
     def route(self, state: AgentState) -> str:
         """Route the case to the Specialist or return CLARIFY_NEEDED."""

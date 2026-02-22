@@ -88,3 +88,35 @@ def test_supervisor_routing(mock_chat):
 
     next_node = agent.route(state)
     assert next_node == "kernel_pathologist"
+
+@patch("product.bsp_agent.agents.supervisor.SecureSandbox")
+@patch("product.bsp_agent.agents.supervisor.ChatVertexAI")
+def test_supervisor_secure_triage(mock_chat, mock_sandbox_class):
+    """Test E (Privacy Constraint): Logs are processed in a SecureSandbox."""
+    # Mock Sandbox
+    mock_sandbox = MagicMock()
+    mock_sandbox_class.return_value = mock_sandbox
+
+    # Mock run_command to succeed (exit_code 0)
+    mock_sandbox.run_command.return_value = MagicMock(exit_code=0)
+
+    # Mock LLM
+    mock_llm = MagicMock()
+    mock_chat.return_value = mock_llm
+    mock_llm.invoke.return_value.content = "kernel_pathologist"
+
+    agent = SupervisorAgent()
+    state: AgentState = {
+        "messages": [],
+        "current_log_chunk": "[ 123.456] kernel panic",
+        "diagnosis_report": None
+    }
+
+    result = agent.secure_triage(state)
+
+    # Assertions
+    assert result == "kernel_pathologist"
+    mock_sandbox_class.assert_called_once()
+    mock_sandbox.setup_workspace.assert_called_once()
+    mock_sandbox.run_command.assert_called_with("grep -E '\\[\\s*\\d+\\.\\d+\\]' input_log.txt")
+    mock_sandbox.teardown.assert_called_once()
