@@ -14,7 +14,7 @@ sys.modules["docker.errors"] = mock_docker.errors
 sys.modules["docker.models.containers"] = MagicMock()
 
 # Now it is safe to import
-from studio.utils.sandbox import DockerSandbox, CommandResult, TestRunResult
+from studio.utils.sandbox import DockerSandbox, SecureSandbox, CommandResult, TestRunResult
 
 class TestDockerSandbox:
     @pytest.fixture
@@ -136,3 +136,47 @@ test_foo.py::test_3 FAILED
         # Assert
         mock_container.stop.assert_called_once()
         assert sandbox.container is None
+
+class TestSecureSandbox:
+    @pytest.fixture
+    def mock_client(self):
+        with patch("studio.utils.sandbox.docker") as patched_docker:
+            client = MagicMock()
+            patched_docker.from_env.return_value = client
+            yield client
+
+    def test_secure_init_config(self, mock_client):
+        # Arrange
+        mock_container = MagicMock()
+        mock_client.containers.run.return_value = mock_container
+
+        # Act
+        sandbox = SecureSandbox(image="secure-image")
+
+        # Assert
+        mock_client.containers.run.assert_called_once()
+        args, kwargs = mock_client.containers.run.call_args
+        assert args[0] == "secure-image"
+        assert kwargs["detach"] is True
+        assert kwargs["auto_remove"] is True
+        assert kwargs["network_disabled"] is True
+        assert kwargs["read_only"] is True
+        assert kwargs["mem_limit"] == "256m"
+        assert kwargs["tmpfs"] == {'/workspace': ''}
+
+        assert sandbox.container == mock_container
+
+    def test_secure_setup_workspace(self, mock_client):
+        # Arrange
+        mock_container = MagicMock()
+        mock_client.containers.run.return_value = mock_container
+        sandbox = SecureSandbox()
+
+        files = {"log.txt": "some logs"}
+
+        # Act
+        result = sandbox.setup_workspace(files)
+
+        # Assert
+        assert result is True
+        mock_container.put_archive.assert_called_once()

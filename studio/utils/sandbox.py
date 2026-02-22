@@ -217,3 +217,27 @@ class DockerSandbox:
 
     def __del__(self):
         self.teardown()
+
+class SecureSandbox(DockerSandbox):
+    """
+    A highly restricted sandbox for log processing.
+    Features: Read-only root FS, no network, strict memory limit.
+    """
+    def _start_container(self):
+        """Boots a hardened ephemeral container."""
+        try:
+            logger.info(f"Booting Secure Sandbox ({self.image})...")
+            self.container = self.client.containers.run(
+                self.image,
+                command="tail -f /dev/null",
+                detach=True,
+                auto_remove=True,
+                mem_limit="256m",
+                network_disabled=True,
+                read_only=True,
+                tmpfs={'/workspace': ''}
+            )
+            # Note: No need for mkdir /workspace as it is handled by tmpfs mount
+        except DockerException as e:
+            logger.critical(f"Failed to start Secure Sandbox: {e}")
+            raise
