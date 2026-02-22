@@ -117,6 +117,7 @@ async def node_task_dispatcher(state: AgentState) -> Dict[str, Any]:
     for f in set(potential_files):
         # Apply strict validation
         if not is_valid_local_path(f):
+            logger.info(f"Task_Dispatcher: Skipping invalid path {f}")
             continue
 
         if not os.path.exists(f):

@@ -1,5 +1,6 @@
 
 import os
+import shutil
 import pytest
 from unittest.mock import MagicMock, patch
 from studio.subgraphs.engineer import node_task_dispatcher, is_valid_local_path
@@ -136,6 +137,14 @@ async def test_node_task_dispatcher_garbage_paths():
 @pytest.mark.asyncio
 async def test_no_garbage_folders_created_on_disk():
     """Regression: Verify NO garbage folders are created on filesystem."""
+    # Pre-cleanup to ensure a clean state
+    garbage_dirs = ["workspace", "org", "en", "stable", "10"]
+    for dir_name in garbage_dirs:
+        if os.path.exists(dir_name):
+            if os.path.isdir(dir_name):
+                shutil.rmtree(dir_name)
+            else:
+                os.remove(dir_name)
 
     # Create a scenario that previously created garbage
     malicious_task = "Fix error at /workspace/bad.py and org/en/stable/docs.h"
@@ -151,7 +160,8 @@ async def test_no_garbage_folders_created_on_disk():
     }
 
     with patch("studio.subgraphs.engineer.get_settings") as mock_settings, \
-         patch("studio.subgraphs.engineer.JulesGitHubClient"):
+         patch("studio.subgraphs.engineer.JulesGitHubClient"), \
+         patch("studio.subgraphs.engineer.logger"): # Suppress logs during test
 
         mock_settings.return_value.github_token = "fake"
         mock_settings.return_value.github_repository = "fake/repo"
