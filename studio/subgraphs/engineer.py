@@ -62,7 +62,11 @@ def is_valid_local_path(path: str) -> bool:
         if pattern in path:
             return False
 
-    # 5. Extension check (Must be one of the supported source types)
+    # 5. Reject spaces (Safety & Convention)
+    if " " in path:
+        return False
+
+    # 6. Extension check (Must be one of the supported source types)
     supported_extensions = ('.py', '.txt', '.md', '.yml', '.yaml', '.json', '.c', '.h', '.cpp')
     if not path.endswith(supported_extensions):
         return False
