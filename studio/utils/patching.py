@@ -33,6 +33,13 @@ def extract_affected_files(diff_content: str) -> List[str]:
             if path.startswith("a/") or path.startswith("b/"):
                 path = path[2:]
 
+            # Normalize: strip /workspace/ or workspace/ or leading /
+            if path.startswith("/workspace/"):
+                path = path[len("/workspace/"):]
+            elif path.startswith("workspace/"):
+                path = path[len("workspace/"):]
+            path = path.lstrip("/")
+
             affected_files.add(path)
 
     return sorted(list(affected_files))
@@ -53,9 +60,40 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
 
     # Normalize the diff to fix common "malformed patch" issues
     # (e.g., missing leading spaces on context lines or empty context lines)
+    # ALSO: Normalize headers to use standard a/ and b/ prefixes for -p1
     fixed_lines = []
     for line in diff_content.splitlines():
-        if line.startswith(('+', '-', '@@', '\\', ' ')):
+        if line.startswith(("--- ", "+++ ")):
+            prefix = line[:4]
+            # Extract path and timestamp/info
+            parts = line[4:].split('\t', 1)
+            path_part = parts[0].strip()
+            rest = '\t' + parts[1] if len(parts) > 1 else ""
+
+            # Skip special markers like /dev/null
+            if path_part == "/dev/null":
+                fixed_lines.append(f"{prefix}{path_part}{rest}")
+                continue
+
+            # Strip existing prefixes to get the raw relative path
+            if path_part.startswith(("a/", "b/")):
+                path_part = path_part[2:]
+
+            if path_part.startswith("/workspace/"):
+                path_part = path_part[len("/workspace/"):]
+            elif path_part.startswith("workspace/"):
+                path_part = path_part[len("workspace/"):]
+
+            path_part = path_part.lstrip("/")
+
+            # Standardize to a/ and b/ for -p1 compatibility
+            if prefix == "--- ":
+                new_path = "a/" + path_part
+            else:
+                new_path = "b/" + path_part
+
+            fixed_lines.append(f"{prefix}{new_path}{rest}")
+        elif line.startswith(('+', '-', '@@', '\\', ' ')):
             fixed_lines.append(line)
         elif not line:
             fixed_lines.append(' ')
@@ -67,7 +105,12 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
         # 1. Write original files to temp dir
         for filepath, content in files.items():
             # Ensure directory structure exists
-            full_path = os.path.join(tmpdir, filepath)
+            # Normalize filepath to be relative to tmpdir
+            safe_filepath = filepath.lstrip("/")
+            if safe_filepath.startswith("workspace/"):
+                safe_filepath = safe_filepath[len("workspace/"):]
+
+            full_path = os.path.join(tmpdir, safe_filepath)
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
             with open(full_path, "w", encoding="utf-8") as f:
                 f.write(content)
@@ -93,6 +136,9 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
             if result.returncode != 0:
                 logger.warning(f"Patch failed with -p1: {result.stderr or result.stdout}")
                 # Fallback? Maybe -p0?
+                # Note: With our header normalization to a/b/, -p1 SHOULD work.
+                # If it failed, maybe the headers were already -p0 style?
+                # Let's try -p0 as a last resort
                 cmd[1] = "-p0"
                 result = subprocess.run(
                     cmd,

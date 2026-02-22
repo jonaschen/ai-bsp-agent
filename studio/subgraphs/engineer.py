@@ -369,8 +369,15 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
     diff_content = ""
     if jules_data.generated_artifacts:
         diff_content = jules_data.generated_artifacts[0].diff_content
+        # extract_affected_files already performs some normalization
         affected_files = extract_affected_files(diff_content)
-        all_target_files.update(affected_files)
+        for f in affected_files:
+            # Ensure absolute paths or workspace prefixes are stripped
+            # to prevent host-side file-not-found errors.
+            clean_f = f.replace("/workspace/", "").replace("workspace/", "")
+            if clean_f.startswith("/"):
+                clean_f = clean_f[1:]
+            all_target_files.add(clean_f)
 
     # 3. Ensure core testing infrastructure is included
     # This prevents sandbox crashes when Jules doesn't touch tests
