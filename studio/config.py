@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     thinking_model: str = "gemini-2.5-pro"
     doing_model: str = "gemini-2.5-flash"
 
+    # Vector Store Configuration
+    vector_store_path: str = Field(default="data/vector_store")
+
     # Polling Configuration
     jules_poll_interval: float = Field(
         default_factory=lambda: 0.1 if (
