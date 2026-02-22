@@ -42,7 +42,7 @@ def test_orchestrator_coding_flow(mock_run_retrospective, mock_run_po, mock_gen_
     # Mock the calculator to avoid network calls and return a safe metric
     mock_metric = SemanticHealthMetric(
         entropy_score=0.5,
-        threshold=7.0,
+        threshold=2.0,
         sample_size=5,
         is_tunneling=False,
         cluster_distribution={}
@@ -77,7 +77,7 @@ def test_orchestrator_coding_flow(mock_run_retrospective, mock_run_po, mock_gen_
          assert eng.proposed_patch == "Patch applied."
          # assert orch.latest_entropy == 0.5 # Removed
 
-    # Check Circuit Breaker (Should be False as entropy is 0.5 < 7.0)
+    # Check Circuit Breaker (Should be False as entropy is 0.5 < 2.0)
     assert not cb
 
 @patch("studio.orchestrator.VertexFlashJudge")

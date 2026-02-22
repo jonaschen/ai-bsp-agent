@@ -75,7 +75,7 @@ async def test_cognitive_tunneling_interception():
         # Mock Entropy Calculator to return HIGH ENTROPY
         high_entropy_metric = SemanticHealthMetric(
             entropy_score=8.5,
-            threshold=7.0,
+            threshold=2.0,
             sample_size=5,
             is_tunneling=True,
             cluster_distribution={"Cluster_0": 0.2, "Cluster_1": 0.2, "Cluster_2": 0.2, "Cluster_3": 0.2, "Cluster_4": 0.2}

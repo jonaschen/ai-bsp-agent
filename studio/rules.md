@@ -73,7 +73,7 @@ return Tavily.search(query)
 ### 4.2 Semantic Entropy Guardrail
 * **Context:** When an agent hallucinates or is unsure, its output uncertainty (Semantic Entropy) spikes.
 
-* **Rule:** If Semantic Entropy > 7.0 (or confidence score < 0.3), reject the output immediately.
+* **Rule:** If Semantic Entropy > 2.0 (or confidence score < 0.3), reject the output immediately.
 
 * **Action:**
 

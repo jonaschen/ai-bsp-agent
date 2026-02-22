@@ -275,7 +275,7 @@ async def node_entropy_guard(state: AgentState) -> Dict[str, Any]:
 
     Responsibilities:
     1. Calculates Semantic Entropy (SE) on the agent's reasoning trace.
-    2. Triggers the 'Circuit Breaker' if SE > 7.0.
+    2. Triggers the 'Circuit Breaker' if SE > 2.0.
     3. Prevents invalid code from reaching the QA stage.
     """
     jules_data = state["jules_metadata"]
