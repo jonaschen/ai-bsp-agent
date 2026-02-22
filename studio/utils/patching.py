@@ -91,19 +91,8 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
             )
 
             if result.returncode != 0:
-                logger.warning(f"Patch failed with -p1: {result.stderr or result.stdout}")
-                # Fallback? Maybe -p0?
-                cmd[1] = "-p0"
-                result = subprocess.run(
-                    cmd,
-                    cwd=tmpdir,
-                    capture_output=True,
-                    text=True,
-                    check=False
-                )
-                if result.returncode != 0:
-                     logger.error(f"Patch failed with -p0 as well: {result.stderr or result.stdout}")
-                     raise RuntimeError(f"Failed to apply patch: {result.stderr or result.stdout}")
+                logger.error(f"Patch failed with -p1: {result.stderr or result.stdout}")
+                raise RuntimeError(f"Failed to apply patch: {result.stderr or result.stdout}")
 
             logger.info("Patch applied successfully.")
 

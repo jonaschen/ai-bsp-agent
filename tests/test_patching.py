@@ -81,8 +81,8 @@ def test_apply_patch_failure():
             apply_virtual_patch(files, diff)
 
         assert "Failed to apply patch" in str(excinfo.value)
-        # Should have tried twice (-p1 then -p0)
-        assert mock_run.call_count == 2
+        # Should have tried once (-p1)
+        assert mock_run.call_count == 1
 
 def test_patch_command_not_found():
     files = {"file.py": "content"}
@@ -95,28 +95,6 @@ def test_patch_command_not_found():
             apply_virtual_patch(files, diff)
 
         assert "patch command not found" in str(excinfo.value)
-
-def test_apply_patch_p0_fallback():
-    files = {"file.py": "content"}
-    diff = "diff"
-
-    with unittest.mock.patch("subprocess.run") as mock_run:
-        # First call (-p1) fails, second call (-p0) succeeds
-        mock_run.side_effect = [
-            MagicMock(returncode=1, stderr="hunk failed"),
-            MagicMock(returncode=0)
-        ]
-
-        # Since we mock success but don't actually modify files on disk (mocked subprocess),
-        # the result will be the original files. This is expected in this mock scenario.
-        # We are testing the fallback logic here.
-        apply_virtual_patch(files, diff)
-
-        assert mock_run.call_count == 2
-        # Check second call arguments
-        args, kwargs = mock_run.call_args_list[1]
-        cmd = args[0]
-        assert "-p0" in cmd
 
 def test_apply_patch_malformed_resilience():
     files = {"hello.py": "print('hello')\n\nprint('world')\n"}

@@ -67,7 +67,7 @@ def is_valid_local_path(path: str) -> bool:
         return False
 
     # 6. Extension check (Must be one of the supported source types)
-    supported_extensions = ('.py', '.txt', '.md', '.yml', '.yaml', '.json', '.c', '.h', '.cpp')
+    supported_extensions = ('.py', '.txt', '.md', '.yml', '.yaml', '.json', '.c', '.h', '.cpp', '.ini')
     if not path.endswith(supported_extensions):
         return False
 
@@ -372,6 +372,10 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
         affected_files = extract_affected_files(diff_content)
         all_target_files.update(affected_files)
 
+    # Always ensure pytest.ini is included if it exists (for pythonpath and other config)
+    if os.path.exists("pytest.ini"):
+        all_target_files.add("pytest.ini")
+
     # 3. Load files from disk to populate the Sandbox
     for filepath in all_target_files:
         try:
@@ -380,8 +384,8 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
                 with open(filepath, "r", encoding="utf-8") as f:
                     files_to_patch[filepath] = f.read()
 
-            # Identify tests to run
-            if "test" in filepath or "spec" in filepath:
+            # Identify tests to run (Strict: only python files)
+            if ("test" in filepath or "spec" in filepath) and filepath.endswith(".py"):
                 test_files.append(filepath)
         except FileNotFoundError:
             logger.warning(f"File not found during sandbox prep: {filepath}")
