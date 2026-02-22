@@ -67,7 +67,7 @@ def is_valid_local_path(path: str) -> bool:
         return False
 
     # 6. Extension check (Must be one of the supported source types)
-    supported_extensions = ('.py', '.txt', '.md', '.yml', '.yaml', '.json', '.c', '.h', '.cpp')
+    supported_extensions = ('.py', '.txt', '.md', '.yml', '.yaml', '.json', '.c', '.h', '.cpp', '.ini', '.toml')
     if not path.endswith(supported_extensions):
         return False
 
@@ -370,7 +370,20 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
     if jules_data.generated_artifacts:
         diff_content = jules_data.generated_artifacts[0].diff_content
         affected_files = extract_affected_files(diff_content)
-        all_target_files.update(affected_files)
+        for f in affected_files:
+            # Normalize: Remove /workspace/ or workspace/ or / prefix if Jules added it
+            normalized_f = f
+            if normalized_f.startswith("/workspace/"):
+                normalized_f = normalized_f[len("/workspace/"):]
+            elif normalized_f.startswith("workspace/"):
+                normalized_f = normalized_f[len("workspace/"):]
+            elif normalized_f.startswith("/"):
+                normalized_f = normalized_f.lstrip("/")
+
+            if is_valid_local_path(normalized_f):
+                all_target_files.add(normalized_f)
+            else:
+                logger.warning(f"QA_Verifier: Skipping invalid affected file path: {f}")
 
     # 3. Ensure core testing infrastructure is included
     # This prevents sandbox crashes when Jules doesn't touch tests
@@ -397,7 +410,10 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
                     files_to_patch[filepath] = f.read()
 
             # Identify tests to run
-            if "test" in filepath or "spec" in filepath:
+            # Stricter check: Must be a .py or .spec file to be run by pytest
+            if (filepath.endswith(".py") or filepath.endswith(".spec")) and \
+               ("test" in filepath or "spec" in filepath) and \
+               is_valid_local_path(filepath):
                 test_files.append(filepath)
         except FileNotFoundError:
             logger.warning(f"File not found during sandbox prep: {filepath}")
