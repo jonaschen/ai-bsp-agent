@@ -360,17 +360,28 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
     files_to_patch = {}
     test_files = []
 
-    # 1. Gather files from context slice
-    all_target_files = set()
+    # 1. Gather files from context slice + Patch (Dynamic Context Sync)
+    raw_files = []
     if jules_data.active_context_slice and jules_data.active_context_slice.files:
-        all_target_files.update(jules_data.active_context_slice.files)
+        raw_files.extend(jules_data.active_context_slice.files)
 
-    # 2. Get the diff and extract ALL affected files (Dynamic Context Sync)
     diff_content = ""
     if jules_data.generated_artifacts:
         diff_content = jules_data.generated_artifacts[0].diff_content
         affected_files = extract_affected_files(diff_content)
-        all_target_files.update(affected_files)
+        raw_files.extend(affected_files)
+
+    # Normalize Paths: strip /workspace/, workspace/, or leading /
+    all_target_files = set()
+    for f in raw_files:
+        nf = f
+        if nf.startswith("/workspace/"):
+            nf = nf[len("/workspace/"):]
+        elif nf.startswith("workspace/"):
+            nf = nf[len("workspace/"):]
+        elif nf.startswith("/"):
+            nf = nf[1:]
+        all_target_files.add(nf)
 
     # 3. Ensure core testing infrastructure is included
     # This prevents sandbox crashes when Jules doesn't touch tests
@@ -396,8 +407,9 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
                 with open(filepath, "r", encoding="utf-8") as f:
                     files_to_patch[filepath] = f.read()
 
-            # Identify tests to run
-            if "test" in filepath or "spec" in filepath:
+            # Identify tests to run (Refined: Only .py or .spec files)
+            is_test_candidate = (filepath.endswith(".py") or filepath.endswith(".spec"))
+            if is_test_candidate and ("test" in filepath or "spec" in filepath):
                 test_files.append(filepath)
         except FileNotFoundError:
             logger.warning(f"File not found during sandbox prep: {filepath}")
