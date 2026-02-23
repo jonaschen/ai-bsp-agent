@@ -152,22 +152,23 @@ async def test_refactor_loop():
         assert jules_meta.status == "COMPLETED"
         assert jules_meta.retry_count == 1
 
-        # Check that dispatch_task was called TWICE
-        assert mock_client.dispatch_task.call_count == 2
+        # Check that dispatch_task was called ONCE (True PR Feedback Loop)
+        assert mock_client.dispatch_task.call_count == 1
 
-        # Verify the second call's payload contains the architect's feedback
+        # Check that post_feedback was called for the retry
+        assert mock_client.post_feedback.call_count == 1
+
+        # Verify the first call's payload contains the TDD constraint
         first_call_args = mock_client.dispatch_task.call_args_list[0]
-        second_call_args = mock_client.dispatch_task.call_args_list[1]
-
-        # First call should have TDD constraint
         first_payload = first_call_args[0][0]
         assert any("TDD" in c for c in first_payload.constraints)
 
-        # Second call should have Architect feedback
-        second_payload = second_call_args[0][0]
-        assert any("ARCHITECTURAL REVIEW FAILED" in c for c in second_payload.constraints)
-        assert any("Class is doing too much" in c for c in second_payload.constraints)
-        assert any("Split class into two" in c for c in second_payload.constraints)
+        # Verify the post_feedback call contains the architect's feedback
+        feedback_call_args = mock_client.post_feedback.call_args_list[0]
+        feedback_text = feedback_call_args[0][1]
+        assert "ARCHITECTURAL REVIEW FAILED" in feedback_text
+        assert "Class is doing too much" in feedback_text
+        assert "Split class into two" in feedback_text
 
         print("Refactor Loop Test Passed Successfully!")
 

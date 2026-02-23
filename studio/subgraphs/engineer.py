@@ -243,8 +243,16 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
             jules_data.generated_artifacts = [artifact]
 
     elif remote_status.status == "REVIEW_READY":
-        logger.info("Remote task is ready for review. Proceeding to Entropy Check/Verification.")
+        # Hash Check: Don't re-test the same code
+        if remote_status.last_commit_hash == jules_data.last_verified_commit:
+            logger.info(f"Review ready but commit hash {remote_status.last_commit_hash} already verified. Waiting for new changes.")
+            jules_data.status = "WORKING"
+            return {"jules_metadata": jules_data}
+
+        logger.info(f"New commit detected ({remote_status.last_commit_hash}). Proceeding to Entropy Check/Verification.")
         jules_data.status = "VERIFYING"
+        jules_data.last_verified_commit = remote_status.last_commit_hash
+        jules_data.last_verified_pr_number = remote_status.linked_pr_number
 
         # Retrieve artifacts (virtual patches, diffs)
         if remote_status.raw_diff:
@@ -568,6 +576,18 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
         }
 
     logger.info("Architect_Review: Code APPROVED.")
+
+    # True PR Feedback Loop: Merge the PR
+    if jules_data.last_verified_pr_number:
+        settings = get_settings()
+        client = JulesGitHubClient(
+            github_token=settings.github_token,
+            repo_name=settings.github_repository,
+            jules_username=settings.jules_username
+        )
+        logger.info(f"Architect_Gate: Merging PR #{jules_data.last_verified_pr_number}")
+        client.merge_pr(jules_data.last_verified_pr_number)
+
     return {"jules_metadata": jules_data}
 
 
@@ -650,8 +670,14 @@ async def node_feedback_loop(state: AgentState) -> Dict[str, Any]:
 
     if not is_infra_error and jules_data.retry_count < jules_data.max_retries:
         jules_data.retry_count += 1
-        jules_data.status = "QUEUED" # Reset status to trigger Task_Dispatcher
-        logger.info(f"Feedback_Loop: Triggering Retry {jules_data.retry_count}/{jules_data.max_retries}")
+
+        # True PR Feedback Loop: Reuse existing task if available
+        if jules_data.external_task_id:
+            jules_data.status = "WORKING"
+            logger.info(f"Feedback_Loop: Reusing task {jules_data.external_task_id}. Triggering Retry {jules_data.retry_count}/{jules_data.max_retries}")
+        else:
+            jules_data.status = "QUEUED" # Reset status to trigger Task_Dispatcher
+            logger.info(f"Feedback_Loop: No external task found. Triggering Retry {jules_data.retry_count}/{jules_data.max_retries}")
 
         # Add a message to the conversation history so the Orchestrator is aware of the churn
         messages.append(HumanMessage(content=f"Retry {jules_data.retry_count}: Automated feedback generated based on failure."))
@@ -717,12 +743,14 @@ def route_architect_gate(state: AgentState) -> Literal["end", "feedback_loop"]:
         return "end"
     return "feedback_loop"
 
-def route_feedback_loop(state: AgentState) -> Literal["task_dispatcher", "end"]:
+def route_feedback_loop(state: AgentState) -> Literal["task_dispatcher", "watch_tower", "end"]:
     """
     Decides whether to retry the loop or give up.
     """
-    if state["jules_metadata"].status == "QUEUED": # Retry triggered
+    if state["jules_metadata"].status == "QUEUED": # Traditional retry (new task)
         return "task_dispatcher"
+    if state["jules_metadata"].status == "WORKING": # PR feedback loop (reuse task)
+        return "watch_tower"
     return "end" # Max retries exceeded
 
 # --- Subgraph Builder ---
@@ -788,6 +816,7 @@ def build_engineer_subgraph() -> StateGraph:
         route_feedback_loop,
         {
             "task_dispatcher": "task_dispatcher",
+            "watch_tower": "watch_tower",
             "end": END # Escalation
         }
     )
