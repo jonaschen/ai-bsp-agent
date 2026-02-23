@@ -67,6 +67,7 @@ class ProductOwnerAgent:
             2. **Dependencies:** If Task B requires Task A (e.g., 'Install Docker' before 'Run Container'), list Task A's ID in Task B's `dependencies`.
             3. **Atomic Units:** Tickets must be implementable by a single Engineer agent.
             4. **No Duplicates:** Ignore these existing titles: {existing_titles}
+            5. **Foundation-First:** Prioritize 'Domain Foundation' and 'Data Contracts' / 'Schemas' before 'Infrastructure' or 'Vector Store' tasks. Always define contracts before the tools that use them.
             """),
             ("user", """
             Blueprint:
@@ -122,6 +123,23 @@ class ProductOwnerAgent:
             for dep_id in t.dependencies:
                 if dep_id in ticket_map:
                     graph.add_edge(dep_id, t.id)
+
+        # Enforce Domain-First Decomposition (Implicit Dependencies)
+        foundation_kw = ["domain foundation", "data contracts", "schemas"]
+        infra_kw = ["infrastructure", "vector store"]
+
+        foundations = [t.id for t in tickets if any(kw in t.title.lower() for kw in foundation_kw)]
+        infrastructures = [t.id for t in tickets if any(kw in t.title.lower() for kw in infra_kw)]
+
+        for f_id in foundations:
+            for i_id in infrastructures:
+                # Add implicit edge from foundation to infrastructure if no reverse path exists
+                if f_id != i_id:
+                    try:
+                        if not nx.has_path(graph, i_id, f_id):
+                            graph.add_edge(f_id, i_id)
+                    except nx.NodeNotFound:
+                        pass
 
         try:
             # Return in execution order

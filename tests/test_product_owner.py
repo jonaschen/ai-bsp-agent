@@ -95,5 +95,77 @@ class TestProductOwnerAgent(unittest.TestCase):
                 self.assertEqual(len(tickets), 1)
                 self.assertEqual(tickets[0].id, "t1")
 
+    def test_dag_prioritizes_domain_and_contracts_over_infrastructure(self):
+        """
+        TDD: Ensure tasks related to Data Contracts/Schemas are sorted before Infrastructure/Vector Store.
+        """
+        t_infra = Ticket(
+            id="TKT-INFRA",
+            title="Setup Vector Store",
+            description="Infrastructure for RAG",
+            priority="HIGH",
+            source_section_id="infra",
+            dependencies=[]
+        )
+        t_contract = Ticket(
+            id="TKT-CONTRACT",
+            title="Define Data Contracts",
+            description="Schema definitions for the system",
+            priority="HIGH",
+            source_section_id="domain",
+            dependencies=[]
+        )
+        t_domain = Ticket(
+            id="TKT-DOMAIN",
+            title="Domain Foundation",
+            description="Core domain logic",
+            priority="HIGH",
+            source_section_id="domain",
+            dependencies=[]
+        )
+
+        # Unsorted list from LLM
+        tickets = [t_infra, t_contract, t_domain]
+
+        # Analyze specs (which calls _sort_dag)
+        # We mock the LLM chain to return these tickets
+        mock_analysis = BlueprintAnalysis(
+            blueprint_version_hash="test-hash",
+            summary_of_changes="test changes",
+            new_tickets=tickets
+        )
+
+        with patch("studio.agents.product_owner.ChatPromptTemplate.from_messages") as mock_prompt_cls:
+            mock_prompt = MagicMock()
+            mock_prompt_cls.return_value = mock_prompt
+
+            mock_intermediate = MagicMock()
+            mock_chain_final = MagicMock()
+            mock_chain_final.invoke.return_value = mock_analysis
+
+            mock_prompt.__or__.return_value = mock_intermediate
+            mock_intermediate.__or__.return_value = mock_chain_final
+
+            # The analyze_specs method will call _sort_dag
+            result = self.po.analyze_specs("blueprint content", [])
+            sorted_tickets = result.new_tickets
+
+            # Find indices
+            infra_idx = -1
+            contract_idx = -1
+            domain_idx = -1
+
+            for i, t in enumerate(sorted_tickets):
+                if "Vector Store" in t.title or "Infrastructure" in t.title:
+                    infra_idx = i
+                if "Data Contracts" in t.title or "Schemas" in t.title:
+                    contract_idx = i
+                if "Domain Foundation" in t.title:
+                    domain_idx = i
+
+            # Assertions
+            self.assertLess(contract_idx, infra_idx, "Data Contracts must come BEFORE Infrastructure")
+            self.assertLess(domain_idx, infra_idx, "Domain Foundation must come BEFORE Infrastructure")
+
 if __name__ == '__main__':
     unittest.main()
