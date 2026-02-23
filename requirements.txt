@@ -12,3 +12,6 @@ python-dotenv
 docker
 networkx
 langgraph
+pypdf
+google-cloud-aiplatform
+google-cloud-discoveryengine

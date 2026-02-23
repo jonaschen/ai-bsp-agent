@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     google_cloud_project: str = Field(default="mock-project")
     vector_store_path: str = Field(default="data/vector_store")
     embedding_model: str = Field(default="textembedding-gecko@003")
+    vector_store_type: str = Field(default="chroma") # options: chroma, vertex_ai
+    vertex_ai_index_id: Optional[str] = None
+    vertex_ai_endpoint_id: Optional[str] = None
+    vertex_ai_region: str = "us-central1"
 
     # Model Stratification Strategy
     thinking_model: str = "gemini-2.5-pro"
