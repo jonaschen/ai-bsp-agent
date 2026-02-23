@@ -44,6 +44,129 @@ The Studio must instantiate the following Multi-Agent System:
 
 ---
 
+## 2.5 The Build Roadmap: Phased Delivery with Explicit Dependencies
+
+To enforce **Test-Driven Development** and prevent infrastructure-before-specification mistakes, the Studio MUST build in the following order:
+
+### Phase 0: Foundation (Specification & Validation)
+
+**TKT-001: Define Agent Personas & Input/Output Contracts**
+* **Objective:** Formalize the interfaces between Supervisor, Pathologist, and Hardware Advisor.
+* **Deliverables:**
+  - Supervisor input schema (user query + log file format)
+  - Pathologist output schema (suspected module, confidence score, evidence)
+  - Hardware Advisor input schema (component name, query type)
+  - Hardware Advisor output schema (voltage specs, timing specs, SOA)
+* **Acceptance Criteria:**
+  - All three agents have formal Pydantic models in `product/schemas.py`
+  - Each model is documented with examples
+  - JSON serialization tests pass for all schemas
+* **Blocked By:** None
+* **Blocks:** TKT-002
+
+**TKT-002: Define Data Contracts & Metadata Schema (Datasheet Repository)**
+* **Objective:** Specify the structure, metadata, and retrieval patterns for the datasheet repository.
+* **Deliverables:**
+  - Datasheet metadata schema (component_type, part_number, voltage_range, timing_specs, etc.)
+  - Sample datasheet JSON structures (minimum 3 different types: PMIC, DRAM, SoC)
+  - Vector embedding strategy (what fields get embedded for RAG?)
+  - Example retrieval queries the Hardware Advisor will make
+* **Acceptance Criteria:**
+  - Schema is defined in `product/schemas/datasheet.py`
+  - 5 representative sample datasheets exist in `fixtures/datasheets/`
+  - Retrieval query patterns documented with examples
+* **Blocked By:** TKT-001
+* **Blocks:** TKT-003, TKT-004
+
+**TKT-003: Create RCA Workflow Test Fixtures (Golden Set)**
+* **Objective:** Build the test cases required by PRODUCT_BLUEPRINT Section 4.
+* **Deliverables:**
+  - `fixtures/panic_log_01.txt` - Null pointer dereference scenario
+  - `fixtures/suspend_hang_02.txt` - Watchdog timeout scenario
+  - `fixtures/healthy_boot_03.txt` - Clean boot (no anomaly scenario)
+  - `fixtures/expected_output_*.json` - Expected RCA reports for each test case
+* **Acceptance Criteria:**
+  - All 3 log fixtures exist and are valid (can be parsed by real dmesg parsers)
+  - Expected outputs follow the SOP schema from Section 3
+  - At least one fixture exceeds 50MB to test chunking logic (Fix #3)
+* **Blocked By:** TKT-002
+* **Blocks:** TKT-005 (Agent Implementation)
+
+### Phase 1: Agent Implementation (Code)
+
+**TKT-005: Implement Supervisor Agent**
+* **Objective:** Build the triage and routing agent.
+* **Acceptance Criteria:**
+  - Passes on TKT-003 fixtures
+  - Correctly routes to Pathologist vs. Hardware Advisor
+  - Implements chunking for logs > 50MB
+* **Blocked By:** TKT-003
+* **Blocks:** TKT-008 (End-to-End Tests)
+
+**TKT-006: Implement Kernel Pathologist Agent**
+* **Objective:** Build the software analysis specialist.
+* **Acceptance Criteria:**
+  - Correctly identifies null pointer dereference in Test Case 1
+  - Correctly diagnoses watchdog timeout in Test Case 2
+  - Returns high confidence on Test Case 3 (no anomaly)
+* **Blocked By:** TKT-003
+* **Blocks:** TKT-008
+
+**TKT-007: Implement Hardware Advisor Agent (with Vector Store)**
+* **Objective:** Build the hardware specialist with datasheet retrieval.
+* **Acceptance Criteria:**
+  - Successfully retrieves datasheets from vector store using semantic similarity
+  - Returns SOA validation for queried components
+  - Integrates with vector store backend from TKT-004
+* **Blocked By:** TKT-002, TKT-003, TKT-004
+* **Blocks:** TKT-008
+
+### Phase 2: Infrastructure
+
+**TKT-004: Implement Vector Store Manager**
+* **Objective:** Build the datasheet indexing and retrieval system.
+* **Technology Choice:** Vertex Vector Search (per AGENTS.md Section 5 Technology Stack Mandate)
+* **Deliverables:**
+  - Vector store initialization code
+  - Datasheet ingestion pipeline
+  - Semantic retrieval methods
+  - Integration with Hardware Advisor agent
+* **Data Model:** Uses schema from TKT-002
+* **Test Data:** Uses fixtures from TKT-002
+* **Acceptance Criteria:**
+  - Successfully indexes sample datasheets from `fixtures/datasheets/`
+  - Retrieval returns semantically similar components
+  - Latency < 500ms for single query
+  - Supports concurrent Hardware Advisor queries
+* **Blocked By:** TKT-002, TKT-003
+* **Blocks:** TKT-007
+
+### Phase 3: Integration & Validation
+
+**TKT-008: End-to-End RCA Workflow Tests**
+* **Objective:** Validate the entire system against golden set.
+* **Acceptance Criteria:**
+  - All 3 golden set test cases pass with semantic similarity > 85%
+  - Confidence scores align with expected keypoints
+  - SOP steps are actionable and correctly formatted
+* **Blocked By:** TKT-005, TKT-006, TKT-007
+
+### Dependency Graph
+
+```
+TKT-001 (Agent Personas)
+  └─→ TKT-002 (Data Contracts)
+       ├─→ TKT-003 (Test Fixtures)
+       │    ├─→ TKT-005 (Supervisor)
+       │    ├─→ TKT-006 (Pathologist)
+       │    └─→ TKT-007 (Hardware Advisor) ←─┐
+       │                                      │
+       └─→ TKT-004 (Vector Store) ───────────┘
+            └─→ TKT-008 (E2E Tests) ←─ TKT-005, TKT-006, TKT-007
+```
+
+---
+
 ## 3. The Interactive Debugging Workflow (SOP)
 
 The Product output is NOT just a text answer. It MUST adhere to this **Strict JSON Schema (Fix #6):**
