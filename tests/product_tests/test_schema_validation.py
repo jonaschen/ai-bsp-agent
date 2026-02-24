@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from product.bsp_agent.core.schema import CaseFile
+from product.schemas import CaseFile
 
 def test_case_file_ingestion():
     # Arrange
