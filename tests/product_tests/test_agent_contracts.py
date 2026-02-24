@@ -1,33 +1,23 @@
 import json
 import pytest
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 from product.schemas import (
     SupervisorInput,
     PathologistOutput,
     HardwareAdvisorInput,
-    HardwareAdvisorOutput,
-    CaseFile,
-    LogPayload,
-    TriageReport,
-    RCAReport,
-    ConsultantResponse,
-    SOPStep
+    HardwareAdvisorOutput
 )
 
-def test_json_serialization_roundtrip():
-    # Helper to test roundtrip
-    def assert_roundtrip(model_class, data):
-        instance = model_class(**data)
-        json_str = instance.model_dump_json()
-        data_back = json.loads(json_str)
-        # Handle potential differences in how Pydantic serializes (e.g. tuples vs lists)
-        # but for simple dicts it should match
-        assert data_back == json.loads(instance.model_dump_json())
-        # Re-instantiate to verify it's still valid
-        instance_back = model_class(**data_back)
-        assert instance == instance_back
+def assert_roundtrip(model_class, data):
+    """Helper to test roundtrip serialization/deserialization."""
+    instance = model_class(**data)
+    json_str = instance.model_dump_json()
+    data_back = json.loads(json_str)
+    # Re-instantiate to verify it's still valid
+    instance_back = model_class(**data_back)
+    assert instance == instance_back
 
-    # Test SupervisorInput (inherited from CaseFile)
+def test_supervisor_input_serialization():
     supervisor_data = {
         "case_id": "CASE-123",
         "device_model": "Pixel 8",
@@ -40,7 +30,7 @@ def test_json_serialization_roundtrip():
     }
     assert_roundtrip(SupervisorInput, supervisor_data)
 
-    # Test PathologistOutput (inherited from ConsultantResponse)
+def test_pathologist_output_serialization():
     pathologist_data = {
         "diagnosis_id": "DIAG-456",
         "confidence_score": 0.95,
@@ -60,7 +50,7 @@ def test_json_serialization_roundtrip():
     }
     assert_roundtrip(PathologistOutput, pathologist_data)
 
-    # Test HardwareAdvisorInput
+def test_hardware_advisor_input_serialization():
     hardware_input_data = {
         "case_id": "CASE-789",
         "device_model": "Pixel 9",
@@ -82,7 +72,7 @@ def test_json_serialization_roundtrip():
     }
     assert_roundtrip(HardwareAdvisorInput, hardware_input_data)
 
-    # Test HardwareAdvisorOutput (inherited from ConsultantResponse)
+def test_hardware_advisor_output_serialization():
     hardware_output_data = {
         "diagnosis_id": "DIAG-789",
         "confidence_score": 0.8,
@@ -104,8 +94,7 @@ def test_json_serialization_roundtrip():
     }
     assert_roundtrip(HardwareAdvisorOutput, hardware_output_data)
 
-def test_validation_errors():
-    # Test confidence_score bounds for HardwareAdvisorOutput
+def test_hardware_advisor_output_confidence_validation():
     invalid_hw_data = {
         "diagnosis_id": "DIAG-789",
         "confidence_score": 1.5, # Out of bounds [0.0, 1.0]
@@ -120,7 +109,7 @@ def test_validation_errors():
     with pytest.raises(ValidationError):
         HardwareAdvisorOutput(**invalid_hw_data)
 
-    # Test confidence_score bounds for PathologistOutput
+def test_pathologist_output_confidence_validation():
     invalid_path_data = {
         "diagnosis_id": "DIAG-456",
         "confidence_score": -0.1, # Out of bounds [0.0, 1.0]
@@ -133,7 +122,7 @@ def test_validation_errors():
     with pytest.raises(ValidationError):
         PathologistOutput(**invalid_path_data)
 
-    # Test missing required field
+def test_supervisor_input_required_fields_validation():
     incomplete_data = {
         "case_id": "CASE-123"
         # missing device_model, etc.
