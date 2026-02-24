@@ -1,6 +1,5 @@
 import pytest
 import json
-from pydantic import ValidationError
 from product.schemas import (
     SupervisorInput,
     PathologistOutput,
@@ -14,68 +13,48 @@ from product.schemas import (
     ConsultantResponse
 )
 
-def test_supervisor_input_serialization():
+def validate_serialization(model_class, payload):
+    """
+    Robust validation pattern: Payload -> Model -> JSON string -> Dict -> Assert equality
+    """
+    # 1. Payload -> Model
+    obj = model_class(**payload)
+
+    # 2. Model -> JSON string
+    json_str = obj.model_dump_json()
+
+    # 3. JSON string -> Dict
+    result_dict = json.loads(json_str)
+
+    # 4. Assert equality with original payload
+    # Note: Pydantic model_dump_json might convert some types (like dates),
+    # but for these simple schemas it should match the input dict.
+    # We use model_dump() on the object to compare against result_dict for better consistency.
+    assert obj.model_dump() == result_dict
+
+    # Also check against original payload for basic fields
+    for key, value in payload.items():
+        assert result_dict[key] == value
+
+def test_log_payload_serialization():
     payload = {
-        "user_chat": "Analyze the log for kernel panic",
-        "case_files": [
-            {
-                "case_id": "CASE-001",
-                "device_model": "Pixel 6",
-                "source_code_mode": "KERNEL_TREE",
-                "symptom_description": "Boot loop",
-                "log_payload": {
-                    "dmesg_content": "kernel panic...",
-                    "logcat_content": ""
-                }
-            }
-        ]
+        "dmesg_content": "kernel panic",
+        "logcat_content": "some logs"
     }
-    obj = SupervisorInput(**payload)
-    assert obj.user_chat == "Analyze the log for kernel panic"
-    assert len(obj.case_files) == 1
-    assert obj.case_files[0].case_id == "CASE-001"
+    validate_serialization(LogPayload, payload)
 
-    # Test JSON serialization
-    json_data = obj.model_dump_json()
-    assert "Analyze the log for kernel panic" in json_data
-
-def test_pathologist_output_serialization():
+def test_case_file_serialization():
     payload = {
-        "suspected_module": "drivers/gpu/drm/msm/mdss.c",
-        "confidence_score": 0.95,
-        "evidence": ["NULL pointer dereference at ..."]
+        "case_id": "CASE-001",
+        "device_model": "Pixel 6",
+        "source_code_mode": "KERNEL_TREE",
+        "symptom_description": "Boot loop",
+        "log_payload": {
+            "dmesg_content": "kernel panic...",
+            "logcat_content": ""
+        }
     }
-    obj = PathologistOutput(**payload)
-    assert obj.suspected_module == "drivers/gpu/drm/msm/mdss.c"
-    assert obj.confidence_score == 0.95
-    assert "NULL pointer dereference" in obj.evidence[0]
-
-    # Test JSON serialization
-    json_data = obj.model_dump_json()
-    assert "0.95" in json_data
-
-def test_hardware_advisor_input_serialization():
-    payload = {
-        "component_name": "PMIC",
-        "query_type": "VOLTAGE"
-    }
-    obj = HardwareAdvisorInput(**payload)
-    assert obj.component_name == "PMIC"
-    assert obj.query_type == "VOLTAGE"
-
-def test_hardware_advisor_output_serialization():
-    payload = {
-        "voltage_specs": {"VREG_L1": "1.8V"},
-        "timing_specs": {"startup_delay": "10ms"},
-        "soa_validation": "Within safe limits"
-    }
-    obj = HardwareAdvisorOutput(**payload)
-    assert obj.voltage_specs["VREG_L1"] == "1.8V"
-    assert obj.soa_validation == "Within safe limits"
-
-    # Test JSON serialization
-    json_data = obj.model_dump_json()
-    assert "VREG_L1" in json_data
+    validate_serialization(CaseFile, payload)
 
 def test_triage_report_serialization():
     payload = {
@@ -85,9 +64,7 @@ def test_triage_report_serialization():
         "key_evidence": ["Panic occurred"],
         "suspected_file_hint": "main.c"
     }
-    obj = TriageReport(**payload)
-    assert obj.status == "CRITICAL"
-    assert obj.model_dump()["status"] == "CRITICAL"
+    validate_serialization(TriageReport, payload)
 
 def test_rca_report_serialization():
     payload = {
@@ -98,9 +75,17 @@ def test_rca_report_serialization():
         "suggested_fix": "Replace sensor",
         "references": ["Link 1"]
     }
-    obj = RCAReport(**payload)
-    assert obj.diagnosis_id == "RCA-001"
-    assert obj.confidence_score == 0.88
+    validate_serialization(RCAReport, payload)
+
+def test_sop_step_serialization():
+    payload = {
+        "step_id": 1,
+        "action_type": "MEASUREMENT",
+        "instruction": "Measure VREG",
+        "expected_value": "1.8V",
+        "file_path": "N/A"
+    }
+    validate_serialization(SOPStep, payload)
 
 def test_consultant_response_serialization():
     payload = {
@@ -119,7 +104,45 @@ def test_consultant_response_serialization():
             }
         ]
     }
-    obj = ConsultantResponse(**payload)
-    assert obj.diagnosis_id == "RCA-001"
-    assert len(obj.sop_steps) == 1
-    assert obj.sop_steps[0].instruction == "Measure VREG"
+    validate_serialization(ConsultantResponse, payload)
+
+def test_supervisor_input_serialization():
+    payload = {
+        "user_chat": "Analyze the log for kernel panic",
+        "case_files": [
+            {
+                "case_id": "CASE-001",
+                "device_model": "Pixel 6",
+                "source_code_mode": "KERNEL_TREE",
+                "symptom_description": "Boot loop",
+                "log_payload": {
+                    "dmesg_content": "kernel panic...",
+                    "logcat_content": ""
+                }
+            }
+        ]
+    }
+    validate_serialization(SupervisorInput, payload)
+
+def test_pathologist_output_serialization():
+    payload = {
+        "suspected_module": "drivers/gpu/drm/msm/mdss.c",
+        "confidence_score": 0.95,
+        "evidence": ["NULL pointer dereference at ..."]
+    }
+    validate_serialization(PathologistOutput, payload)
+
+def test_hardware_advisor_input_serialization():
+    payload = {
+        "component_name": "PMIC",
+        "query_type": "VOLTAGE"
+    }
+    validate_serialization(HardwareAdvisorInput, payload)
+
+def test_hardware_advisor_output_serialization():
+    payload = {
+        "voltage_specs": {"VREG_L1": "1.8V"},
+        "timing_specs": {"startup_delay": "10ms"},
+        "soa_validation": "Within safe limits"
+    }
+    validate_serialization(HardwareAdvisorOutput, payload)
