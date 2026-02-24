@@ -280,6 +280,22 @@ class JulesGitHubClient:
             logger.error(f"GitHub error while merging PR #{pr_number}: {e}")
             return False
 
+    def create_issue(self, title: str, body: str, labels: Optional[List[str]] = None) -> Optional[int]:
+        """
+        Creates a generic GitHub issue.
+        """
+        try:
+            issue = self.repo.create_issue(
+                title=title,
+                body=body,
+                labels=labels or []
+            )
+            logger.info(f"Created issue #{issue.number}: {title}")
+            return issue.number
+        except GithubException as e:
+            logger.error(f"Failed to create issue '{title}': {e}")
+            return None
+
     def get_open_prs(self, label: Optional[str] = None, author: Optional[str] = None) -> List[PullRequest.PullRequest]:
         """
         Lists all open Pull Requests, optionally filtered by label and author.
