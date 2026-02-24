@@ -40,14 +40,23 @@ def test_json_serialization_roundtrip():
     }
     assert_roundtrip(SupervisorInput, supervisor_data)
 
-    # Test PathologistOutput (inherited from RCAReport)
+    # Test PathologistOutput (inherited from ConsultantResponse)
     pathologist_data = {
         "diagnosis_id": "DIAG-456",
         "confidence_score": 0.95,
+        "status": "CRITICAL",
         "root_cause_summary": "Null pointer in dwc3 driver",
-        "technical_detail": "Attempted to access offset 0x20 of NULL pointer",
-        "suggested_fix": "Add NULL check in dwc3_gadget_ep_enable",
-        "references": ["CVE-2023-XXXXX"]
+        "evidence": ["Attempted to access offset 0x20 of NULL pointer"],
+        "sop_steps": [
+            {
+                "step_id": 1,
+                "action_type": "CODE_PATCH",
+                "instruction": "Add NULL check in dwc3_gadget_ep_enable",
+                "expected_value": "No more null pointer dereference",
+                "file_path": "drivers/usb/dwc3/gadget.c"
+            }
+        ],
+        "suspected_module": "drivers/usb/dwc3/"
     }
     assert_roundtrip(PathologistOutput, pathologist_data)
 
@@ -61,6 +70,8 @@ def test_json_serialization_roundtrip():
             "dmesg_content": "...",
             "logcat_content": "..."
         },
+        "component_name": "PMIC",
+        "query_type": "VOLTAGE",
         "triage_info": {
             "status": "WARNING",
             "failure_type": "HANG_STALL",
@@ -86,7 +97,10 @@ def test_json_serialization_roundtrip():
                 "expected_value": "Clean square waves without excessive noise",
                 "file_path": "N/A"
             }
-        ]
+        ],
+        "voltage_specs": "1.8V",
+        "timing_specs": "400kHz",
+        "soa_info": "Max 85C"
     }
     assert_roundtrip(HardwareAdvisorOutput, hardware_output_data)
 
@@ -98,7 +112,10 @@ def test_validation_errors():
         "status": "CRITICAL",
         "root_cause_summary": "I2C bus contention",
         "evidence": [],
-        "sop_steps": []
+        "sop_steps": [],
+        "voltage_specs": None,
+        "timing_specs": None,
+        "soa_info": None
     }
     with pytest.raises(ValidationError):
         HardwareAdvisorOutput(**invalid_hw_data)
@@ -107,10 +124,11 @@ def test_validation_errors():
     invalid_path_data = {
         "diagnosis_id": "DIAG-456",
         "confidence_score": -0.1, # Out of bounds [0.0, 1.0]
+        "status": "CRITICAL",
         "root_cause_summary": "Summary",
-        "technical_detail": "Detail",
-        "suggested_fix": "Fix",
-        "references": []
+        "evidence": [],
+        "sop_steps": [],
+        "suspected_module": "module"
     }
     with pytest.raises(ValidationError):
         PathologistOutput(**invalid_path_data)
