@@ -562,6 +562,16 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
             all_violations.extend(verdict.violations)
 
     # 3. Handle Verdict
+    if jules_data.last_verified_pr_number:
+        settings = get_settings()
+        client = JulesGitHubClient(
+            github_token=settings.github_token,
+            repo_name=settings.github_repository,
+            jules_username=settings.jules_username
+        )
+    else:
+        client = None
+
     if all_violations:
         logger.warning(f"Architect_Gate: Code REJECTED with {len(all_violations)} violations.")
         jules_data.status = "FAILED" # Force loop back
@@ -574,6 +584,11 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
         feedback += "\nINSTRUCTION: Refactor the code to address these violations while keeping tests GREEN."
         jules_data.feedback_log.append(feedback)
 
+        # Submit a formal REQUEST_CHANGES review on GitHub
+        if client and jules_data.last_verified_pr_number:
+            logger.info(f"Architect_Gate: Requesting changes on PR #{jules_data.last_verified_pr_number}")
+            client.review_pr(jules_data.last_verified_pr_number, event="REQUEST_CHANGES", body=feedback)
+
         return {
             "jules_metadata": jules_data,
             "messages": [AIMessage(content="**SYSTEM**: Architect rejected the solution. See feedback.")]
@@ -581,14 +596,10 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
 
     logger.info("Architect_Review: Code APPROVED.")
 
-    # True PR Feedback Loop: Merge the PR
-    if jules_data.last_verified_pr_number:
-        settings = get_settings()
-        client = JulesGitHubClient(
-            github_token=settings.github_token,
-            repo_name=settings.github_repository,
-            jules_username=settings.jules_username
-        )
+    # Submit a formal APPROVE review then merge the PR
+    if client and jules_data.last_verified_pr_number:
+        logger.info(f"Architect_Gate: Approving PR #{jules_data.last_verified_pr_number}")
+        client.review_pr(jules_data.last_verified_pr_number, event="APPROVE", body="All checks passed. Merging.")
         logger.info(f"Architect_Gate: Merging PR #{jules_data.last_verified_pr_number}")
         client.merge_pr(jules_data.last_verified_pr_number)
 
