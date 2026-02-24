@@ -12,7 +12,7 @@ def test_case_file_ingestion():
         "case_id": "TEST-001",
         "device_model": "Pixel_Prototype_Unit",
         "source_code_mode": "USER_UPLOADED_ZIP",
-        "symptom_description": "Kernel panic during resume",
+        "user_query": "Kernel panic during resume",
         "log_payload": {
             "dmesg_content": raw_log,
             "logcat_content": ""
