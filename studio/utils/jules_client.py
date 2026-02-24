@@ -237,6 +237,27 @@ class JulesGitHubClient:
             logger.error(f"Failed to post feedback to #{external_id}: {e}")
             return False
 
+    def review_pr(self, pr_number: int, event: Literal["APPROVE", "REQUEST_CHANGES", "COMMENT"], body: str = "") -> bool:
+        """
+        Submits a formal GitHub Pull Request review.
+
+        Args:
+            pr_number: The PR number to review.
+            event: One of "APPROVE", "REQUEST_CHANGES", or "COMMENT".
+            body: The review body / summary text.
+
+        Returns:
+            True on success, False on failure.
+        """
+        try:
+            pr = self.repo.get_pull(pr_number)
+            pr.create_review(body=body, event=event)
+            logger.info(f"Submitted PR review ({event}) on PR #{pr_number}")
+            return True
+        except GithubException as e:
+            logger.error(f"GitHub error while reviewing PR #{pr_number}: {e}")
+            return False
+
     def merge_pr(self, pr_number: int) -> bool:
         """
         Merges the specified Pull Request.

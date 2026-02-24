@@ -93,7 +93,7 @@ def test_route_feedback_loop_working():
 @pytest.mark.asyncio
 async def test_architect_gate_merge_pr():
     """
-    Test that node_architect_gate calls merge_pr on success.
+    Test that node_architect_gate calls review_pr (APPROVE) then merge_pr on success.
     """
     jules_meta = JulesMetadata(
         external_task_id="123",
@@ -112,7 +112,66 @@ async def test_architect_gate_merge_pr():
 
         await node_architect_gate(state)
 
+        mock_client.review_pr.assert_called_once_with(42, event="APPROVE", body="All checks passed. Merging.")
         mock_client.merge_pr.assert_called_once_with(42)
+
+@pytest.mark.asyncio
+async def test_architect_gate_request_changes_on_violation():
+    """
+    Test that node_architect_gate calls review_pr (REQUEST_CHANGES) when violations are found.
+    """
+    from studio.agents.architect import ReviewVerdict, Violation
+    jules_meta = JulesMetadata(
+        external_task_id="123",
+        status="COMPLETED",
+        last_verified_pr_number=99
+    )
+    state = {"jules_metadata": jules_meta, "messages": []}
+
+    mock_violation = MagicMock()
+    mock_violation.severity = "HIGH"
+    mock_violation.rule_id = "SRP"
+    mock_violation.file_path = "foo.py"
+    mock_violation.description = "Class does too much"
+    mock_violation.suggested_fix = "Split into smaller classes"
+
+    mock_verdict = MagicMock()
+    mock_verdict.status = "REJECTED"
+    mock_verdict.violations = [mock_violation]
+
+    with patch("studio.subgraphs.engineer.JulesGitHubClient") as MockClient, \
+         patch("studio.subgraphs.engineer.ArchitectAgent") as MockArchitect, \
+         patch("studio.subgraphs.engineer.apply_virtual_patch", return_value={"foo.py": "code"}):
+
+        mock_client = MockClient.return_value
+        mock_architect = MockArchitect.return_value
+        mock_architect.review_code.return_value = mock_verdict
+
+        result = await node_architect_gate(state)
+
+        mock_client.review_pr.assert_called_once()
+        call_kwargs = mock_client.review_pr.call_args
+        assert call_kwargs.kwargs["event"] == "REQUEST_CHANGES"
+        mock_client.merge_pr.assert_not_called()
+        assert result["jules_metadata"].status == "FAILED"
+
+def test_jules_client_review_pr():
+    """
+    Test that JulesGitHubClient.review_pr submits a formal GitHub PR review.
+    """
+    with patch("studio.utils.jules_client.Github"):
+        client = JulesGitHubClient(github_token=MagicMock(), repo_name="test/repo")
+        assert hasattr(client, "review_pr")
+
+        mock_pr = MagicMock()
+        client.repo.get_pull = MagicMock(return_value=mock_pr)
+
+        assert client.review_pr(42, event="APPROVE", body="LGTM")
+        mock_pr.create_review.assert_called_once_with(body="LGTM", event="APPROVE")
+
+        mock_pr.create_review.reset_mock()
+        assert client.review_pr(42, event="REQUEST_CHANGES", body="Fix violations")
+        mock_pr.create_review.assert_called_once_with(body="Fix violations", event="REQUEST_CHANGES")
 
 def test_jules_client_merge_pr():
     """
