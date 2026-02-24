@@ -206,21 +206,31 @@ class JulesGitHubClient:
 
     def post_feedback(self, external_id: str, feedback: str, is_error: bool = False) -> bool:
         """
-        Posts a comment on the Issue (or PR if available).
+        Posts a comment on the PR (if available) or falls back to the Issue.
+        Explicitly tags Jules for visibility.
         """
-        # Logic: If we know the PR, comment on the PR (code context).
-        # If not, comment on the Issue (general guidance).
         try:
-            # Simple implementation: Comment on the Issue ID provided
-            # (In a real system, we'd look up the PR from the Issue ID first)
             issue_number = int(external_id)
             issue = self.repo.get_issue(issue_number)
 
-            prefix = "### ❌ QA Verification Failed" if is_error else "### ℹ️ Studio Guidance"
-            comment_body = f"{prefix}\n\n{feedback}"
+            # 1. Detect if a linked PR exists
+            pr = self._find_linked_pr(issue)
 
-            issue.create_comment(comment_body)
-            logger.info(f"Posted feedback to Issue #{issue_number}")
+            # 2. Construct comment body with explicit tagging
+            # Use a newline after the tag for better Markdown rendering
+            prefix = "### ❌ QA Verification Failed" if is_error else "### ℹ️ Studio Guidance"
+            comment_body = f"@{self.jules_username}\n{prefix}\n\n{feedback}"
+
+            # 3. Post the comment
+            if pr:
+                # PullRequest objects use create_issue_comment for top-level comments
+                pr.create_issue_comment(comment_body)
+                location = f"PR #{pr.number}"
+            else:
+                issue.create_comment(comment_body)
+                location = f"Issue #{issue_number}"
+
+            logger.info(f"Posted feedback to {location}")
             return True
 
         except GithubException as e:
