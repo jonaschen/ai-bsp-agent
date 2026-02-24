@@ -280,6 +280,43 @@ class JulesGitHubClient:
             logger.error(f"GitHub error while merging PR #{pr_number}: {e}")
             return False
 
+    def get_open_prs(self, label: Optional[str] = None, author: Optional[str] = None) -> List[PullRequest.PullRequest]:
+        """
+        Lists all open Pull Requests, optionally filtered by label and author.
+        """
+        try:
+            pulls = self.repo.get_pulls(state='open', sort='created', direction='desc')
+            filtered_pulls = []
+
+            for pr in pulls:
+                # Filter by author
+                if author and pr.user.login != author:
+                    continue
+
+                # Filter by label
+                if label:
+                    labels = [l.name for l in pr.labels]
+                    if label not in labels:
+                        continue
+
+                filtered_pulls.append(pr)
+
+            return filtered_pulls
+        except GithubException as e:
+            logger.error(f"Failed to list open PRs: {e}")
+            return []
+
+    def get_file_content(self, path: str, ref: Optional[str] = None) -> str:
+        """
+        Fetches the full content of a file at a specific ref/branch.
+        """
+        try:
+            content = self.repo.get_contents(path, ref=ref)
+            return content.decoded_content.decode('utf-8')
+        except GithubException as e:
+            logger.error(f"Failed to get content for {path} at {ref}: {e}")
+            raise
+
     # --- Internal Helpers ---
 
     def _construct_issue_body(self, payload: TaskPayload) -> str:

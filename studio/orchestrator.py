@@ -37,6 +37,7 @@ from studio.memory import JulesMetadata, VerificationGate, EngineeringState
 from studio.agents.product_owner import run_po_cycle
 from studio.agents.scrum_master import run_scrum_retrospective
 from studio.agents.optimizer import OptimizerAgent
+from studio.agents.pr_monitor import run_pr_monitor
 
 # --- MOCK SUBGRAPHS (Placeholders for compilation) ---
 def engineer_subgraph_node(state: ContextSlice) -> Dict:
@@ -92,6 +93,7 @@ class Orchestrator:
         self.workflow.add_node("engineer_subgraph", self._engineer_wrapper)
         self.workflow.add_node("sop_guide_subgraph", self._sop_guide_wrapper)
         self.workflow.add_node("scrum_master", self.node_scrum_master)
+        self.workflow.add_node("pr_monitor", self.node_pr_monitor)
         self.workflow.add_node("reflector", reflector_node)
 
         # 2. Define Edges (The Lifecycle Flow)
@@ -104,6 +106,7 @@ class Orchestrator:
                 "plan": "product_owner",
                 "execute": "backlog_dispatcher",
                 "interactive_guide": "sop_guide_subgraph",
+                "monitor": "pr_monitor",
                 "block": END
             }
         )
@@ -136,8 +139,15 @@ class Orchestrator:
         self.workflow.add_edge("reflector", END)
         self.workflow.add_edge("scrum_master", END)
         self.workflow.add_edge("sop_guide_subgraph", END)
+        self.workflow.add_edge("pr_monitor", END)
 
         self.app = self.workflow.compile()
+
+    # --- NODE: PR Monitor (MONITOR) ---
+    async def node_pr_monitor(self, state: StudioState) -> Dict:
+        self.logger.info("Orchestrator: Engaging PR Monitor Agent...")
+        await run_pr_monitor()
+        return {}
 
     # --- NODE: Product Owner (PLAN) ---
     async def node_product_owner(self, state: StudioState) -> Dict:
@@ -312,6 +322,7 @@ class Orchestrator:
         if intent == "SPRINT": return "plan"
         if intent == "CODING": return "execute"
         if intent == "INTERACTIVE_GUIDE": return "interactive_guide"
+        if intent == "MONITOR": return "monitor"
         return "block"
 
     # --- NODE: Intent Router ---
@@ -323,8 +334,8 @@ class Orchestrator:
         """
         orch = state.orchestration
 
-        # Preserve SPRINT intent if explicitly set
-        if orch.user_intent == "SPRINT":
+        # Preserve SPRINT/MONITOR intent if explicitly set
+        if orch.user_intent in ["SPRINT", "MONITOR"]:
             return {"orchestration": orch}
 
         # Check for No-Log Scenario (The Consultant Pivot)
