@@ -17,10 +17,6 @@ class Settings(BaseSettings):
     vector_store_path: str = Field(default="data/vector_store")
     embedding_model: str = Field(default="textembedding-gecko@003")
 
-    # PR Monitor Configuration
-    monitor_label: Optional[str] = Field(default=None)
-    monitor_author: Optional[str] = Field(default=None)
-
     # Model Stratification Strategy
     thinking_model: str = "gemini-2.5-pro"
     doing_model: str = "gemini-2.5-flash"
