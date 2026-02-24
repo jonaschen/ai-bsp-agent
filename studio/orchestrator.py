@@ -37,6 +37,8 @@ from studio.memory import JulesMetadata, VerificationGate, EngineeringState
 from studio.agents.product_owner import run_po_cycle
 from studio.agents.scrum_master import run_scrum_retrospective
 from studio.agents.optimizer import OptimizerAgent
+from studio.agents.codebase_analyzer import CodebaseAnalyzerAgent
+from studio.agents.pr_monitor import PRMonitorAgent
 
 # --- MOCK SUBGRAPHS (Placeholders for compilation) ---
 def engineer_subgraph_node(state: ContextSlice) -> Dict:
@@ -86,6 +88,8 @@ class Orchestrator:
         """
         # 1. Define Nodes
         self.workflow.add_node("intent_router", self.route_intent)
+        self.workflow.add_node("codebase_analyzer", self.node_codebase_analyzer)
+        self.workflow.add_node("pr_monitor", self.node_pr_monitor)
         self.workflow.add_node("product_owner", self.node_product_owner)
         self.workflow.add_node("backlog_dispatcher", self.node_backlog_dispatcher)
         self.workflow.add_node("context_slicer", self.slice_context)
@@ -101,6 +105,8 @@ class Orchestrator:
             "intent_router",
             self._decide_entry_route,
             {
+                "analyze": "codebase_analyzer",
+                "monitor": "pr_monitor",
                 "plan": "product_owner",
                 "execute": "backlog_dispatcher",
                 "interactive_guide": "sop_guide_subgraph",
@@ -108,6 +114,8 @@ class Orchestrator:
             }
         )
 
+        self.workflow.add_edge("codebase_analyzer", "product_owner")
+        self.workflow.add_edge("pr_monitor", END)
         self.workflow.add_edge("product_owner", "backlog_dispatcher")
 
         # Loop over the backlog
@@ -138,6 +146,24 @@ class Orchestrator:
         self.workflow.add_edge("sop_guide_subgraph", END)
 
         self.app = self.workflow.compile()
+
+    # --- NODE: Codebase Analyzer ---
+    async def node_codebase_analyzer(self, state: StudioState) -> Dict:
+        self.logger.info("Orchestrator: Engaging Codebase Analyzer...")
+        analyzer = CodebaseAnalyzerAgent()
+        # Returns a list of created issue numbers
+        issues = await analyzer.scan_and_report()
+        self.logger.info(f"Codebase Analyzer created {len(issues)} issues.")
+        # We might want to store these in state or just let PO find them
+        return {}
+
+    # --- NODE: PR Monitor ---
+    async def node_pr_monitor(self, state: StudioState) -> Dict:
+        self.logger.info("Orchestrator: Engaging PR Monitor...")
+        monitor = PRMonitorAgent()
+        processed = await monitor.monitor_and_review()
+        self.logger.info(f"PR Monitor processed {len(processed)} PRs.")
+        return {}
 
     # --- NODE: Product Owner (PLAN) ---
     async def node_product_owner(self, state: StudioState) -> Dict:
@@ -308,10 +334,12 @@ class Orchestrator:
 
     def _decide_entry_route(self, state: StudioState) -> str:
         """Determines the entry point based on user intent."""
-        intent = state.orchestration.user_intent
-        if intent == "SPRINT": return "plan"
-        if intent == "CODING": return "execute"
-        if intent == "INTERACTIVE_GUIDE": return "interactive_guide"
+        intent = state.orchestration.user_intent.lower()
+        if intent == "analyze": return "analyze"
+        if intent == "monitor": return "monitor"
+        if intent == "sprint": return "plan"
+        if intent in ["coding", "execute"]: return "execute"
+        if intent == "interactive_guide": return "interactive_guide"
         return "block"
 
     # --- NODE: Intent Router ---
@@ -323,8 +351,8 @@ class Orchestrator:
         """
         orch = state.orchestration
 
-        # Preserve SPRINT intent if explicitly set
-        if orch.user_intent == "SPRINT":
+        # Preserve explicit intents
+        if orch.user_intent in ["SPRINT", "analyze", "monitor", "execute"]:
             return {"orchestration": orch}
 
         # Check for No-Log Scenario (The Consultant Pivot)

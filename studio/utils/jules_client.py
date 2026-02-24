@@ -15,7 +15,7 @@ Dependencies:
 """
 
 import logging
-from typing import Protocol, List, Dict, Optional, Literal
+from typing import Protocol, List, Dict, Optional, Literal, Any
 from enum import Enum
 from pydantic import BaseModel, Field, SecretStr
 
@@ -113,6 +113,22 @@ class JulesGitHubClient:
                 raise
         return self._repo_cache
 
+    def create_issue(self, title: str, body: str, labels: List[str] = None) -> int:
+        """
+        Creates a generic GitHub issue.
+        """
+        try:
+            issue = self.repo.create_issue(
+                title=title,
+                body=body,
+                labels=labels or []
+            )
+            logger.info(f"Created issue #{issue.number}: {title}")
+            return issue.number
+        except GithubException as e:
+            logger.error(f"Failed to create issue '{title}': {e}")
+            raise
+
     def dispatch_task(self, payload: TaskPayload) -> str:
         """
         Converts the internal Studio Task into a GitHub Issue formatted for Jules.
@@ -124,18 +140,53 @@ class JulesGitHubClient:
         body = self._construct_issue_body(payload)
 
         # 2. Create the Issue
-        try:
-            issue = self.repo.create_issue(
-                title=f"[Studio Task] {payload.intent} ({payload.task_id})",
-                body=body,
-                labels=["ai-studio", f"priority:{payload.priority.value.lower()}", "jules"]
-            )
-            logger.info(f"Task dispatched. Issue #{issue.number} created.")
-            return str(issue.number)
+        issue_number = self.create_issue(
+            title=f"[Studio Task] {payload.intent} ({payload.task_id})",
+            body=body,
+            labels=["ai-studio", f"priority:{payload.priority.value.lower()}", "jules"]
+        )
+        return str(issue_number)
 
+    def get_open_prs(self) -> List[Dict[str, Any]]:
+        """
+        Fetches all open Pull Requests in the repository.
+        """
+        try:
+            prs = self.repo.get_pulls(state='open', sort='created')
+            results = []
+            for pr in prs:
+                # Basic info
+                results.append({
+                    "number": pr.number,
+                    "title": pr.title,
+                    "url": pr.html_url,
+                    "last_commit_hash": pr.head.sha,
+                    "raw_diff": self._get_pr_diff(pr)
+                })
+            return results
         except GithubException as e:
-            logger.error(f"Failed to create issue for task {payload.task_id}: {e}")
-            raise
+            logger.error(f"Failed to fetch open PRs: {e}")
+            return []
+
+    def _get_pr_diff(self, pr: PullRequest.PullRequest) -> str:
+        """Helper to fetch and format PR diff."""
+        diff_files = list(pr.get_files())
+        diff_parts = []
+        for f in diff_files:
+            if not f.patch:
+                continue
+            # Fix malformed patches (missing leading spaces on context lines)
+            fixed_patch = []
+            for line in f.patch.splitlines():
+                if line.startswith(('+', '-', '@@', '\\', ' ')):
+                    fixed_patch.append(line)
+                elif not line:
+                    fixed_patch.append(' ')
+                else:
+                    fixed_patch.append(' ' + line)
+            patch_content = "\n".join(fixed_patch) + "\n"
+            diff_parts.append(f"--- a/{f.filename}\n+++ b/{f.filename}\n{patch_content}")
+        return "".join(diff_parts)
 
     def get_status(self, external_id: str) -> WorkStatus:
         """
