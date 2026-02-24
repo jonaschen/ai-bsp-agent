@@ -1,5 +1,5 @@
 from typing import TypedDict, List, Annotated, Union, Optional
-from product.bsp_agent.core.schema import ConsultantResponse
+from product.schemas import ConsultantResponse
 
 class AgentState(TypedDict):
     messages: List[Union[tuple, str]]

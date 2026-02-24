@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from product.bsp_agent.core.schema import ConsultantResponse
+from product.schemas import ConsultantResponse
 from product.bsp_agent.agents.supervisor import SupervisorAgent
 from product.bsp_agent.core.state import AgentState
 
