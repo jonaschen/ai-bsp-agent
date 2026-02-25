@@ -102,3 +102,18 @@ async def test_vertex_flash_judge():
     mock_response.text = "FALSE"
     result = await judge.check_entailment("A", "B", "Context")
     assert result is False
+
+@pytest.mark.asyncio
+async def test_empty_samples():
+    # Mock the judge to return empty samples
+    judge = AsyncMock()
+    judge.generate_samples.return_value = []
+
+    calculator = SemanticEntropyCalculator(judge)
+    metric = await calculator.measure_uncertainty("Prompt", "Intent")
+
+    # Should return high uncertainty (tunneling) and 0.0 entropy
+    assert metric.entropy_score == 0.0
+    assert metric.is_tunneling is True
+    assert metric.sample_size == 0
+    assert metric.cluster_distribution == {}
