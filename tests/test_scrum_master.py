@@ -74,6 +74,36 @@ class TestScrumMasterAgent(unittest.TestCase):
             self.assertEqual(report, expected_report)
             mock_chain.invoke.assert_called_once()
 
+    def test_conduct_retrospective_exception_handling(self):
+        sprint_data = {
+            "sprint_id": "SPRINT-CRASH",
+            "completed_tickets_log": [],
+            "failed_tickets_log": []
+        }
+
+        # Mock prompt creation and chain construction to raise exception
+        with patch("studio.agents.scrum_master.ChatPromptTemplate.from_messages") as mock_prompt_cls:
+            mock_prompt = MagicMock()
+            mock_prompt_cls.return_value = mock_prompt
+
+            # Chain simulation: prompt | llm | parser
+            mock_chain = MagicMock()
+            mock_chain.invoke.side_effect = Exception("Simulated LLM Crash")
+
+            mock_chain_step1 = MagicMock()
+            mock_prompt.__or__.return_value = mock_chain_step1
+            mock_chain_step1.__or__.return_value = mock_chain
+
+            report = self.agent.conduct_retrospective(sprint_data)
+
+            # Verification
+            self.assertIsInstance(report, RetrospectiveReport)
+            self.assertEqual(report.sprint_id, "SPRINT-CRASH")
+            self.assertEqual(report.success_rate, 0.0)
+            self.assertEqual(report.avg_entropy_score, 0.0)
+            self.assertIn("Scrum Master Crash", report.key_bottlenecks)
+            self.assertEqual(report.optimizations, [])
+
     def test_run_scrum_retrospective_not_enough_data(self):
         state = {
             "orchestration_layer": {
