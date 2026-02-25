@@ -146,27 +146,47 @@ class Orchestrator:
         # 1. Process results from the previous execution
         if eng.current_task and eng.jules_meta:
             self.logger.info(f"Processing result for task: {eng.current_task}, status: {eng.jules_meta.status}")
-            new_queue = []
-            for t in orch.task_queue:
-                if t.id == eng.current_task or f"{t.title}: {t.description}" == eng.current_task:
-                    if eng.jules_meta.status == "COMPLETED":
-                        t.status = "COMPLETED"
-                        orch.completed_tasks_log.append(t)
-                        self.logger.info(f"Task {t.id} completed.")
-                        continue # Removed from active queue
-                    elif eng.jules_meta.status == "FAILED":
-                        t.status = "FAILED"
-                        orch.failed_tasks_log.append(t)
-                        self.logger.info(f"Task {t.id} failed.")
-                        continue # Removed from active queue
-                new_queue.append(t)
-            orch.task_queue = new_queue
 
-        # 2. Pick the next ticket that is OPEN or IN_PROGRESS (if resuming)
-        next_ticket = next((t for t in orch.task_queue if t.status in ["OPEN", "IN_PROGRESS"]), None)
+            # Helper to update a list and return the updated ticket if found
+            def update_and_filter(ticket_list):
+                new_list = []
+                found_ticket = None
+                for t in ticket_list:
+                    if t.id == eng.current_task or f"{t.title}: {t.description}" == eng.current_task:
+                        if eng.jules_meta.status == "COMPLETED":
+                            t.status = "COMPLETED"
+                            found_ticket = t
+                            continue # Remove from active list
+                        elif eng.jules_meta.status == "FAILED":
+                            t.status = "FAILED"
+                            found_ticket = t
+                            continue # Remove from active list
+                    new_list.append(t)
+                return new_list, found_ticket
+
+            # Update both to keep them in sync
+            orch.task_queue, updated_tkt_q = update_and_filter(orch.task_queue)
+            orch.sprint_backlog, updated_tkt_s = update_and_filter(orch.sprint_backlog)
+
+            updated_tkt = updated_tkt_s or updated_tkt_q
+            if updated_tkt:
+                if updated_tkt.status == "COMPLETED":
+                    orch.completed_tasks_log.append(updated_tkt)
+                    self.logger.info(f"Task {updated_tkt.id} completed.")
+                elif updated_tkt.status == "FAILED":
+                    orch.failed_tasks_log.append(updated_tkt)
+                    self.logger.info(f"Task {updated_tkt.id} failed.")
+
+        # 2. Pick the next ticket that is OPEN or IN_PROGRESS from the SPRINT BACKLOG
+        next_ticket = next((t for t in orch.sprint_backlog if t.status in ["OPEN", "IN_PROGRESS"]), None)
 
         if next_ticket:
             next_ticket.status = "IN_PROGRESS"
+
+            # Mark as IN_PROGRESS in task_queue for consistency if present
+            for t in orch.task_queue:
+                if t.id == next_ticket.id:
+                    t.status = "IN_PROGRESS"
             new_eng = EngineeringState(
                 current_task=f"{next_ticket.title}: {next_ticket.description}",
                 jules_meta=JulesMetadata(
@@ -287,8 +307,8 @@ class Orchestrator:
 
     def _decide_loop_route(self, state: StudioState) -> str:
         """Determines if there are more tasks in the backlog."""
-        # Check for tickets that are OPEN or currently IN_PROGRESS
-        active_ticket = next((t for t in state.orchestration.task_queue if t.status in ["OPEN", "IN_PROGRESS"]), None)
+        # Check for tickets that are OPEN or currently IN_PROGRESS in the SPRINT BACKLOG
+        active_ticket = next((t for t in state.orchestration.sprint_backlog if t.status in ["OPEN", "IN_PROGRESS"]), None)
         return "next" if active_ticket else "done"
 
     def _decide_entry_route(self, state: StudioState) -> str:
