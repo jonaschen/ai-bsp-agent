@@ -1,5 +1,29 @@
 import pytest
-from studio.memory import TestResult
+from studio.memory import TestResult, ContextSlice
+
+def test_context_slice_footprint_determinism():
+    """Test that identical ContextSlice objects produce the same footprint."""
+    c1 = ContextSlice(files=["a.py", "b.py"], issues=["1", "2"])
+    c2 = ContextSlice(files=["a.py", "b.py"], issues=["1", "2"])
+    assert c1.footprint() == c2.footprint()
+
+def test_context_slice_footprint_sorting():
+    """Test that footprint is order-independent for files and issues."""
+    c1 = ContextSlice(files=["a.py", "b.py"], issues=["1", "2"])
+    c2 = ContextSlice(files=["b.py", "a.py"], issues=["2", "1"])
+    assert c1.footprint() == c2.footprint()
+
+def test_context_slice_footprint_sensitivity():
+    """Test that footprint changes when content changes."""
+    c1 = ContextSlice(files=["a.py"], issues=["1"])
+    c2 = ContextSlice(files=["a.py", "b.py"], issues=["1"])
+    assert c1.footprint() != c2.footprint()
+
+def test_context_slice_footprint_empty():
+    """Test footprint generation with empty fields."""
+    c1 = ContextSlice(files=[], issues=[])
+    assert isinstance(c1.footprint(), str)
+    assert len(c1.footprint()) > 0
 
 def test_test_result_summary_success():
     """Test that summary generates correct format for PASS status."""
