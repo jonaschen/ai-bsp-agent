@@ -497,6 +497,29 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
         jules_data.status = "COMPLETED"
     else:
         logger.warning(f"QA_Verifier: Tests FAILED. Demoting status to FAILED. Logs: {logs[:100]}...")
+
+        # Stability Protocol Fallback: If refactor breaks tests, fallback to Green
+        if jules_data.is_refactoring and jules_data.green_patch:
+            logger.warning("QA_Verifier: Refactor broke tests. Falling back to Green state.")
+
+            # Initialize client for fallback
+            settings = get_settings()
+            client = JulesGitHubClient(
+                github_token=settings.github_token,
+                repo_name=settings.github_repository,
+                jules_username=settings.jules_username
+            )
+
+            if jules_data.last_verified_pr_number:
+                body = "Refactor broke functional tests. Falling back to Green state with #TODO: Tech Debt."
+                client.fallback_to_green(jules_data.last_verified_pr_number, jules_data.green_patch)
+                client.review_pr(jules_data.last_verified_pr_number, event="APPROVE", body=body)
+                client.merge_pr(jules_data.last_verified_pr_number)
+
+            jules_data.status = "COMPLETED" # We accept the fallback
+            jules_data.is_refactoring = False
+            return {"jules_metadata": jules_data}
+
         jules_data.status = "FAILED"
 
     return {"jules_metadata": jules_data}
@@ -574,27 +597,57 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
 
     if all_violations:
         logger.warning(f"Architect_Gate: Code REJECTED with {len(all_violations)} violations.")
-        jules_data.status = "FAILED" # Force loop back
 
-        # Format feedback
-        feedback = "ARCHITECTURAL REVIEW FAILED.\n\nVIOLATIONS:\n"
-        for v in all_violations:
-            feedback += f"- [{v.severity}] {v.rule_id} in {v.file_path}: {v.description} (Fix: {v.suggested_fix})\n"
+        # Stability Protocol: ONE refactor attempt
+        if jules_data.refactor_count < 1:
+            logger.info("Architect_Gate: Triggering first refactor attempt.")
+            jules_data.status = "FAILED"
+            jules_data.refactor_count += 1
+            jules_data.is_refactoring = True
 
-        feedback += "\nINSTRUCTION: Refactor the code to address these violations while keeping tests GREEN."
-        jules_data.feedback_log.append(feedback)
+            # Save the current "Green" patch for potential fallback
+            if jules_data.generated_artifacts:
+                jules_data.green_patch = jules_data.generated_artifacts[0].diff_content
 
-        # Submit a formal REQUEST_CHANGES review on GitHub
-        if client and jules_data.last_verified_pr_number:
-            logger.info(f"Architect_Gate: Requesting changes on PR #{jules_data.last_verified_pr_number}")
-            client.review_pr(jules_data.last_verified_pr_number, event="REQUEST_CHANGES", body=feedback)
+            # Format feedback
+            feedback = "ARCHITECTURAL REVIEW FAILED.\n\nVIOLATIONS:\n"
+            for v in all_violations:
+                feedback += f"- [{v.severity}] {v.rule_id} in {v.file_path}: {v.description} (Fix: {v.suggested_fix})\n"
 
-        return {
-            "jules_metadata": jules_data,
-            "messages": [AIMessage(content="**SYSTEM**: Architect rejected the solution. See feedback.")]
-        }
+            feedback += "\nINSTRUCTION: Refactor the code to address these violations while keeping tests GREEN."
+            jules_data.feedback_log.append(feedback)
+
+            # Submit a formal REQUEST_CHANGES review on GitHub
+            if client and jules_data.last_verified_pr_number:
+                logger.info(f"Architect_Gate: Requesting changes on PR #{jules_data.last_verified_pr_number}")
+                client.review_pr(jules_data.last_verified_pr_number, event="REQUEST_CHANGES", body=feedback)
+
+            return {
+                "jules_metadata": jules_data,
+                "messages": [AIMessage(content="**SYSTEM**: Architect rejected the solution. Refactor attempt 1/1 initiated.")]
+            }
+        else:
+            # Fallback Rule: Already attempted refactor, revert to Green state with tag
+            logger.warning("Architect_Gate: Refactor retry limit reached. Falling back to Green state.")
+
+            if jules_data.green_patch:
+                # We restore the green patch and add tech debt tag
+                # Implementation of fallback will be in JulesGitHubClient
+                if client and jules_data.last_verified_pr_number:
+                    body = "Refactor limit reached. Falling back to Green state with #TODO: Tech Debt."
+                    client.fallback_to_green(jules_data.last_verified_pr_number, jules_data.green_patch)
+                    client.review_pr(jules_data.last_verified_pr_number, event="APPROVE", body=body)
+                    client.merge_pr(jules_data.last_verified_pr_number)
+
+                jules_data.status = "COMPLETED"
+                jules_data.is_refactoring = False
+                return {
+                    "jules_metadata": jules_data,
+                    "messages": [AIMessage(content="**SYSTEM**: Refactor limit reached. Fallback to Green state with Tech Debt tag.")]
+                }
 
     logger.info("Architect_Review: Code APPROVED.")
+    jules_data.is_refactoring = False # Reset refactoring flag on success
 
     # Submit a formal APPROVE review then merge the PR
     if client and jules_data.last_verified_pr_number:

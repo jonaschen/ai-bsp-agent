@@ -86,6 +86,12 @@ class AIEmployeeClient(Protocol):
         """
         ...
 
+    def fallback_to_green(self, pr_number: int, green_patch: str) -> bool:
+        """
+        Stability Protocol Fallback.
+        """
+        ...
+
 # --- SECTION 3: Concrete Implementation ( Google Jules ) ---
 
 class JulesGitHubClient:
@@ -278,6 +284,63 @@ class JulesGitHubClient:
 
         except GithubException as e:
             logger.error(f"GitHub error while merging PR #{pr_number}: {e}")
+            return False
+
+    def fallback_to_green(self, pr_number: int, green_patch: str) -> bool:
+        """
+        Stability Protocol Fallback:
+        Reverts the PR to the "Green" state and adds #TODO: Tech Debt tags.
+        """
+        logger.warning(f"Fallback: Reverting PR #{pr_number} to Green state with tags.")
+        try:
+            from studio.utils.patching import apply_virtual_patch, extract_affected_files
+
+            pr = self.repo.get_pull(pr_number)
+            branch = pr.head.ref
+            base_sha = pr.base.sha
+
+            # 1. Identify affected files
+            affected_paths = extract_affected_files(green_patch)
+
+            # 2. Fetch original content (from base)
+            original_files = {}
+            for path in affected_paths:
+                try:
+                    file_content = self.repo.get_contents(path, ref=base_sha)
+                    original_files[path] = file_content.decoded_content.decode("utf-8")
+                except GithubException:
+                    # File might be new in the PR
+                    original_files[path] = ""
+
+            # 3. Apply Green Patch
+            patched_files = apply_virtual_patch(original_files, green_patch)
+
+            # 4. Add Tech Debt Tags
+            for path, content in patched_files.items():
+                if path.endswith(".py"):
+                    tag = "# TODO: Tech Debt - Architectural Refactor Needed (Stability Protocol Fallback)\n"
+                    # Add to top of file
+                    patched_files[path] = tag + content
+                elif path.endswith((".c", ".h", ".cpp")):
+                    tag = "// TODO: Tech Debt - Architectural Refactor Needed (Stability Protocol Fallback)\n"
+                    patched_files[path] = tag + content
+
+            # 5. Push updates to the branch
+            for path, content in patched_files.items():
+                current_file = self.repo.get_contents(path, ref=branch)
+                self.repo.update_file(
+                    path=path,
+                    message="chore: Stability Protocol Fallback (Revert to Green + Tech Debt)",
+                    content=content,
+                    sha=current_file.sha,
+                    branch=branch
+                )
+
+            logger.info(f"Fallback successful for PR #{pr_number}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Fallback failed: {e}")
             return False
 
     # --- Internal Helpers ---
