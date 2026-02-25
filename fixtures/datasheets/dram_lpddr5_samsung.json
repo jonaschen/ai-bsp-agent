@@ -1,0 +1,10 @@
+{
+    "component_type": "DRAM",
+    "part_number": "K3LK7K70BM",
+    "voltage_range": "1.1V / 1.8V",
+    "timing_specs": {
+        "data_rate": "8533Mbps",
+        "t_ras": "42ns"
+    },
+    "description": "Samsung LPDDR5 16GB, optimized for high-performance mobile devices."
+}

@@ -1,0 +1,10 @@
+{
+    "component_type": "SoC",
+    "part_number": "SM8650-AB",
+    "voltage_range": "0.5V - 1.2V",
+    "timing_specs": {
+        "cpu_max_freq": "3.3GHz",
+        "gpu_max_freq": "903MHz"
+    },
+    "description": "Qualcomm Snapdragon 8 Gen 3 Mobile Platform."
+}

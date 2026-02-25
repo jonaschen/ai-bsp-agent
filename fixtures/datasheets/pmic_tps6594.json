@@ -1,0 +1,10 @@
+{
+    "component_type": "PMIC",
+    "part_number": "TPS6594-Q1",
+    "voltage_range": "3.3V - 5.0V",
+    "timing_specs": {
+        "t_rise": "10ms",
+        "t_fall": "5ms"
+    },
+    "description": "Multi-rail PMIC for automotive applications, supporting LPDDR4X and LPDDR5."
+}

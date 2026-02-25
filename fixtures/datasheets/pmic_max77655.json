@@ -1,0 +1,10 @@
+{
+    "component_type": "PMIC",
+    "part_number": "MAX77655",
+    "voltage_range": "2.5V - 5.5V",
+    "timing_specs": {
+        "i2c_speed": "1MHz",
+        "soft_start_time": "1ms"
+    },
+    "description": "Single-inductor multiple-output (SIMO) PMIC for small Li+ battery powered devices."
+}

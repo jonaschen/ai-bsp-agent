@@ -1,0 +1,10 @@
+{
+    "component_type": "DRAM",
+    "part_number": "MT53E1G32D2",
+    "voltage_range": "1.1V / 1.8V",
+    "timing_specs": {
+        "data_rate": "4266Mbps",
+        "t_ck": "0.468ns"
+    },
+    "description": "Micron LPDDR4X 32Gb, low power DDR4 SDRAM."
+}
