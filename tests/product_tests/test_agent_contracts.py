@@ -2,6 +2,12 @@ import json
 import pytest
 from pydantic import ValidationError
 from product.schemas import (
+    LogPayload,
+    CaseFile,
+    TriageReport,
+    RCAReport,
+    SOPStep,
+    ConsultantResponse,
     SupervisorInput,
     PathologistOutput,
     HardwareAdvisorInput,
@@ -16,6 +22,76 @@ def assert_roundtrip(model_class, data):
     # Re-instantiate to verify it's still valid
     instance_back = model_class(**data_back)
     assert instance == instance_back
+
+def test_log_payload_serialization():
+    data = {
+        "dmesg_content": "[ 0.000000] Linux version...",
+        "logcat_content": "I/ActivityManager: ..."
+    }
+    assert_roundtrip(LogPayload, data)
+
+def test_case_file_serialization():
+    data = {
+        "case_id": "CASE-123",
+        "device_model": "Pixel 8",
+        "source_code_mode": "git",
+        "user_query": "Kernel panic on boot",
+        "log_payload": {
+            "dmesg_content": "...",
+            "logcat_content": "..."
+        }
+    }
+    assert_roundtrip(CaseFile, data)
+
+def test_triage_report_serialization():
+    data = {
+        "status": "CRITICAL",
+        "failure_type": "KERNEL_PANIC",
+        "event_horizon_timestamp": "123.456",
+        "key_evidence": ["Panic occurred"],
+        "suspected_file_hint": "drivers/usb/dwc3/gadget.c"
+    }
+    assert_roundtrip(TriageReport, data)
+
+def test_rca_report_serialization():
+    data = {
+        "diagnosis_id": "RCA-001",
+        "confidence_score": 0.9,
+        "root_cause_summary": "Summary",
+        "technical_detail": "Detail",
+        "suggested_fix": "Fix",
+        "references": ["Ref"]
+    }
+    assert_roundtrip(RCAReport, data)
+
+def test_sop_step_serialization():
+    data = {
+        "step_id": 1,
+        "action_type": "CODE_PATCH",
+        "instruction": "Do something",
+        "expected_value": "Expected",
+        "file_path": "path/to/file"
+    }
+    assert_roundtrip(SOPStep, data)
+
+def test_consultant_response_serialization():
+    data = {
+        "diagnosis_id": "DIAG-001",
+        "confidence_score": 0.85,
+        "status": "WARNING",
+        "root_cause_summary": "Summary",
+        "evidence": ["Evidence"],
+        "sop_steps": [
+            {
+                "step_id": 1,
+                "action_type": "MEASUREMENT",
+                "instruction": "Measure",
+                "expected_value": "Value",
+                "file_path": "N/A"
+            }
+        ]
+    }
+    assert_roundtrip(ConsultantResponse, data)
 
 def test_supervisor_input_serialization():
     supervisor_data = {
