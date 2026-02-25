@@ -34,3 +34,7 @@ ENV/
 
 .pytest_cache/
 .DS_Store
+
+# Test artifacts written to product/prompts/ during test runs
+product/prompts/*.py
+product/prompts/*.yaml
