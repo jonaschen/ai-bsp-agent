@@ -23,7 +23,7 @@ async def test_router_case_a_coding_with_log(mock_gen_model, mock_vertex_judge):
         session_id="test_case_a",
         user_intent="Fix Bug",
         triage_status=TriageStatus(is_log_available=True, suspected_domain="drivers"),
-        task_queue=[
+        sprint_backlog=[
             Ticket(id="TKT-1", title="Fix the bug", description="Fix it", priority="HIGH", source_section_id="1.1")
         ]
     )

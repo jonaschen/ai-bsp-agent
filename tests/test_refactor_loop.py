@@ -42,7 +42,7 @@ async def test_refactor_loop():
         user_intent="CODING",
         triage_status=TriageStatus(is_log_available=True, suspected_domain="app"),
         current_context_slice=ContextSlice(intent="CODING", files=["src/app.py"]),
-        task_queue=[
+        sprint_backlog=[
             Ticket(id="TKT-REF", title="Feature X", description="Implement X", priority="HIGH", source_section_id="1.1")
         ]
     )
