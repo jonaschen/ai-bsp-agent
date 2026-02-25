@@ -1,9 +1,14 @@
 name: Publish Compliance Issues
 
-# Triggered manually (workflow_dispatch) to publish the two audit findings as
-# GitHub Issues with full descriptions and developer checklists.
-# Re-running is safe: the job checks for duplicate titles before creating.
+# Triggered on push to the audit branch (runs once on PR) and also available
+# as a manual dispatch. Re-running is safe: the job checks for duplicate titles
+# before creating each issue.
 on:
+  push:
+    branches:
+      - "copilot/audit-agents-md-compliance"
+    paths:
+      - ".github/workflows/create-compliance-issues.yml"
   workflow_dispatch:
 
 jobs:
