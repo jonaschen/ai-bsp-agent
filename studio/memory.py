@@ -154,6 +154,9 @@ class JulesMetadata(BaseModel):
     last_verified_pr_number: Optional[int] = Field(None, description="The PR number associated with the last verified commit")
     retry_count: int = 0
     max_retries: int = 5
+    refactor_count: int = 0
+    is_refactoring: bool = False
+    green_patch: Optional[str] = None
 
     # Context Slicing (Input to the Agent)
     active_context_slice: ContextSlice = Field(default_factory=ContextSlice)
@@ -245,10 +248,11 @@ class Violation(BaseModel):
 
 class ReviewVerdict(BaseModel):
     """The Architect's Final Decision."""
-    status: Literal["APPROVED", "REJECTED", "NEEDS_REFACTOR"]
+    status: Literal["APPROVED", "REJECTED", "NEEDS_REFACTOR", "APPROVED_WITH_TECH_DEBT"]
     quality_score: float = Field(..., description="0.0 to 10.0 scale")
     violations: List[Violation] = []
     adr_entry: Optional[ArchitecturalDecisionRecord] = Field(None, description="New rule to record if needed")
+    tech_debt_tag: Optional[str] = Field(None, description="Tag to be added if approved with tech debt")
 
 # Legacy / Review Agent Artifacts
 class ReviewSummary(BaseModel):
