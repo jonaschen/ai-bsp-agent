@@ -1,0 +1,7 @@
+{
+    "component_type": "DRAM",
+    "part_number": "DRAM_SAMPLE_02",
+    "voltage_range": "1.2V",
+    "timing_specs": "tRP: 13.75ns",
+    "description": "16GB DDR4 SDRAM module for industrial applications."
+}

@@ -1,0 +1,7 @@
+{
+    "component_type": "PMIC",
+    "part_number": "PMIC_SAMPLE_01",
+    "voltage_range": "0.8V - 5.5V",
+    "timing_specs": "tSTART: 1.5ms",
+    "description": "High-efficiency power management IC for mobile processors."
+}

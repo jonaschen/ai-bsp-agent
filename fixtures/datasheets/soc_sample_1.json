@@ -1,0 +1,7 @@
+{
+    "component_type": "SoC",
+    "part_number": "SOC_SAMPLE_01",
+    "voltage_range": "0.6V - 1.1V (Core)",
+    "timing_specs": "fMAX: 3.2GHz",
+    "description": "Octa-core application processor with integrated 5G modem."
+}

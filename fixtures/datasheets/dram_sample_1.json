@@ -1,0 +1,7 @@
+{
+    "component_type": "DRAM",
+    "part_number": "DRAM_SAMPLE_01",
+    "voltage_range": "1.1V / 0.6V",
+    "timing_specs": "tCK: 0.53ns (1866MHz)",
+    "description": "8GB LPDDR5 SDRAM for high-performance mobile computing."
+}

@@ -1,0 +1,7 @@
+{
+    "component_type": "PMIC",
+    "part_number": "PMIC_SAMPLE_02",
+    "voltage_range": "1.2V - 3.6V",
+    "timing_specs": "tSOFT_START: 500us",
+    "description": "Sub-PMIC for secondary power rails in wearable devices."
+}
