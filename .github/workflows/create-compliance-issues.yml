@@ -1,14 +1,15 @@
 name: Publish Compliance Issues
 
-# Triggered on push to the audit branch (runs once on PR) and also available
-# as a manual dispatch. Re-running is safe: the job checks for duplicate titles
-# before creating each issue.
-on:
+# Triggered on push to the audit branch when this workflow file or either issue
+# body file changes. Also available as a manual dispatch.
+# Re-running is safe: the job checks for duplicate titles before creating.
+"on":
   push:
     branches:
       - "copilot/audit-agents-md-compliance"
     paths:
       - ".github/workflows/create-compliance-issues.yml"
+      - ".github/compliance-issues/*.md"
   workflow_dispatch:
 
 jobs:
@@ -18,177 +19,45 @@ jobs:
       issues: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Create Issue 1 — Optimizer ACL Enforcement (AGENTS.md §4)
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const title = "🔒 [Compliance] Optimizer lacks sandboxing and ACL enforcement — Direct violation of AGENTS.md §4";
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: "🔒 [Compliance] Optimizer lacks sandboxing and ACL enforcement — Direct violation of AGENTS.md §4"
+          ISSUE_BODY_FILE: ".github/compliance-issues/issue-optimizer-acl.md"
+        run: |
+          # Idempotency: skip if issue already exists
+          existing=$(gh issue list --repo "${{ github.repository }}" \
+            --state open --search "$ISSUE_TITLE" --json title --jq '.[].title')
+          if echo "$existing" | grep -qF "$ISSUE_TITLE"; then
+            echo "Issue 1 already exists, skipping."
+          else
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "$ISSUE_TITLE" \
+              --body-file "$ISSUE_BODY_FILE" \
+              --label "bug"
+            echo "Issue 1 created successfully."
+          fi
 
-            // Idempotency: skip if issue already exists
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: "open",
-              per_page: 100
-            });
-            if (existing.data.some(i => i.title === title)) {
-              console.log("Issue already exists, skipping.");
-              return;
-            }
-
-            const body = `## Summary
-
-The \`OptimizerAgent\` (in \`studio/optimizer.py\` and \`studio/agents/optimizer.py\`) currently writes output to \`studio/_candidate/\` **without any access-control checks**. This directly violates **AGENTS.md §4 — Data Sovereignty & Containment Protocol**, which states:
-
-> *The Optimizer Agent MUST be executed in a container/sandbox where it has **Write Permission ONLY** to the \`product/prompts/\` directory. Any attempt to write to \`studio/\` must result in a \`PermissionDenied\` OS error.*
-
----
-
-## Problem Details
-
-\`\`\`python
-# studio/optimizer.py — CURRENT (non-compliant)
-def apply_prompt_update(self, target_file_path: str, new_content: str):
-    candidate_dir = Path("studio/_candidate")   # ❌ writes to studio/!
-    candidate_path = candidate_dir / original_path.name
-    os.makedirs(candidate_dir, exist_ok=True)   # ❌ no ACL check
-    candidate_path.write_text(new_content)       # ❌ can write anywhere
-\`\`\`
-
-**Root causes:**
-1. No sandboxing container enforced.
-2. No ACL checks — Optimizer will happily write to \`studio/\` or any other path.
-3. No \`PermissionError\` raised on constraint violation.
-4. Output destination hardcoded to \`studio/_candidate/\` instead of \`product/prompts/\`.
-
----
-
-## Required Fix (AGENTS.md §4)
-
-- Add an \`ALLOWED_WRITE_PATH = Path("product/prompts").resolve()\` constant.
-- In \`apply_prompt_update()\`, resolve the target path and raise \`PermissionError\` if it falls outside \`ALLOWED_WRITE_PATH\`.
-- Update \`optimize_prompt()\` to route output explicitly to \`product/prompts/<filename>\`.
-- Add \`write_prompt_file()\` method with ACL guard to \`studio/agents/optimizer.py\`.
-
----
-
-## 📜 Developer Checklist (MUST FOLLOW)
-
-> ⚠️ This project operates under **AGENTS.md** as the supreme governing constitution. All changes **MUST** comply.
-
-- [ ] **Follow TDD (AGENTS.md §1 — Prime Directive):**
-  1. 🔴 **Red** — Write a failing test that covers the ACL violation (e.g., assert \`PermissionError\` is raised when writing to \`studio/\`).
-  2. 🟢 **Green** — Implement the minimal ACL check to pass the test.
-  3. 🔵 **Refactor** — Clean up per SOLID principles (the Architect will review).
-- [ ] **Stay compliant with AGENTS.md §4:** The fix must raise a real OS-level \`PermissionError\` — not just log a warning.
-- [ ] **Tests must cover:**
-  - Writing to \`studio/\` raises \`PermissionError\`.
-  - Writing to an arbitrary path raises \`PermissionError\`.
-  - Writing to \`product/prompts/\` succeeds.
-
----
-
-## References
-
-- **AGENTS.md §4 — Data Sovereignty & Containment Protocol** (Point 4 — ACL Enforcement)
-- **Affected files:** \`studio/optimizer.py\`, \`studio/agents/optimizer.py\`
-- **Compliance audit finding:** FIX-001 (Priority 1 — CRITICAL)
-- **Audit date:** 2026-02-25`;
-
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: title,
-              body: body,
-              labels: ["bug", "compliance"]
-            });
-            console.log("Issue 1 created successfully.");
-
-      - name: Create Issue 2 — Architect Refactor Retry Limit (AGENTS.md §1.1)
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const title = "🔁 [Compliance] Architect refactor retry limit not implemented — Violates AGENTS.md §1.1 TDD Stability Protocol";
-
-            // Idempotency: skip if issue already exists
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: "open",
-              per_page: 100
-            });
-            if (existing.data.some(i => i.title === title)) {
-              console.log("Issue already exists, skipping.");
-              return;
-            }
-
-            const body = `## Summary
-
-The \`node_architect_gate()\` function in \`studio/subgraphs/engineer.py\` does **not** limit the Architect to a single refactor attempt. This directly violates **AGENTS.md §1.1 — The Stability Protocol (Anti-Loop Mechanism)**, which states:
-
-> *The Architect is allowed **ONE (1)** attempt to refactor a "Green" solution. If the refactored code fails the test (Red), the system **MUST** revert to the "Green" (messy but working) state. The reverted code is committed with a \`#TODO: Tech Debt\` tag.*
-
-Without this limit the system can loop indefinitely on architect rejections, burning API calls and blocking the pipeline.
-
----
-
-## Problem Details
-
-\`\`\`python
-# studio/subgraphs/engineer.py — CURRENT (non-compliant)
-def route_architect_gate(state: AgentState) -> Literal["end", "feedback_loop"]:
-    if state["jules_metadata"].status == "COMPLETED":
-        return "end"
-    return "feedback_loop"   # ❌ no retry counter — loops forever
-\`\`\`
-
-**Root causes:**
-1. No state field tracking how many architect-driven refactor attempts have occurred.
-2. No fallback rule: if refactor fails, the system must revert to the last Green state.
-3. No \`#TODO: Tech Debt\` tagging mechanism when the fallback is applied.
-
----
-
-## Required Fix (AGENTS.md §1.1)
-
-- Add \`architect_refactor_attempts: int = 0\` to \`JulesMetadata\` in \`studio/memory.py\`.
-- In \`node_architect_gate()\`:
-  - On first rejection: increment \`architect_refactor_attempts\`, set \`status = "FAILED"\`, send refactor feedback.
-  - On second rejection (\`architect_refactor_attempts >= 1\`): apply **Stability Protocol fallback** — set \`status = "COMPLETED"\`, append \`#TODO: Tech Debt\` note with deferred violations.
-- Add \`"APPROVED_WITH_TECH_DEBT"\` to \`ReviewVerdict.status\` and a \`tech_debt_tag\` field to carry the note.
-
----
-
-## 📜 Developer Checklist (MUST FOLLOW)
-
-> ⚠️ This project operates under **AGENTS.md** as the supreme governing constitution. All changes **MUST** comply.
-
-- [ ] **Follow TDD (AGENTS.md §1 — Prime Directive):**
-  1. 🔴 **Red** — Write a failing test that verifies the Stability Protocol: after one rejected refactor, a second Architect rejection MUST result in \`status = "COMPLETED"\` (fallback to Green), **not** another loop.
-  2. 🟢 **Green** — Add the \`architect_refactor_attempts\` counter and fallback logic to pass the test.
-  3. 🔵 **Refactor** — Architect reviews the implementation for SOLID compliance.
-- [ ] **Stay compliant with AGENTS.md §1.1:** The fallback must leave the system in a valid \`COMPLETED\` state with a \`#TODO: Tech Debt\` log entry — the pipeline must NOT be blocked.
-- [ ] **Tests must cover:**
-  - First architect rejection increments counter and sets \`status = "FAILED"\`.
-  - Second architect rejection triggers fallback: \`status = "COMPLETED"\` + \`#TODO: Tech Debt\` tag.
-  - Tech debt log entry contains the deferred violation details.
-  - Clean approval (no violations) leaves counter at 0.
-
----
-
-## References
-
-- **AGENTS.md §1.1 — The Stability Protocol (Anti-Loop Mechanism)**
-- **AGENTS.md §1 — The Prime Directive: TDD is Law**
-- **Affected files:** \`studio/subgraphs/engineer.py\`, \`studio/memory.py\`, \`studio/agents/architect.py\`
-- **Compliance audit finding:** FIX-002 (Priority 1 — CRITICAL)
-- **Audit date:** 2026-02-25`;
-
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: title,
-              body: body,
-              labels: ["bug", "compliance"]
-            });
-            console.log("Issue 2 created successfully.");
+      - name: Create Issue 2 — Architect Stability Protocol (AGENTS.md §1.1)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: "🔁 [Compliance] Architect refactor retry limit not implemented — Violates AGENTS.md §1.1 TDD Stability Protocol"
+          ISSUE_BODY_FILE: ".github/compliance-issues/issue-architect-stability.md"
+        run: |
+          # Idempotency: skip if issue already exists
+          existing=$(gh issue list --repo "${{ github.repository }}" \
+            --state open --search "$ISSUE_TITLE" --json title --jq '.[].title')
+          if echo "$existing" | grep -qF "$ISSUE_TITLE"; then
+            echo "Issue 2 already exists, skipping."
+          else
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "$ISSUE_TITLE" \
+              --body-file "$ISSUE_BODY_FILE" \
+              --label "bug"
+            echo "Issue 2 created successfully."
+          fi
