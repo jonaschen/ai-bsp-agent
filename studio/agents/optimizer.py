@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import Dict, Any, List
 from langchain_google_vertexai import ChatVertexAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -8,6 +9,21 @@ from studio.utils.prompts import fetch_system_prompt, update_system_prompt
 from studio.memory import RetrospectiveReport, ProcessOptimization
 
 logger = logging.getLogger("studio.agents.optimizer")
+
+# ACL: Optimizer may only write to product/prompts/ (AGENTS.md §4)
+ALLOWED_WRITE_PATH = Path("product/prompts").resolve()
+
+def _check_acl(path: Path):
+    """
+    Raises PermissionError if the resolved path falls outside the allowed
+    write directory (product/prompts/). Enforces AGENTS.md §4 containment.
+    """
+    resolved = path.resolve()
+    if not str(resolved).startswith(str(ALLOWED_WRITE_PATH)):
+        raise PermissionError(
+            f"Optimizer ACL Violation: Cannot write to {resolved}. "
+            f"Write permission is restricted to {ALLOWED_WRITE_PATH}."
+        )
 
 class OptimizerAgent:
     """
@@ -21,6 +37,9 @@ class OptimizerAgent:
             temperature=0.1,  # Precise and conservative updates
             max_output_tokens=4096
         )
+
+        # ACL: Optimizer may only write to product/prompts/ (AGENTS.md §4)
+        self.allowed_write_paths = [ALLOWED_WRITE_PATH]
 
         # Mapping from Scrum Master role names to prompt registry keys
         self.role_mapping = {
@@ -54,6 +73,17 @@ class OptimizerAgent:
                 update_system_prompt(registry_key, new_prompt)
             else:
                 logger.warning(f"Optimizer: Failed to rewrite prompt for {opt.target_role}.")
+
+    def write_prompt_file(self, target_path: str, content: str):
+        """
+        Writes prompt content to a file, enforcing ACL (AGENTS.md §4).
+        Raises PermissionError if the resolved path is outside product/prompts/.
+        """
+        _check_acl(Path(target_path))
+        resolved = Path(target_path).resolve()
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+        resolved.write_text(content)
+        logger.info(f"Optimizer: Wrote prompt to {resolved}")
 
     def _rewrite_prompt(self, current_prompt: str, optimization: ProcessOptimization) -> str:
         """

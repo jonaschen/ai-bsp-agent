@@ -573,6 +573,27 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
         client = None
 
     if all_violations:
+        # Stability Protocol (AGENTS.md §1.1): Architect is allowed ONE (1) refactor attempt.
+        # If this is already a refactor attempt, fall back to the Green (working) state
+        # and mark the code with #TODO: Tech Debt.
+        if jules_data.architect_refactor_attempts >= 1:
+            logger.warning(
+                "Architect_Gate: Stability Protocol triggered. "
+                "Max refactor attempts (1) exceeded. "
+                "Falling back to Green state with #TODO: Tech Debt."
+            )
+            jules_data.status = "COMPLETED"  # Accept the messy but working code
+            tech_debt_note = (
+                "#TODO: Tech Debt - Architecture Refactor Needed.\n"
+                "Deferred violations (Stability Protocol fallback):\n"
+            )
+            for v in all_violations:
+                tech_debt_note += f"- [{v.severity}] {v.rule_id} in {v.file_path}: {v.description}\n"
+            jules_data.feedback_log.append(tech_debt_note)
+            return {"jules_metadata": jules_data}
+
+        # First rejection: increment refactor attempt counter and request refactor
+        jules_data.architect_refactor_attempts += 1
         logger.warning(f"Architect_Gate: Code REJECTED with {len(all_violations)} violations.")
         jules_data.status = "FAILED" # Force loop back
 

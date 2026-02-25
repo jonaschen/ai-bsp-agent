@@ -13,6 +13,9 @@ load_dotenv()
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# ACL: Optimizer may only write to this directory (AGENTS.md §4)
+ALLOWED_WRITE_PATH = Path("product/prompts").resolve()
+
 class OptimizerAgent:
     """
     The Evolver Agent.
@@ -37,23 +40,32 @@ class OptimizerAgent:
 
     def apply_prompt_update(self, target_file_path: str, new_content: str):
         """
-        Writes the optimized prompt content to the shadow deployment directory.
+        Writes the optimized prompt content to a file within product/prompts/.
+
+        ACL Enforcement (AGENTS.md §4): target_file_path MUST resolve to a path
+        within product/prompts/. Any attempt to write outside this directory raises
+        a PermissionError.
         """
-        original_path = Path(target_file_path)
-        candidate_dir = Path("studio/_candidate")
-        candidate_path = candidate_dir / original_path.name
+        resolved_target = Path(target_file_path).resolve()
 
-        # Ensure the candidate directory exists
-        self.logger.info(f"Ensuring candidate directory exists: {candidate_dir}")
-        os.makedirs(candidate_dir, exist_ok=True)
+        # ACL Check: Verify the resolved target is within ALLOWED_WRITE_PATH
+        if not str(resolved_target).startswith(str(ALLOWED_WRITE_PATH)):
+            raise PermissionError(
+                f"Optimizer ACL Violation: Cannot write to {resolved_target}. "
+                f"Write permission is restricted to {ALLOWED_WRITE_PATH}."
+            )
 
-        # Write the new content to the candidate file
-        self.logger.info(f"Writing new prompt for {original_path.name} to {candidate_path}")
-        candidate_path.write_text(new_content)
+        # Ensure the target directory exists
+        self.logger.info(f"Ensuring product/prompts directory exists.")
+        os.makedirs(resolved_target.parent, exist_ok=True)
+
+        # Write the new content to the target file
+        self.logger.info(f"Writing optimized prompt to {resolved_target}")
+        resolved_target.write_text(new_content)
 
         # Log for the Manager/Reviewer
         self.logger.info(
-            f"Candidate written to {candidate_path}. Waiting for Reviewer verification."
+            f"Candidate written to {resolved_target}. Waiting for Reviewer verification."
         )
 
     def analyze_failures(self, target_file: str) -> str:
@@ -143,8 +155,10 @@ class OptimizerAgent:
         # 4. Apply the Patch (Surgical Replacement)
         if optimized_assignment and var_name in optimized_assignment:
             new_code_content = code_content.replace(match.group(0), optimized_assignment)
-            
-            self.apply_prompt_update(target_file_path, new_code_content)
+
+            # ACL: Write to product/prompts/ only (AGENTS.md §4)
+            dest_path = str(Path("product/prompts") / Path(target_file_path).name)
+            self.apply_prompt_update(dest_path, new_code_content)
 
             self.logger.info(f"✅ Created candidate for {target_file_path}")
             # In Level 5, we would now trigger a git commit or PR creation here.
