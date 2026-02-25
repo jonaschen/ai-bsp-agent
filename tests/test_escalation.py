@@ -47,7 +47,7 @@ async def test_escalation_logic():
         user_intent="CODING",
         triage_status=TriageStatus(is_log_available=True, suspected_domain="app"),
         current_context_slice=ContextSlice(intent="CODING", files=["src/app.py"]),
-        task_queue=[ticket],
+        sprint_backlog=[ticket],
         task_max_retries=2 # 設定 task_max_retries = 2
     )
 

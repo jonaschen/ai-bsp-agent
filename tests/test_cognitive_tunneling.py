@@ -42,7 +42,7 @@ async def test_cognitive_tunneling_interception():
         user_intent="CODING",
         triage_status=TriageStatus(is_log_available=True, suspected_domain="drivers"),
         current_context_slice=ContextSlice(intent="CODING", files=["src/auth.py"]),
-        task_queue=[
+        sprint_backlog=[
             Ticket(id="TKT-TUNNEL", title="Fix the bug", description="Fix it", priority="HIGH", source_section_id="1.1")
         ]
     )

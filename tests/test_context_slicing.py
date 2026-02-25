@@ -29,7 +29,7 @@ def test_context_slicing_large_log(mock_run_retrospective, mock_run_po, mock_gen
         user_intent="UNKNOWN",
         full_logs=log_content,
         triage_status=TriageStatus(is_log_available=True, suspected_domain="drivers"),
-        task_queue=[
+        sprint_backlog=[
             Ticket(id="TKT-SLICE", title="Test Task", description="Test", priority="LOW", source_section_id="1.1")
         ]
     )

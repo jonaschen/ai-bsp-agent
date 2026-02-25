@@ -133,7 +133,11 @@ class Orchestrator:
         new_tickets = await asyncio.to_thread(run_po_cycle, state_dict)
 
         orch = state.orchestration
-        updated_orch = orch.model_copy(update={"task_queue": orch.task_queue + new_tickets})
+        # When planning a new sprint, we populate both the global task_queue and the active sprint_backlog
+        updated_orch = orch.model_copy(update={
+            "task_queue": orch.task_queue + new_tickets,
+            "sprint_backlog": orch.sprint_backlog + new_tickets
+        })
         return {"orchestration": updated_orch}
 
     # --- NODE: Backlog Dispatcher (EXECUTE LOOP) ---

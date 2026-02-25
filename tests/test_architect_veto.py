@@ -41,7 +41,7 @@ async def test_architect_veto():
         user_intent="CODING",
         triage_status=TriageStatus(is_log_available=True, suspected_domain="app"),
         current_context_slice=ContextSlice(intent="CODING", files=["src/app.py", "tests/test_app.py"]),
-        task_queue=[
+        sprint_backlog=[
             Ticket(id="TKT-VETO", title="Refactor feature X", description="Clean it up", priority="HIGH", source_section_id="1.1")
         ]
     )
