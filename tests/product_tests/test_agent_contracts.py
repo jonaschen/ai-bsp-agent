@@ -22,7 +22,7 @@ def test_supervisor_input_serialization():
         "case_id": "CASE-123",
         "device_model": "Pixel 8",
         "source_code_mode": "git",
-        "symptom_description": "Kernel panic on boot",
+        "user_query": "Kernel panic on boot",
         "log_payload": {
             "dmesg_content": "[ 0.000000] Linux version...",
             "logcat_content": "I/ActivityManager: ..."
@@ -55,7 +55,7 @@ def test_hardware_advisor_input_serialization():
         "case_id": "CASE-789",
         "device_model": "Pixel 9",
         "source_code_mode": "tarball",
-        "symptom_description": "Display flicker",
+        "user_query": "Display flicker",
         "log_payload": {
             "dmesg_content": "...",
             "logcat_content": "..."
