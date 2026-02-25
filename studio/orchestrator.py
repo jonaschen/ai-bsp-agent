@@ -39,21 +39,6 @@ from studio.agents.scrum_master import run_scrum_retrospective
 from studio.agents.optimizer import OptimizerAgent
 
 # --- MOCK SUBGRAPHS (Placeholders for compilation) ---
-def engineer_subgraph_node(state: ContextSlice) -> Dict:
-    """Mock execution of the Engineer Subgraph"""
-    # Returns a dict matching AgentStepOutput schema
-    return {
-        "content": "Patch applied.",
-        "thought_process": "Analyzed dependencies and applied fix.",
-        "cognitive_health": {
-            "entropy_score": 0.5,
-            "threshold": 7.0,
-            "sample_size": 5,
-            "is_tunneling": False,
-            "cluster_distribution": {}
-        }
-    }
-
 def sop_guide_node(state: SOPState) -> Dict:
     """Mock execution of the Interactive SOP Guide"""
     return {"current_step_index": state.current_step_index + 1}
