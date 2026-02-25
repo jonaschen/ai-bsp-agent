@@ -23,9 +23,6 @@ class OptimizerAgent:
     """
     def __init__(self, logger=None):
         self.logger = logger or logging.getLogger(__name__)
-        token = os.getenv("GITHUB_TOKEN")
-        if not token:
-            raise ValueError("GITHUB_TOKEN not found.")
         
         # Use a high-reasoning model for meta-prompting
         self.llm = ChatVertexAI(

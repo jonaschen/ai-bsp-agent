@@ -46,6 +46,7 @@ def test_optimizer_agent_acl(mock_chat):
         optimizer.apply_optimizations(report)
 
 @patch("studio.optimizer.ChatVertexAI")
+@patch.dict(os.environ, {"GITHUB_TOKEN": "mock_token"})
 def test_legacy_optimizer_redirection_and_acl(mock_chat):
     """
     Test that the legacy OptimizerAgent (studio/optimizer.py)
