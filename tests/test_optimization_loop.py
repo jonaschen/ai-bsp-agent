@@ -4,14 +4,14 @@ import pytest
 from unittest.mock import MagicMock, patch
 from langchain_core.messages import AIMessage
 from langchain_google_vertexai import ChatVertexAI
-from studio.utils.prompts import fetch_system_prompt, update_system_prompt, DEFAULT_PROMPTS
+from studio.utils.prompts import fetch_system_prompt, update_system_prompt, DEFAULT_PROMPTS, PROMPTS_JSON
 from studio.agents.optimizer import OptimizerAgent
 from studio.memory import RetrospectiveReport, ProcessOptimization
 
-PROMPTS_JSON = "prompts.json"
-
 @pytest.fixture(autouse=True)
 def cleanup_prompts_json():
+    # Ensure directory exists for tests
+    os.makedirs(os.path.dirname(PROMPTS_JSON), exist_ok=True)
     if os.path.exists(PROMPTS_JSON):
         os.remove(PROMPTS_JSON)
     yield
