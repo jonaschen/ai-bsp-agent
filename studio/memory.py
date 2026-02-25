@@ -231,6 +231,8 @@ class OrchestrationState(BaseModel):
 
     # Sprint Management
     current_sprint_id: Optional[str] = None
+    sprint_goal: Optional[str] = None
+    sprint_backlog: List[Ticket] = Field(default_factory=list, description="The active sprint tasks")
     completed_tasks_log: List[Ticket] = []
     failed_tasks_log: List[Ticket] = []
 
