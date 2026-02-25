@@ -167,5 +167,35 @@ class TestProductOwnerAgent(unittest.TestCase):
             self.assertLess(contract_idx, infra_idx, "Data Contracts must come BEFORE Infrastructure")
             self.assertLess(domain_idx, infra_idx, "Domain Foundation must come BEFORE Infrastructure")
 
+    def test_analyze_specs_exception_logging(self):
+        """
+        Verify that analyze_specs logs an error before re-raising an exception.
+        """
+        # Mock the chain to raise an Exception
+        with patch("studio.agents.product_owner.ChatPromptTemplate.from_messages") as mock_prompt_cls:
+            mock_prompt = MagicMock()
+            mock_prompt_cls.return_value = mock_prompt
+
+            # We need to simulate the chain raising an exception when invoked
+            mock_intermediate = MagicMock()
+            mock_chain_final = MagicMock()
+            # Simulate failure during invocation
+            mock_chain_final.invoke.side_effect = Exception("Test Failure")
+
+            mock_prompt.__or__.return_value = mock_intermediate
+            mock_intermediate.__or__.return_value = mock_chain_final
+
+            # Mock the logger to verify error logging
+            with patch("studio.agents.product_owner.logger") as mock_logger:
+                with self.assertRaises(Exception) as context:
+                    self.po.analyze_specs("blueprint", [])
+
+                # Verify exception message
+                self.assertEqual(str(context.exception), "Test Failure")
+
+                # Verify logger.error was called
+                mock_logger.error.assert_called_once()
+                self.assertIn("PO Analysis failed: Test Failure", mock_logger.error.call_args[0][0])
+
 if __name__ == '__main__':
     unittest.main()
