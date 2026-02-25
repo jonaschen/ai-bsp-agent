@@ -18,6 +18,14 @@ class TestArchitectAgent(unittest.TestCase):
         self.assertEqual(agent.constitution_content, "CONSTITUTION_CONTENT")
         self.assertIsNotNone(agent.constitution_hash)
 
+    @patch("studio.agents.architect.ChatVertexAI")
+    @patch("builtins.open")
+    def test_load_constitution_file_not_found(self, mock_file, mock_llm):
+        mock_file.side_effect = FileNotFoundError
+        agent = ArchitectAgent()
+        self.assertEqual(agent.constitution_content, "CRITICAL: ENFORCE SOLID. NO AGENTS.MD FOUND.")
+        self.assertEqual(agent.constitution_hash, "EMERGENCY_MODE")
+
     @patch("studio.agents.architect.ArchitectAgent")
     def test_run_architect_gate(self, MockArchitectAgent):
         # Setup mock agent instance
