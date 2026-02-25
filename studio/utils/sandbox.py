@@ -244,3 +244,43 @@ class SecureSandbox(DockerSandbox):
         except DockerException as e:
             logger.critical(f"Failed to start Secure Sandbox: {e}")
             raise
+
+class OptimizerSandbox(DockerSandbox):
+    """
+    Specific Sandbox for the Optimizer Agent.
+    Implements Section 4.4 of AGENTS.md:
+    "Write Permission ONLY to the product/prompts/ directory."
+    """
+    def _start_container(self):
+        import os
+        from pathlib import Path
+
+        # Ensure allowed directory exists on host
+        allowed_dir_host = Path("product/prompts").resolve()
+        os.makedirs(allowed_dir_host, exist_ok=True)
+
+        try:
+            logger.info(f"Booting OPTIMIZER Sandbox ({self.image})...")
+            # We mount the product/prompts directory as the ONLY writable volume
+            # The rest of the container is read-only
+            self.container = self.client.containers.run(
+                self.image,
+                command="tail -f /dev/null",
+                detach=True,
+                auto_remove=True,
+                read_only=True, # Root FS is read-only
+                network_disabled=True,
+                mem_limit="512m",
+                volumes={
+                    str(allowed_dir_host): {
+                        'bind': '/app/product/prompts',
+                        'mode': 'rw'
+                    }
+                },
+                working_dir='/app'
+            )
+            # Create a workspace in the writable volume
+            self.container.exec_run("mkdir -p /app/product/prompts/workspace")
+        except DockerException as e:
+            logger.critical(f"Failed to start Optimizer Sandbox: {e}")
+            raise

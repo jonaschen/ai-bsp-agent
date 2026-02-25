@@ -26,12 +26,14 @@ Your goal is to optimize the studio processes and improve agent performance.
 """
 })
 
-PROMPTS_JSON = "prompts.json"
+from studio.utils.acl import verify_write_permission
+
+PROMPTS_JSON = "product/prompts/prompts.json"
 
 def fetch_system_prompt(role: str) -> str:
     """
     Fetches the system prompt for a given role.
-    Learned (prompts.json) > Default (DEFAULT_PROMPTS).
+    Learned (product/prompts/prompts.json) > Default (DEFAULT_PROMPTS).
     """
     prompts = {}
     if os.path.exists(PROMPTS_JSON):
@@ -46,8 +48,12 @@ def fetch_system_prompt(role: str) -> str:
 
 def update_system_prompt(role: str, new_prompt: str):
     """
-    Updates the system prompt for a given role and persists it to prompts.json.
+    Updates the system prompt for a given role and persists it to product/prompts/prompts.json.
+    Enforces ACL containment protocol.
     """
+    # Verify write permission to the target JSON file
+    verify_write_permission(PROMPTS_JSON)
+
     prompts = {}
     if os.path.exists(PROMPTS_JSON):
         try:
