@@ -72,6 +72,7 @@ class Orchestrator:
         # 1. Define Nodes
         self.workflow.add_node("intent_router", self.route_intent)
         self.workflow.add_node("product_owner", self.node_product_owner)
+        self.workflow.add_node("sprint_planning", self.node_sprint_planning)
         self.workflow.add_node("backlog_dispatcher", self.node_backlog_dispatcher)
         self.workflow.add_node("context_slicer", self.slice_context)
         self.workflow.add_node("engineer_subgraph", self._engineer_wrapper)
@@ -87,13 +88,14 @@ class Orchestrator:
             self._decide_entry_route,
             {
                 "plan": "product_owner",
-                "execute": "backlog_dispatcher",
+                "execute": "sprint_planning",
                 "interactive_guide": "sop_guide_subgraph",
                 "block": END
             }
         )
 
-        self.workflow.add_edge("product_owner", "backlog_dispatcher")
+        self.workflow.add_edge("product_owner", "sprint_planning")
+        self.workflow.add_edge("sprint_planning", "backlog_dispatcher")
 
         # Loop over the backlog
         self.workflow.add_conditional_edges(
@@ -133,12 +135,41 @@ class Orchestrator:
         new_tickets = await asyncio.to_thread(run_po_cycle, state_dict)
 
         orch = state.orchestration
-        # When planning a new sprint, we populate both the global task_queue and the active sprint_backlog
+        # When planning a new sprint, we only populate the global task_queue.
+        # node_sprint_planning will move them to the active backlog.
         updated_orch = orch.model_copy(update={
-            "task_queue": orch.task_queue + new_tickets,
-            "sprint_backlog": orch.sprint_backlog + new_tickets
+            "task_queue": orch.task_queue + new_tickets
         })
         return {"orchestration": updated_orch}
+
+    # --- NODE: Sprint Planning ---
+    async def node_sprint_planning(self, state: StudioState) -> Dict:
+        """
+        Safely moves a batch of up to 3 unblocked tickets from the global task_queue
+        into the active sprint_backlog if it is empty.
+        """
+        self.logger.info("Orchestrator: Sprint Planning Node...")
+        orch = state.orchestration.model_copy(deep=True)
+
+        # If sprint_backlog already has active tasks, return unchanged.
+        if orch.sprint_backlog:
+            return {}
+
+        # Pop up to 3 OPEN tickets from task_queue
+        open_tickets = [t for t in orch.task_queue if t.status == "OPEN"]
+        batch = open_tickets[:3]
+
+        if batch:
+            self.logger.info(f"Moving {len(batch)} tasks to sprint backlog.")
+            # Remove batch from task_queue
+            batch_ids = {t.id for t in batch}
+            orch.task_queue = [t for t in orch.task_queue if t.id not in batch_ids]
+            orch.sprint_backlog = batch
+            orch.sprint_goal = f"Execute batch of {len(batch)} tasks."
+
+            return {"orchestration": orch}
+
+        return {}
 
     # --- NODE: Backlog Dispatcher (EXECUTE LOOP) ---
     async def node_backlog_dispatcher(self, state: StudioState) -> Dict:
