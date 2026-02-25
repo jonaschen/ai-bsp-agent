@@ -35,6 +35,15 @@ from studio.config import get_settings
 
 logger = logging.getLogger("JulesProxy")
 
+# Ignore common noise patterns from pytest/docs/stdlib
+NOISE_PATTERNS = [
+    "org/en/stable",
+    "unittest/mock.py",
+    "workspace/",
+    "http:",
+    "https:"
+]
+
 def is_valid_local_path(path: str) -> bool:
     """
     Validates if a string that looks like a path is a safe, local project path.
@@ -50,15 +59,8 @@ def is_valid_local_path(path: str) -> bool:
     # 3. Ignore paths escaping current directory
     if ".." in path:
         return False
-    # 4. Ignore common noise patterns from pytest/docs/stdlib
-    noise_patterns = [
-        "org/en/stable",
-        "unittest/mock.py",
-        "workspace/",
-        "http:",
-        "https:"
-    ]
-    for pattern in noise_patterns:
+
+    for pattern in NOISE_PATTERNS:
         if pattern in path:
             return False
 
