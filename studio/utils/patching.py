@@ -63,26 +63,56 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
     if not diff_content.strip():
         return files.copy()
 
-    # 1. Initialize any files mentioned in the diff that aren't in our dictionary
+    # 1. Parse the diff to handle renames and deletions correctly
+    patch_set = None
+    try:
+        patch_set = PatchSet(io.StringIO(diff_content))
+    except Exception as e:
+        logger.warning(f"unidiff failed to parse patch for initialization: {e}")
+
+    # 2. Initialize any files mentioned in the diff that aren't in our dictionary
     # This allows the 'patch' command to create new files correctly.
+    # CRITICAL: Do NOT initialize files that are being DELETED if we don't have them,
+    # as that would create an empty file that 'patch' fails to delete (hunk mismatch).
     affected_files = extract_affected_files(diff_content)
     patched_files_workset = files.copy()
-    for path in affected_files:
+
+    files_to_initialize = set(affected_files)
+    if patch_set:
+        for patched_file in patch_set:
+            if getattr(patched_file, 'is_removed_file', False):
+                # If the file is being removed and we don't have it in our source dict,
+                # don't create it as an empty file. Let 'patch' handle it or fail gracefully.
+                if patched_file.path not in files:
+                    files_to_initialize.discard(patched_file.path)
+
+    for path in files_to_initialize:
         if path not in patched_files_workset:
             logger.info(f"Initializing new file for patching: {path}")
             patched_files_workset[path] = ""
 
-    # 2. Normalize the diff
+    # 3. Normalize the diff
     try:
         # Try using unidiff for clean normalization
-        patch_set = PatchSet(io.StringIO(diff_content))
+        if not patch_set:
+            patch_set = PatchSet(io.StringIO(diff_content))
+
         new_diff_parts = []
         for patched_file in patch_set:
             source = patched_file.source_file
             target = patched_file.target_file
-            # Strip prefixes for -p0 compatibility
-            if source.startswith("a/") and source != "a/": source = source[2:]
-            if target.startswith("b/") and target != "b/": target = target[2:]
+
+            # Special case for new files
+            if source == "/dev/null":
+                pass
+            elif source.startswith("a/") and source != "a/":
+                source = source[2:]
+
+            # Special case for deleted files
+            if target == "/dev/null":
+                pass
+            elif target.startswith("b/") and target != "b/":
+                target = target[2:]
 
             new_diff_parts.append(f"--- {source}\n")
             new_diff_parts.append(f"+++ {target}\n")
@@ -131,12 +161,31 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
             with open(full_path, "w", encoding="utf-8") as f:
                 f.write(content)
 
-        # 4. Write diff to a file
+        # 4. Handle renames manually since 'patch' utility doesn't support them
+        if patch_set:
+            for patched_file in patch_set:
+                if getattr(patched_file, 'is_rename', False):
+                    old_path = patched_file.source_file
+                    new_path = patched_file.target_file
+                    if old_path.startswith("a/"): old_path = old_path[2:]
+                    if new_path.startswith("b/"): new_path = new_path[2:]
+
+                    src_on_disk = os.path.join(tmpdir, old_path)
+                    dst_on_disk = os.path.join(tmpdir, new_path)
+
+                    if os.path.exists(src_on_disk):
+                        logger.info(f"Manual rename: {old_path} -> {new_path}")
+                        os.makedirs(os.path.dirname(dst_on_disk), exist_ok=True)
+                        os.rename(src_on_disk, dst_on_disk)
+                        # We also need to update patched_files_workset if we want to be consistent,
+                        # but os.walk at the end will pick up the new file anyway.
+
+        # 5. Write diff to a file
         patch_path = os.path.join(tmpdir, "changes.patch")
         with open(patch_path, "w", encoding="utf-8") as f:
             f.write(diff_content)
 
-        # 5. Apply patch
+        # 6. Apply patch
         # Since we stripped a/ and b/ prefixes, we use -p0 primarily.
         # We use -E to ensure empty files are removed (e.g. during consolidation).
         cmd = ["patch", "-p0", "-E", "--input", "changes.patch"]
@@ -149,6 +198,16 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
                 text=True,
                 check=False # We handle errors manually
             )
+
+            # If it failed, check if it was just because there were no hunks (common in renames)
+            if result.returncode != 0 and "Only garbage was found" in result.stdout + result.stderr:
+                 if patch_set and all(getattr(f, 'is_rename', False) and len(f) == 0 for f in patch_set):
+                     logger.info("Ignoring 'garbage' error as patch only contained pure renames.")
+                 else:
+                     logger.warning(f"Patch failed with -p0 (garbage?): {result.stderr or result.stdout}")
+                     # Try fallback anyway
+                     cmd = ["patch", "-p1", "-E", "--input", "changes.patch"]
+                     result = subprocess.run(cmd, cwd=tmpdir, capture_output=True, text=True, check=False)
 
             if result.returncode != 0:
                 logger.warning(f"Patch failed with -p0: {result.stderr or result.stdout}")
@@ -163,15 +222,19 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
                     check=False
                 )
                 if result.returncode != 0:
-                     logger.error(f"Patch failed with -p1 as well: {result.stderr or result.stdout}")
-                     raise RuntimeError(f"Failed to apply patch: {result.stderr or result.stdout}")
+                     # Check again for garbage error in fallback
+                     if "Only garbage was found" in result.stdout + result.stderr and patch_set and all(getattr(f, 'is_rename', False) and len(f) == 0 for f in patch_set):
+                          logger.info("Ignoring 'garbage' error in fallback as well.")
+                     else:
+                          logger.error(f"Patch failed with -p1 as well: {result.stderr or result.stdout}")
+                          raise RuntimeError(f"Failed to apply patch: {result.stderr or result.stdout}")
 
             logger.info("Patch applied successfully.")
 
         except FileNotFoundError:
              raise RuntimeError("patch command not found. Please install patch.")
 
-        # 6. Read back all files
+        # 7. Read back all files
         patched_files_result = {}
         for root, _, filenames in os.walk(tmpdir):
             for filename in filenames:
