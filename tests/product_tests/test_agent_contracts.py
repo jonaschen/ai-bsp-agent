@@ -9,6 +9,8 @@ from product.schemas import (
     SOPStep,
     ConsultantResponse,
     SupervisorInput,
+    SupervisorOutput,
+    PathologistInput,
     PathologistOutput,
     HardwareAdvisorInput,
     HardwareAdvisorOutput
@@ -55,12 +57,20 @@ def test_triage_report_serialization():
 
 def test_rca_report_serialization():
     data = {
-        "diagnosis_id": "RCA-001",
-        "confidence": 0.9,
+        "diagnosis_id": "RCA-BSP-001",
+        "confidence_score": 0.9,
+        "status": "CRITICAL",
         "root_cause_summary": "Summary",
-        "technical_detail": "Detail",
-        "suggested_fix": "Fix",
-        "references": ["Ref"]
+        "evidence": ["Evidence 1"],
+        "sop_steps": [
+            {
+                "step_id": 1,
+                "action_type": "MEASUREMENT",
+                "instruction": "Measure",
+                "expected_value": "Value",
+                "file_path": "N/A"
+            }
+        ]
     }
     assert_roundtrip(RCAReport, data)
 
@@ -152,7 +162,7 @@ def test_hardware_advisor_output_serialization():
     hardware_output_data = {
         "voltage_specs": "1.8V",
         "timing_specs": "400kHz",
-        "soa_info": "Max 85C",
+        "soa": "Max 85C",
         "confidence": 0.8,
         "evidence": ["Datasheet Table 1"],
         "sop_steps": [
@@ -171,13 +181,40 @@ def test_hardware_advisor_output_confidence_validation():
     invalid_hw_data = {
         "voltage_specs": "1.8V",
         "timing_specs": "400kHz",
-        "soa_info": "Max 85C",
+        "soa": "Max 85C",
         "confidence": 1.5, # Out of bounds [0.0, 1.0]
         "evidence": [],
         "sop_steps": []
     }
     with pytest.raises(ValidationError):
         HardwareAdvisorOutput(**invalid_hw_data)
+
+def test_supervisor_output_serialization():
+    data = {
+        "status": "OK",
+        "next_specialist": "kernel_pathologist",
+        "triage_report": {
+            "status": "CRITICAL",
+            "failure_type": "KERNEL_PANIC",
+            "event_horizon_timestamp": "123.456",
+            "key_evidence": ["Evidence"],
+            "suspected_file_hint": "hint"
+        }
+    }
+    assert_roundtrip(SupervisorOutput, data)
+
+def test_pathologist_input_serialization():
+    data = {
+        "log_chunk": "Panic log",
+        "triage_info": {
+            "status": "CRITICAL",
+            "failure_type": "KERNEL_PANIC",
+            "event_horizon_timestamp": "123.456",
+            "key_evidence": ["Evidence"],
+            "suspected_file_hint": "hint"
+        }
+    }
+    assert_roundtrip(PathologistInput, data)
 
 def test_pathologist_output_confidence_validation():
     invalid_path_data = {
