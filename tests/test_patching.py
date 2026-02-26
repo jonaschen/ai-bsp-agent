@@ -96,12 +96,12 @@ def test_patch_command_not_found():
 
         assert "patch command not found" in str(excinfo.value)
 
-def test_apply_patch_p0_fallback():
+def test_apply_patch_p1_fallback():
     files = {"file.py": "content"}
     diff = "diff"
 
     with unittest.mock.patch("subprocess.run") as mock_run:
-        # First call (-p1) fails, second call (-p0) succeeds
+        # First call (-p0) fails, second call (-p1) succeeds
         mock_run.side_effect = [
             MagicMock(returncode=1, stderr="hunk failed"),
             MagicMock(returncode=0)
@@ -116,7 +116,7 @@ def test_apply_patch_p0_fallback():
         # Check second call arguments
         args, kwargs = mock_run.call_args_list[1]
         cmd = args[0]
-        assert "-p0" in cmd
+        assert "-p1" in cmd
 
 def test_apply_patch_malformed_resilience():
     files = {"hello.py": "print('hello')\n\nprint('world')\n"}

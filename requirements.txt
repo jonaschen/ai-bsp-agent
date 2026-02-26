@@ -12,3 +12,4 @@ python-dotenv
 docker
 networkx
 langgraph
+unidiff
