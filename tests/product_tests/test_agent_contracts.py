@@ -9,6 +9,8 @@ from product.schemas import (
     SOPStep,
     ConsultantResponse,
     SupervisorInput,
+    SupervisorOutput,
+    PathologistInput,
     PathologistOutput,
     HardwareAdvisorInput,
     HardwareAdvisorOutput
@@ -152,7 +154,7 @@ def test_hardware_advisor_output_serialization():
     hardware_output_data = {
         "voltage_specs": "1.8V",
         "timing_specs": "400kHz",
-        "soa_info": "Max 85C",
+        "soa": "Max 85C",
         "confidence": 0.8,
         "evidence": ["Datasheet Table 1"],
         "sop_steps": [
@@ -171,7 +173,7 @@ def test_hardware_advisor_output_confidence_validation():
     invalid_hw_data = {
         "voltage_specs": "1.8V",
         "timing_specs": "400kHz",
-        "soa_info": "Max 85C",
+        "soa": "Max 85C",
         "confidence": 1.5, # Out of bounds [0.0, 1.0]
         "evidence": [],
         "sop_steps": []
@@ -196,3 +198,37 @@ def test_supervisor_input_required_fields_validation():
     }
     with pytest.raises(ValidationError):
         SupervisorInput(**incomplete_data)
+
+def test_supervisor_output_serialization():
+    data = {
+        "triage_report": {
+            "status": "CRITICAL",
+            "failure_type": "KERNEL_PANIC",
+            "event_horizon_timestamp": "123.456",
+            "key_evidence": ["Panic occurred"],
+            "suspected_file_hint": "drivers/usb/dwc3/gadget.c"
+        }
+    }
+    assert_roundtrip(SupervisorOutput, data)
+
+def test_pathologist_input_serialization():
+    data = {
+        "case_file": {
+            "case_id": "CASE-123",
+            "device_model": "Pixel 8",
+            "source_code_mode": "git",
+            "user_query": "Kernel panic on boot",
+            "log_payload": {
+                "dmesg_content": "...",
+                "logcat_content": "..."
+            }
+        },
+        "triage_info": {
+            "status": "CRITICAL",
+            "failure_type": "KERNEL_PANIC",
+            "event_horizon_timestamp": "123.456",
+            "key_evidence": ["Panic occurred"],
+            "suspected_file_hint": "drivers/usb/dwc3/gadget.c"
+        }
+    }
+    assert_roundtrip(PathologistInput, data)

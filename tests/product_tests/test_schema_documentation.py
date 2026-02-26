@@ -1,23 +1,31 @@
 import pytest
 from product.schemas import (
     SupervisorInput,
+    SupervisorOutput,
+    PathologistInput,
     PathologistOutput,
     HardwareAdvisorInput,
     HardwareAdvisorOutput,
     LogPayload,
     SOPStep,
     TriageReport,
+    RCAReport,
+    CaseFile,
     ConsultantResponse
 )
 
 @pytest.mark.parametrize("model", [
     SupervisorInput,
+    SupervisorOutput,
+    PathologistInput,
     PathologistOutput,
     HardwareAdvisorInput,
     HardwareAdvisorOutput,
     LogPayload,
     SOPStep,
     TriageReport,
+    RCAReport,
+    CaseFile,
     ConsultantResponse
 ])
 def test_models_have_examples(model):
