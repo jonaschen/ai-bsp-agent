@@ -80,12 +80,15 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
     files_to_initialize = set(affected_files)
     if patch_set:
         for patched_file in patch_set:
-            if getattr(patched_file, 'is_removed_file', False):
-                # If the file is being removed and we don't have it in our source dict,
+            # Handle deletions and renames (source side)
+            if getattr(patched_file, 'is_removed_file', False) or getattr(patched_file, 'is_rename', False):
+                # If the file is being removed or renamed-from, and we don't have it in our source dict,
                 # don't create it as an empty file. Let 'patch' handle it or fail gracefully.
                 if patched_file.path not in files:
                     files_to_initialize.discard(patched_file.path)
-            elif getattr(patched_file, 'is_added_file', False) and patched_file.source_file == "/dev/null":
+
+            # Handle additions
+            elif getattr(patched_file, 'is_added_file', False) or patched_file.source_file == "/dev/null":
                 # Do NOT initialize added files, let 'patch' create them from scratch.
                 # This avoids 'file already exists' errors in some patch versions.
                 files_to_initialize.discard(patched_file.path)
@@ -95,7 +98,7 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
             logger.info(f"Initializing new file for patching: {path}")
             patched_files_workset[path] = ""
 
-    # 3. Normalize the diff
+    # 3. Normalize the diff and handle missing files for deletions/renames
     try:
         # Try using unidiff for clean normalization
         if not patch_set:
@@ -103,6 +106,22 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
 
         new_diff_parts = []
         for patched_file in patch_set:
+            source = patched_file.source_file
+            target = patched_file.target_file
+            path = patched_file.path
+
+            # Handle case where file to be deleted/modified doesn't exist
+            if source != "/dev/null":
+                # Strip prefixes for check
+                check_path = path
+                if check_path not in patched_files_workset:
+                    if getattr(patched_file, 'is_removed_file', False) or getattr(patched_file, 'is_rename', False):
+                        logger.info(f"Skipping patch hunk for already-deleted/moved file: {path}")
+                        continue
+                    else:
+                        # Modification of non-existent file - let 'patch' fail or handle it
+                        pass
+
             source = patched_file.source_file
             target = patched_file.target_file
 
@@ -272,5 +291,14 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
 
                 with open(abs_path, "r", encoding="utf-8") as f:
                     patched_files_result[rel_path] = f.read()
+
+        # 10. Final safety check: remove any file from the final dictionary that was supposed to be deleted.
+        if patch_set:
+            for patched_file in patch_set:
+                if getattr(patched_file, 'is_removed_file', False) or patched_file.target_file == "/dev/null":
+                    path = patched_file.path
+                    if path in patched_files_result:
+                        logger.info(f"Final safety removal: {path}")
+                        del patched_files_result[path]
 
         return patched_files_result
