@@ -109,6 +109,7 @@ class ArchitectAgent:
                 "format_instructions": self.parser.get_format_instructions()
             })
 
+            verdict = self._apply_good_enough_threshold(verdict)
             self._log_verdict(verdict)
             return verdict
 
@@ -126,9 +127,31 @@ class ArchitectAgent:
                 )]
             )
 
+    def _apply_good_enough_threshold(self, verdict: ReviewVerdict) -> ReviewVerdict:
+        """
+        Applies the 'Good Enough' threshold logic to avoid refactor loops.
+        Score >= 8.0 and no CRITICAL violations = APPROVED_WITH_TECH_DEBT.
+        """
+        has_critical = any(v.severity == "CRITICAL" for v in verdict.violations)
+
+        if verdict.quality_score >= 8.0 and not has_critical:
+            # If not perfect (already APPROVED), we mark as Good Enough.
+            if verdict.status != "APPROVED":
+                verdict.status = "APPROVED_WITH_TECH_DEBT"
+
+            # If status is APPROVED_WITH_TECH_DEBT, append the tag as per constraints.
+            if verdict.status == "APPROVED_WITH_TECH_DEBT":
+                tag = "#TODO: Tech Debt"
+                if not verdict.tech_debt_tag:
+                    verdict.tech_debt_tag = tag
+                elif tag not in verdict.tech_debt_tag:
+                    verdict.tech_debt_tag = f"{verdict.tech_debt_tag} {tag}".strip()
+
+        return verdict
+
     def _log_verdict(self, verdict: ReviewVerdict):
-        if verdict.status == "APPROVED":
-            logger.info(f"✅ Code APPROVED (Score: {verdict.quality_score})")
+        if verdict.status in ["APPROVED", "APPROVED_WITH_TECH_DEBT"]:
+            logger.info(f"✅ Code {verdict.status} (Score: {verdict.quality_score})")
         else:
             logger.warning(f"❌ Code {verdict.status} (Score: {verdict.quality_score})")
 
@@ -175,7 +198,8 @@ def run_architect_gate(engineering_state: Dict[str, Any]):
 
     # 5. Return Subgraph Update
     # We update 'code_artifacts' with the report, and update 'verification_gate' status
-    gate_status = "GREEN" if verdict.status == "APPROVED" else "RED"
+    # 'APPROVED_WITH_TECH_DEBT' is also considered 'GREEN'.
+    gate_status = "GREEN" if verdict.status in ["APPROVED", "APPROVED_WITH_TECH_DEBT"] else "RED"
     blocking_reason = None
     if gate_status == "RED":
         blocking_reason = "\n".join([f"ARCHITECT REJECT: {v.description}" for v in verdict.violations])
@@ -183,7 +207,7 @@ def run_architect_gate(engineering_state: Dict[str, Any]):
     return {
         "code_artifacts": {
             **artifacts,
-            "static_analysis_report": verdict.dict() # Store the full report
+            "static_analysis_report": verdict.model_dump() # Store the full report
         },
         "verification_gate": {
             "status": gate_status,
