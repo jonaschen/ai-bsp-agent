@@ -21,6 +21,8 @@ classDiagram
         +load_state()
         +save_state()
         +update_state()
+        +get_view_for_agent()
+        +perform_atomic_swap()
         +route_task()
     }
 
@@ -30,16 +32,24 @@ classDiagram
         +VertexFlashJudge judge
         +route_intent()
         +node_product_owner()
+        +node_sprint_planning()
         +node_backlog_dispatcher()
         +slice_context()
         +node_scrum_master()
-        +check_semantic_health()
+        +_engineer_wrapper()
+        +_sop_guide_wrapper()
+        +_check_semantic_health()
+        +_decide_loop_route()
+        +_decide_entry_route()
     }
 
     class StudioState {
+        +str system_version
         +OrchestrationState orchestration
         +EngineeringState engineering
         +bool circuit_breaker_triggered
+        +bool escalation_triggered
+        +bool privacy_mode
         +get_agent_slice()
     }
 
@@ -122,10 +132,11 @@ stateDiagram-v2
     [*] --> IntentRouter
 
     IntentRouter --> ProductOwner: Intent = SPRINT
-    IntentRouter --> BacklogDispatcher: Intent = CODING
+    IntentRouter --> SprintPlanning: Intent = CODING
     IntentRouter --> SOPGuide: Intent = INTERACTIVE_GUIDE
 
-    ProductOwner --> BacklogDispatcher: Generate Backlog
+    ProductOwner --> SprintPlanning: Generate Backlog
+    SprintPlanning --> BacklogDispatcher: Move to Backlog
 
     state BacklogDispatcher <<choice>>
     BacklogDispatcher --> ContextSlicer: Next Ticket Available
@@ -133,13 +144,13 @@ stateDiagram-v2
 
     ContextSlicer --> EngineerSubgraph: Sliced Context
 
-    EngineerSubgraph --> BacklogDispatcher: Task Success/Fail
+    state EngineerSubgraph <<choice>>
+    EngineerSubgraph --> BacklogDispatcher: Healthy (Process Result)
+    EngineerSubgraph --> Reflector: SE > 7.0 (Tunneling)
+    EngineerSubgraph --> EngineerSubgraph: Retry
 
-    EngineerSubgraph --> Reflector: SE > 7.0 (Breaker)
     Reflector --> [*]: Circuit Breaker Triggered
-
-    ScrumMaster --> Optimizer: Report Generated
-    Optimizer --> [*]
+    ScrumMaster --> [*]: Optimization Report Generated
     SOPGuide --> [*]
 ```
 
@@ -155,8 +166,8 @@ stateDiagram-v2
 
     state WatchTower <<choice>>
     WatchTower --> WatchTower: Status = WORKING/QUEUED/PLANNING
-    WatchTower --> EntropyGuard: Status = COMPLETED/REVIEW_READY/BLOCKED
-    WatchTower --> HumanInterrupt: Status = BLOCKED (if enabled)
+    WatchTower --> EntropyGuard: Status = COMPLETED/REVIEW_READY/VERIFYING/FAILED
+    WatchTower --> HumanInterrupt: Status = BLOCKED
 
     state EntropyGuard <<choice>>
     EntropyGuard --> FeedbackLoop: SE > 7.0 (Tunneling) or Status=FAILED

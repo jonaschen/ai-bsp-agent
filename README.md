@@ -64,8 +64,10 @@ The system operates as a **Hierarchical State Machine** orchestrated by LangGrap
 ├── PRODUCT_BLUEPRINT.md    # The Product Spec: What the Studio is building.
 ├── README.md               # This file.
 ├── product/                # The Output: The Android BSP Consultant Agent code/prompts.
-│   ├── bsp_agent/          # Core logic of the product.
-│   └── prompts/            # Product prompts (optimized by Scrum Master).
+│   ├── bsp_agent/          # Core logic of the product (Supervisor, Core state).
+│   ├── prompts/            # Product prompts (optimized by Scrum Master).
+│   ├── schemas.py          # Agent Persona Contracts & Case File definitions.
+│   └── __init__.py         # Package initialization.
 ├── studio/                 # The Factory: The AI Software Studio.
 │   ├── agents/             # Agent implementations (Architect, PO, Scrum Master, Optimizer).
 │   ├── subgraphs/          # Subgraph definitions (Engineer).
@@ -74,6 +76,8 @@ The system operates as a **Hierarchical State Machine** orchestrated by LangGrap
 │   ├── manager.py          # State persistence and management.
 │   ├── review_agent.py     # Review utility (Alternative/Legacy).
 │   ├── qa_agent.py         # QA utility (Standalone).
+│   ├── optimizer.py        # Legacy Optimizer script.
+│   ├── rules.md            # Long-term Memory: Best practices & patterns.
 │   └── utils/              # Utilities (Entropy Math, Sandbox, Patching, Prompts).
 └── tests/                  # Test suite and Simulations.
     └── phase2_simulation.py # End-to-end simulation of the Studio workflow.
