@@ -30,6 +30,7 @@ def test_get_status_constructs_correct_diff(mock_github):
     mock_pr.state = "open"
     mock_pr.html_url = "http://github.com/owner/repo/pull/456"
     mock_pr.head.sha = "abcdef12345"
+    mock_pr.head.ref = "feat/new-api"
     mock_pr.additions = 10
     mock_pr.deletions = 5
     mock_event.source.issue.as_pull_request.return_value = mock_pr

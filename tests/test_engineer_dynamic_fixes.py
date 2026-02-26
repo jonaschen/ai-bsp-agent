@@ -104,12 +104,15 @@ async def test_qa_verifier_dynamic_sandbox_sync():
             "system_constitution": ""
         }
 
-        with unittest.mock.patch("studio.subgraphs.engineer.DockerSandbox") as mock_sandbox_class:
+        with unittest.mock.patch("studio.subgraphs.engineer.DockerSandbox") as mock_sandbox_class, \
+             unittest.mock.patch("studio.subgraphs.engineer.checkout_pr_branch") as mock_checkout:
             mock_sandbox = MagicMock()
             mock_sandbox_class.return_value = mock_sandbox
             mock_sandbox.setup_workspace.return_value = True
             mock_sandbox.run_pytest.return_value = MagicMock(passed=True, error_log=None)
 
+            # Simulate checkout happened and file updated
+            with open(test_file, "w") as f: f.write("patched\n")
             await node_qa_verifier(state)
 
             # Verify setup_workspace was called with the patched content of test_file
