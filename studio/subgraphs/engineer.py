@@ -307,7 +307,8 @@ async def node_entropy_guard(state: AgentState) -> Dict[str, Any]:
     calculator = SemanticEntropyCalculator(judge)
 
     prompt = jules_data.current_task_prompt or "Unknown Intent"
-    metric = await calculator.measure_uncertainty(prompt, prompt)
+    intent = jules_data.active_context_slice.intent if jules_data.active_context_slice else "CODING"
+    metric = await calculator.measure_uncertainty(prompt, intent)
 
     se_score = metric.entropy_score
 

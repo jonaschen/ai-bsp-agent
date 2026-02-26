@@ -16,7 +16,7 @@ class OptimizerAgent:
     Implements OPRO (Optimization by PROmpting).
     It reads RetrospectiveReports and updates agent system prompts.
     """
-    def __init__(self, model_name: str = "gemini-2.5-flash"):
+    def __init__(self, model_name: str = "gemini-2.5-pro"):
         self.llm = ChatVertexAI(
             model_name=model_name,
             temperature=0.1,  # Precise and conservative updates

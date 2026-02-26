@@ -322,7 +322,10 @@ class Orchestrator:
             updates["escalation_triggered"] = True
 
         # 4. Enforce Semantic Entropy Guardrail
-        metric = await self.calculator.measure_uncertainty(slice_obj.intent, slice_obj.intent)
+        # Note: The Engineer Subgraph already runs an entropy check on the generated patch.
+        # This global check acts as a secondary safety layer on the 'Intent' consistency.
+        # We use the task description as the prompt for the global check.
+        metric = await self.calculator.measure_uncertainty(state.engineering.current_task or "Fix the bug", slice_obj.intent)
 
         # Map output back to StudioState
         eng_update = state.engineering.model_copy(update={

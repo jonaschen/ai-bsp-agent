@@ -40,7 +40,7 @@ class BlueprintAnalysis(BaseModel):
 logger = logging.getLogger("studio.agents.po")
 
 class ProductOwnerAgent:
-    def __init__(self, model_name: str = "gemini-3-pro-preview"):
+    def __init__(self, model_name: str = "gemini-2.5-pro"):
         self.llm = ChatVertexAI(
             model_name=model_name,
             temperature=0.1, # Minimized entropy for strict dependency logic
