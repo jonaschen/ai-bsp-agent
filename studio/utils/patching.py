@@ -85,6 +85,10 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
                 # don't create it as an empty file. Let 'patch' handle it or fail gracefully.
                 if patched_file.path not in files:
                     files_to_initialize.discard(patched_file.path)
+            elif getattr(patched_file, 'is_added_file', False) and patched_file.source_file == "/dev/null":
+                # Do NOT initialize added files, let 'patch' create them from scratch.
+                # This avoids 'file already exists' errors in some patch versions.
+                files_to_initialize.discard(patched_file.path)
 
     for path in files_to_initialize:
         if path not in patched_files_workset:
@@ -234,7 +238,29 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
         except FileNotFoundError:
              raise RuntimeError("patch command not found. Please install patch.")
 
-        # 7. Read back all files
+        # 7. Post-patch cleanup: Manual deletion for files marked removed
+        # (This handles cases where 'patch -E' might have failed)
+        if patch_set:
+            for patched_file in patch_set:
+                if getattr(patched_file, 'is_removed_file', False):
+                    path = patched_file.path
+                    abs_path = os.path.join(tmpdir, path)
+                    if os.path.exists(abs_path):
+                        logger.info(f"Manual post-patch deletion: {path}")
+                        os.remove(abs_path)
+
+        # 8. Remove empty directories (Important for Python package structure)
+        for root, dirs, _ in os.walk(tmpdir, topdown=False):
+            for d in dirs:
+                dir_path = os.path.join(root, d)
+                try:
+                    if not os.listdir(dir_path):
+                        logger.info(f"Removing empty directory: {dir_path}")
+                        os.rmdir(dir_path)
+                except OSError:
+                    pass
+
+        # 9. Read back all files
         patched_files_result = {}
         for root, _, filenames in os.walk(tmpdir):
             for filename in filenames:
