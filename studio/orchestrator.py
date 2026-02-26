@@ -37,6 +37,7 @@ from studio.memory import JulesMetadata, VerificationGate, EngineeringState
 from studio.agents.product_owner import run_po_cycle
 from studio.agents.scrum_master import run_scrum_retrospective
 from studio.agents.optimizer import OptimizerAgent
+from studio.utils.git_utils import sync_main_branch
 
 # --- MOCK SUBGRAPHS (Placeholders for compilation) ---
 def sop_guide_node(state: SOPState) -> Dict:
@@ -207,7 +208,8 @@ class Orchestrator:
             if updated_tkt:
                 if updated_tkt.status == "COMPLETED":
                     orch.completed_tasks_log.append(updated_tkt)
-                    self.logger.info(f"Task {updated_tkt.id} completed.")
+                    self.logger.info(f"Task {updated_tkt.id} completed. Synchronizing local workspace with main branch.")
+                    await asyncio.to_thread(sync_main_branch)
                 elif updated_tkt.status == "FAILED":
                     orch.failed_tasks_log.append(updated_tkt)
                     self.logger.info(f"Task {updated_tkt.id} failed.")
