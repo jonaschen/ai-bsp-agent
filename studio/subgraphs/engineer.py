@@ -30,6 +30,7 @@ from vertexai.generative_models import GenerativeModel
 from studio.utils.entropy_math import SemanticEntropyCalculator, VertexFlashJudge
 from studio.utils.sandbox import DockerSandbox
 from studio.utils.patching import apply_virtual_patch, extract_affected_files
+from studio.utils.git_utils import checkout_pr_branch
 from studio.agents.architect import ArchitectAgent, ReviewVerdict
 from studio.config import get_settings
 
@@ -255,6 +256,7 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
         jules_data.status = "VERIFYING"
         jules_data.last_verified_commit = remote_status.last_commit_hash
         jules_data.last_verified_pr_number = remote_status.linked_pr_number
+        jules_data.current_branch = remote_status.branch_name
 
         # Retrieve artifacts (virtual patches, diffs)
         if remote_status.raw_diff:
@@ -364,6 +366,23 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
 
     logger.info("QA_Verifier: Running dynamic verification in sandbox.")
 
+    # 0. Sync workspace with PR branch (Replace Virtual Patching)
+    if jules_data.current_branch:
+        logger.info(f"QA_Verifier: Syncing workspace to branch {jules_data.current_branch}")
+        try:
+            checkout_pr_branch(jules_data.current_branch)
+        except Exception as e:
+            logger.error(f"QA_Verifier: Checkout failed: {e}")
+            result = TestResult(
+                test_id="git_checkout",
+                status="ERROR",
+                logs=f"Failed to checkout branch {jules_data.current_branch}: {str(e)}",
+                attempt_count=jules_data.retry_count + 1
+            )
+            jules_data.test_results_history.append(result)
+            jules_data.status = "FAILED"
+            return {"jules_metadata": jules_data}
+
     # 1. Prepare Files
     # We need to gather all relevant files (context + modified)
     # and apply the virtual patch.
@@ -413,24 +432,10 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
         except FileNotFoundError:
             logger.warning(f"File not found during sandbox prep: {filepath}")
 
-    # 4. Apply Patch
-    try:
-        patched_files = apply_virtual_patch(files_to_patch, diff_content)
-    except Exception as e:
-        logger.error(f"Failed to apply virtual patch: {e}")
-        # Mark as error in feedback
-        status = "ERROR"
-        logs = f"Patch application failed: {str(e)}"
-
-        result = TestResult(
-            test_id="patch_application",
-            status=status,
-            logs=logs,
-            attempt_count=jules_data.retry_count + 1
-        )
-        jules_data.test_results_history.append(result)
-        jules_data.status = "FAILED"
-        return {"jules_metadata": jules_data}
+    # 4. Use synced local files (formerly Apply Patch)
+    # Since we checked out the branch, files_to_patch (read from disk)
+    # already contains the changes from Jules.
+    patched_files = files_to_patch
 
     # 2. Setup Sandbox
     # Replicates the Engineer's environment for validation
@@ -567,12 +572,9 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
         except Exception:
             pass
 
-    try:
-        patched_files = apply_virtual_patch(files_to_patch, diff_content)
-    except Exception as e:
-        # Should have been caught by QA, but safety net
-        logger.error(f"Architect failed to apply patch: {e}")
-        return {}
+    # 4. Use synced local files (formerly Apply Patch)
+    # Since we are on the PR branch, files_to_patch already contains the changes.
+    patched_files = files_to_patch
 
     # 2. Run Architect Agent
     architect = ArchitectAgent()

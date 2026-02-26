@@ -54,6 +54,7 @@ class WorkStatus(BaseModel):
     tracking_id: str
     status: Literal["QUEUED", "WORKING", "REVIEW_READY", "COMPLETED", "BLOCKED"]
     linked_pr_number: Optional[int] = None
+    branch_name: Optional[str] = None
     pr_url: Optional[str] = None
     last_commit_hash: Optional[str] = None
     diff_stat: str = "+0/-0"
@@ -199,6 +200,7 @@ class JulesGitHubClient:
                 tracking_id=external_id,
                 status=status_map.get(pr.state, "WORKING"),
                 linked_pr_number=pr.number,
+                branch_name=pr.head.ref,
                 pr_url=pr.html_url,
                 last_commit_hash=pr.head.sha,
                 diff_stat=f"+{pr.additions}/-{pr.deletions}",
