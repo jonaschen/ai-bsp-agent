@@ -30,7 +30,7 @@ logger = logging.getLogger("studio.agents.scrum_master")
 # --- THE AGENT ---
 
 class ScrumMasterAgent:
-    def __init__(self, model_name: str = "gemini-3-pro-preview"):
+    def __init__(self, model_name: str = "gemini-2.5-pro"):
         self.llm = ChatVertexAI(
             model_name=model_name,
             temperature=0.4, # Balanced for creative problem solving

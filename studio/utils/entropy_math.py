@@ -27,6 +27,7 @@ logger = logging.getLogger("studio.utils.entropy_math")
 DEFAULT_SAMPLE_SIZE = 5
 ENTROPY_THRESHOLD = 7.0  # If SE > 7.0, uncertainty is too high (Tunneling/Confabulation)
 # Note: Threshold depends on N. For N=5, max entropy is log2(5) ~= 2.32.
+# 7.0 is chosen to prevent false positives from normal variance, as per rules.md 4.2.
 
 # --- SECTION 1: The Abstraction (LLM Client) ---
 

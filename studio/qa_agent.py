@@ -66,6 +66,35 @@ class QAAgent:
                 "logs": f"Internal Error in QAAgent: {str(e)}"
             })
 
+    def verify_prompt(self, actual_output: str, expected_keypoints: list) -> str:
+        """
+        Runs Semantic Similarity Checks against the 'Golden Set'.
+        Note: As per AGENTS.md, this should be deterministic but also use LLM-as-a-Judge.
+        To maintain deterministic constraints in the current environment, we implement
+        a keyword-based check as a placeholder, which will be upgraded to a
+        dedicated Judge model in production.
+        """
+        matched = []
+        missing = []
+        for kp in expected_keypoints:
+            if kp.lower() in actual_output.lower():
+                matched.append(kp)
+            else:
+                missing.append(kp)
+
+        score = len(matched) / len(expected_keypoints) if expected_keypoints else 1.0
+        status = "PASS" if score >= 0.85 else "FAIL" # 85% threshold as per Blueprint
+
+        logs = f"Semantic Keypoint Check: {len(matched)}/{len(expected_keypoints)} matched.\n"
+        logs += f"Matched: {matched}\n"
+        logs += f"Missing: {missing}\n"
+
+        return safe_json_dump({
+            "status": status,
+            "logs": logs,
+            "score": score
+        })
+
 if __name__ == "__main__":
     try:
         # If run as a script, default to running all tests if no path provided
