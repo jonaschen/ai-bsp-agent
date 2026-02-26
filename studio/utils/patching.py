@@ -138,7 +138,8 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
 
         # 5. Apply patch
         # Since we stripped a/ and b/ prefixes, we use -p0 primarily.
-        cmd = ["patch", "-p0", "--input", "changes.patch"]
+        # We use -E to ensure empty files are removed (e.g. during consolidation).
+        cmd = ["patch", "-p0", "-E", "--input", "changes.patch"]
 
         try:
             result = subprocess.run(
@@ -152,7 +153,8 @@ def apply_virtual_patch(files: Dict[str, str], diff_content: str) -> Dict[str, s
             if result.returncode != 0:
                 logger.warning(f"Patch failed with -p0: {result.stderr or result.stdout}")
                 # Fallback to -p1 just in case
-                cmd[1] = "-p1"
+                # Keep -E in fallback
+                cmd = ["patch", "-p1", "-E", "--input", "changes.patch"]
                 result = subprocess.run(
                     cmd,
                     cwd=tmpdir,
