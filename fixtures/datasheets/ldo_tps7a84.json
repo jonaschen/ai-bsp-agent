@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "component_type": "LDO",
+    "part_number": "TPS7A84",
+    "manufacturer": "TI",
+    "voltage_range": {"min": 0.8, "max": 5.2, "unit": "V"},
+    "timing_specs": {"startup_time": "500us"},
+    "interfaces": ["EN", "PG"]
+  },
+  "content": "The TPS7A84 is a low-noise, high-PSRR, low-dropout regulator capable of sourcing 3 A with only 180 mV of maximum dropout. It is ideal for powering sensitive analog components.",
+  "source_url": "https://www.ti.com/lit/ds/symlink/tps7a84.pdf"
+}

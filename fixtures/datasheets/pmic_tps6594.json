@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "component_type": "PMIC",
+    "part_number": "TPS6594",
+    "manufacturer": "TI",
+    "voltage_range": {"min": 0.6, "max": 3.3, "unit": "V"},
+    "timing_specs": {"i2c_speed": "1MHz"},
+    "interfaces": ["I2C", "GPIO", "SPMI"]
+  },
+  "content": "The TPS6594 is a highly integrated power management IC for automotive and industrial applications. It features five high-efficiency step-down regulators and four LDOs. It supports I2C for communication and control.",
+  "source_url": "https://www.ti.com/lit/ds/symlink/tps6594.pdf"
+}
