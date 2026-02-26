@@ -1,3 +1,8 @@
+"""
+product/schemas.py: Source of Truth for Agent I/O Contracts.
+Includes Pydantic models for Supervisor, Pathologist, and Hardware Advisor agents.
+"""
+
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
