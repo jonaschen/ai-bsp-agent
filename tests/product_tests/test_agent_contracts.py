@@ -152,7 +152,7 @@ def test_hardware_advisor_output_serialization():
     hardware_output_data = {
         "voltage_specs": "1.8V",
         "timing_specs": "400kHz",
-        "soa_info": "Max 85C",
+        "soa": "Max 85C",
         "confidence": 0.8,
         "evidence": ["Datasheet Table 1"],
         "sop_steps": [
@@ -171,7 +171,7 @@ def test_hardware_advisor_output_confidence_validation():
     invalid_hw_data = {
         "voltage_specs": "1.8V",
         "timing_specs": "400kHz",
-        "soa_info": "Max 85C",
+        "soa": "Max 85C",
         "confidence": 1.5, # Out of bounds [0.0, 1.0]
         "evidence": [],
         "sop_steps": []

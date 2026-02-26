@@ -76,7 +76,7 @@ class HardwareAdvisorOutput(BaseModel):
     """Output contract for the Hardware Advisor Agent."""
     voltage_specs: Optional[str] = Field(None, description="Voltage requirements from datasheet", examples=["1.8V +/- 5%", "0.8V VDD_CORE"])
     timing_specs: Optional[str] = Field(None, description="Timing requirements from datasheet", examples=["tVAC min 100ns", "tCK 1.25ns"])
-    soa_info: Optional[str] = Field(None, description="Safe Operating Area details", examples=["Max junction temp 125C", "Max current 2A"])
+    soa: Optional[str] = Field(None, description="Safe Operating Area details", examples=["Max junction temp 125C", "Max current 2A"])
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence in the specs retrieved", examples=[0.99, 0.85])
     evidence: List[str] = Field(..., description="Supporting excerpts from the datasheet", examples=["Table 5.1: VDD range 1.7V to 1.9V"])
     sop_steps: List[SOPStep] = Field(..., description="Measurement instructions for the human", examples=[{"step_id": 1, "action_type": "MEASUREMENT", "instruction": "Measure TP34", "expected_value": "1.8V", "file_path": "N/A"}])
