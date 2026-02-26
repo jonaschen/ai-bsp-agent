@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "component_type": "SoC",
+    "part_number": "SDM845",
+    "manufacturer": "Qualcomm",
+    "voltage_range": {"core_v": 0.8, "io_v": 1.8},
+    "timing_specs": {"cpu_max": "2.8GHz"},
+    "interfaces": ["LPDDR4X", "UFS 2.1", "PCIe Gen 3"]
+  },
+  "content": "Snapdragon 845 is a high-end ARM SoC for smartphones. It integrates 8 Kryo 385 cores, an Adreno 630 GPU, and a Hexagon 685 DSP. It supports dual-channel LPDDR4X-1866 memory.",
+  "source_url": "https://www.qualcomm.com/products/snapdragon-845-mobile-platform"
+}

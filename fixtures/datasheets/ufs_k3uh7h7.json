@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "component_type": "UFS",
+    "part_number": "K3UH7H7",
+    "manufacturer": "Samsung",
+    "voltage_range": {"vcc": 2.95, "vccq": 1.2},
+    "timing_specs": {"read_speed": "2100MB/s"},
+    "interfaces": ["UFS 3.1", "MIPI M-PHY"]
+  },
+  "content": "Samsung UFS 3.1 is a high-performance flash storage device designed for mobile devices. It provides exceptional read/write speeds and low power consumption.",
+  "source_url": "https://semiconductor.samsung.com/storage/mobile-storage/ufs/"
+}

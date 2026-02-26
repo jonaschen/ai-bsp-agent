@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "component_type": "DRAM",
+    "part_number": "MT53E",
+    "manufacturer": "Micron",
+    "voltage_range": {"min": 0.6, "max": 1.1, "unit": "V"},
+    "timing_specs": {"speed": "LPDDR5-6400"},
+    "interfaces": ["LPDDR5"]
+  },
+  "content": "Micron LPDDR5 is a high-speed CMOS, dynamic random-access memory configured as 8 channels. It uses a double data rate architecture on the command/address (CA) bus to reduce the number of input pins in the system.",
+  "source_url": "https://www.micron.com/products/dram/lpddr5"
+}
