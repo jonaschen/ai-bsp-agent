@@ -57,7 +57,10 @@ async def test_context_fidelity(tmp_path, monkeypatch):
     state = {"jules_metadata": jules_data}
 
     # 4. Mock Architect Agent
-    with patch("studio.subgraphs.engineer.ArchitectAgent") as MockArchitect:
+    # We mock the entire ArchitectAgent class to avoid LLM initialization
+    with patch("studio.subgraphs.engineer.ArchitectAgent") as MockArchitect, \
+         patch("studio.subgraphs.engineer.checkout_pr_branch") as mock_checkout:
+
         mock_architect_instance = MockArchitect.return_value
         # Mock the review_code to return an approved verdict
         mock_architect_instance.review_code.return_value = ReviewVerdict(
@@ -67,7 +70,8 @@ async def test_context_fidelity(tmp_path, monkeypatch):
         )
 
         # 5. Execute the Node
-        # We don't mock apply_virtual_patch to ensure we test the full reconstruction logic
+        # Simulate that on the checked out branch, the file already has the new content
+        logic_file.write_text(expected_full_source)
         await node_architect_gate(state)
 
         # 6. Verification

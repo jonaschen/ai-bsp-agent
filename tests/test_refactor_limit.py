@@ -1,6 +1,7 @@
 import os
 import pytest
 import asyncio
+import unittest
 from unittest.mock import MagicMock, AsyncMock, patch, call
 from studio.memory import (
     StudioState, OrchestrationState, EngineeringState, TriageStatus,
@@ -22,7 +23,8 @@ async def test_refactor_retry_limit_reached():
         green_patch="Green Patch Content",
         status="COMPLETED", # Passed QA
         last_verified_pr_number=123,
-        generated_artifacts=[CodeChangeArtifact(diff_content="Refactored Patch Content")]
+        generated_artifacts=[CodeChangeArtifact(diff_content="Refactored Patch Content")],
+        active_context_slice=ContextSlice(files=["src/app.py"])
     )
 
     state: AgentState = {
@@ -47,16 +49,15 @@ async def test_refactor_retry_limit_reached():
 
     with patch("studio.subgraphs.engineer.ArchitectAgent") as mock_architect_class, \
          patch("studio.subgraphs.engineer.JulesGitHubClient") as mock_client_class, \
-         patch("studio.subgraphs.engineer.apply_virtual_patch") as mock_apply, \
-         patch("studio.subgraphs.engineer.get_settings"):
+         patch("studio.subgraphs.engineer.checkout_pr_branch") as mock_checkout, \
+         patch("studio.subgraphs.engineer.get_settings"), \
+         patch("studio.subgraphs.engineer.os.path.exists", return_value=True), \
+         patch("builtins.open", unittest.mock.mock_open(read_data="some content")):
 
         mock_architect = mock_architect_class.return_value
         mock_architect.review_code.return_value = mock_verdict
 
         mock_client = mock_client_class.return_value
-
-        # Mock patching to return some dummy files
-        mock_apply.return_value = {"src/app.py": "some content"}
 
         # 3. Execute node_architect_gate
         result = await node_architect_gate(state)
@@ -86,7 +87,8 @@ async def test_refactor_breaks_qa_fallback():
         green_patch="Green Patch Content",
         status="VERIFYING",
         last_verified_pr_number=124,
-        generated_artifacts=[CodeChangeArtifact(diff_content="Broken Refactor Patch")]
+        generated_artifacts=[CodeChangeArtifact(diff_content="Broken Refactor Patch")],
+        active_context_slice=ContextSlice(files=["src/app.py"])
     )
 
     state: AgentState = {
@@ -96,10 +98,10 @@ async def test_refactor_breaks_qa_fallback():
 
     with patch("studio.subgraphs.engineer.DockerSandbox") as mock_sandbox_class, \
          patch("studio.subgraphs.engineer.JulesGitHubClient") as mock_client_class, \
-         patch("studio.subgraphs.engineer.apply_virtual_patch") as mock_apply, \
+         patch("studio.subgraphs.engineer.checkout_pr_branch") as mock_checkout, \
          patch("studio.subgraphs.engineer.get_settings"), \
          patch("studio.subgraphs.engineer.os.path.exists", return_value=True), \
-         patch("studio.subgraphs.engineer.open", MagicMock()):
+         patch("builtins.open", unittest.mock.mock_open(read_data="some content")):
 
         # Mock Sandbox to FAIL
         mock_sandbox = mock_sandbox_class.return_value

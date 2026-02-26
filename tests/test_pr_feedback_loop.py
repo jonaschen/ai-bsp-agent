@@ -1,8 +1,9 @@
 import pytest
 import asyncio
+import unittest
 from unittest.mock import patch, MagicMock, AsyncMock
 from studio.subgraphs.engineer import node_watch_tower, node_feedback_loop, route_feedback_loop, node_architect_gate
-from studio.memory import JulesMetadata, AgentState
+from studio.memory import JulesMetadata, AgentState, ContextSlice
 from studio.utils.jules_client import WorkStatus, JulesGitHubClient, TaskPriority
 from studio.config import Settings
 
@@ -104,7 +105,8 @@ async def test_architect_gate_merge_pr():
 
     with patch("studio.subgraphs.engineer.JulesGitHubClient") as MockClient, \
          patch("studio.subgraphs.engineer.ArchitectAgent") as MockArchitect, \
-         patch("studio.subgraphs.engineer.apply_virtual_patch"):
+         patch("studio.subgraphs.engineer.checkout_pr_branch") as mock_checkout, \
+         patch("studio.subgraphs.engineer.os.path.exists", return_value=False):
 
         mock_client = MockClient.return_value
         mock_architect = MockArchitect.return_value
@@ -124,7 +126,8 @@ async def test_architect_gate_request_changes_on_violation():
     jules_meta = JulesMetadata(
         external_task_id="123",
         status="COMPLETED",
-        last_verified_pr_number=99
+        last_verified_pr_number=99,
+        active_context_slice=ContextSlice(files=["foo.py"])
     )
     state = {"jules_metadata": jules_meta, "messages": []}
 
@@ -141,7 +144,9 @@ async def test_architect_gate_request_changes_on_violation():
 
     with patch("studio.subgraphs.engineer.JulesGitHubClient") as MockClient, \
          patch("studio.subgraphs.engineer.ArchitectAgent") as MockArchitect, \
-         patch("studio.subgraphs.engineer.apply_virtual_patch", return_value={"foo.py": "code"}):
+         patch("studio.subgraphs.engineer.checkout_pr_branch") as mock_checkout, \
+         patch("studio.subgraphs.engineer.os.path.exists", return_value=True), \
+         patch("builtins.open", unittest.mock.mock_open(read_data="code")):
 
         mock_client = MockClient.return_value
         mock_architect = MockArchitect.return_value
@@ -150,8 +155,10 @@ async def test_architect_gate_request_changes_on_violation():
         result = await node_architect_gate(state)
 
         mock_client.review_pr.assert_called_once()
-        call_kwargs = mock_client.review_pr.call_args
-        assert call_kwargs.kwargs["event"] == "REQUEST_CHANGES"
+        args, kwargs = mock_client.review_pr.call_args
+        # Arguments: (pr_number, event, body)
+        assert args[0] == 99
+        assert kwargs.get("event") == "REQUEST_CHANGES"
         mock_client.merge_pr.assert_not_called()
         assert result["jules_metadata"].status == "FAILED"
 
