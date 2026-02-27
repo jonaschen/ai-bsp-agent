@@ -51,8 +51,9 @@ def reflector_node(state: StudioState) -> Dict:
 # --- THE ORCHESTRATOR CLASS ---
 
 class Orchestrator:
-    def __init__(self, engineer_app=None, checkpointer=None):
+    def __init__(self, engineer_app=None, checkpointer=None, manager=None):
         self.logger = logging.getLogger("Orchestrator")
+        self.manager = manager
 
         # Initialize the Semantic Sensor
         self.judge = VertexFlashJudge(GenerativeModel("gemini-2.5-pro"))
@@ -178,6 +179,7 @@ class Orchestrator:
         # Use deep copy to avoid mutation issues in loops
         orch = state.orchestration.model_copy(deep=True)
         eng = state.engineering
+        updated_tkt = None
 
         # 1. Process results from the previous execution
         if eng.current_task and eng.jules_meta:
@@ -213,6 +215,13 @@ class Orchestrator:
                 elif updated_tkt.status == "FAILED":
                     orch.failed_tasks_log.append(updated_tkt)
                     self.logger.info(f"Task {updated_tkt.id} failed.")
+
+                # Critical Transition: Task Completion/Failure - Persist state to disk
+                # Triggered only if status is terminal (COMPLETED or FAILED)
+                if updated_tkt.status in ["COMPLETED", "FAILED"] and self.manager:
+                    self.manager.state = state.model_copy(update={"orchestration": orch})
+                    self.manager._save_state()
+                    self.logger.info(f"Explicit persistence triggered for task {updated_tkt.id} terminal status: {updated_tkt.status}.")
 
         # 2. Pick the next ticket that is OPEN or IN_PROGRESS from the SPRINT BACKLOG
         next_ticket = next((t for t in orch.sprint_backlog if t.status in ["OPEN", "IN_PROGRESS"]), None)
@@ -342,6 +351,15 @@ class Orchestrator:
         if metric.is_tunneling:
             self.logger.critical(f"Cognitive Tunneling Detected (SE={metric.entropy_score})! Triggering Circuit Breaker.")
             updates["circuit_breaker_triggered"] = True
+
+            # Critical Transition: Circuit Breaker Triggered - Persist state to disk
+            if self.manager:
+                self.manager.state = state.model_copy(update={
+                    "engineering": eng_update,
+                    "circuit_breaker_triggered": True
+                })
+                self.manager._save_state()
+                self.logger.info("Explicit persistence triggered for Circuit Breaker.")
 
         return updates
 

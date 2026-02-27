@@ -1,7 +1,7 @@
 # Android BSP AI Consultant Team (The Studio)
 
 > **Version:** v5.2.0 (Phase 3: Evolution & Reality)
-> **Status:** Active Development / Simulation
+> **Status:** Research Prototype / Serious AI Systems Engineering
 >
 > *Note: While the system design targets Phase 3 (v5.2.0), the codebase currently initializes with a "Cold Start" version of v1.0.0 via `main.py`.*
 
@@ -10,6 +10,26 @@
 This repository hosts the **Recursive Cognitive Software Factory** (also known as "The Studio"), a specialized multi-agent system designed to autonomously build, verify, and maintain high-quality software products.
 
 The primary product being built is the **Android BSP Consultant**, an AI agent capable of analyzing Android Kernel logs, performing root cause analysis (RCA), and suggesting fixes for complex embedded systems issues (e.g., Suspend-to-Disk failures).
+
+### 當前功能快照 | Current Capability Snapshot
+*   **Hierarchical Orchestration:** Uses LangGraph to manage complex state transitions across multiple agent roles.
+*   **Autonomous TDD Loop:** Implementation of a strict Red-Green-Refactor cycle with automated testing (`pytest`) and code review.
+*   **Self-Optimization (OPRO):** Ability to analyze failure patterns and surgically update agent prompts in `prompts.json` to improve future performance.
+*   **Context Slicing & Guardrails:** Prevents context collapse and hallucinations via dynamic file filtering and Semantic Entropy monitoring (Circuit Breaker).
+*   **Multi-Specialist BSP RCA:** Specialized agents for Kernel Pathological analysis and Hardware Datasheet correlation.
+
+### 侷限性 | Limitations
+*   **Cold Start Latency:** Initial system initialization and state graph setup can be time-intensive.
+*   **Environment Specificity:** Currently optimized for Android BSP contexts; adapting to other domains requires significant blueprint and fixture updates.
+*   **Deterministic Bottlenecks:** While agents are non-deterministic, the governance layer relies on deterministic tests which may not cover all edge cases in complex system failures.
+*   **Model Dependency:** Highly optimized for the Gemini-2.5-Pro / Vertex AI stack; performance on smaller or different models is not yet validated.
+
+---
+
+### GitHub Topics
+`ai-systems`, `multi-agent`, `autonomous-software-factory`, `langgraph`, `vertex-ai`, `android-bsp`, `ai-safety`, `opro`, `software-engineering-automation`
+
+---
 
 ### Core Philosophy: Factory vs. Product
 *   **The Studio (`studio/`):** The "Factory" infrastructure. It contains the Orchestrator, Agents (Architect, Product Owner, Engineer, Scrum Master, Optimizer), and the Governance rules. This is the "meta-level" system that builds the software.

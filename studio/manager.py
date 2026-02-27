@@ -2,6 +2,7 @@ import os
 import json
 import shutil
 import tempfile
+import threading
 from typing import Any, Dict
 from studio.memory import (
     StudioState, OrchestrationState, EngineeringState, VerificationGate
@@ -19,6 +20,7 @@ class StudioManager:
     def __init__(self, root_dir: str = "."):
         self.root_dir = root_dir
         self.state_path = os.path.join(self.root_dir, "studio_state.json")
+        self.lock = threading.RLock()
         self.state = self._load_state()
 
     def _get_default_state(self) -> StudioState:
@@ -64,14 +66,15 @@ class StudioManager:
         AGENTS.md Sec 9: Data Sovereignty.
         Ensure _save_state() writes to a temporary file first, then renames it (atomic write).
         """
-        fd, temp_path = tempfile.mkstemp(dir=self.root_dir, text=True)
-        # Use model_dump_json to serialize Pydantic model
-        json_str = self.state.model_dump_json(indent=4)
+        with self.lock:
+            fd, temp_path = tempfile.mkstemp(dir=self.root_dir, text=True)
+            # Use model_dump_json to serialize Pydantic model
+            json_str = self.state.model_dump_json(indent=4)
 
-        with os.fdopen(fd, 'w') as f:
-            f.write(json_str)
+            with os.fdopen(fd, 'w') as f:
+                f.write(json_str)
 
-        os.replace(temp_path, self.state_path)
+            os.replace(temp_path, self.state_path)
 
     def update_state(self, key: str, value: Any):
         """
