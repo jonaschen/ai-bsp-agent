@@ -56,10 +56,21 @@ def test_triage_report_serialization():
 def test_rca_report_serialization():
     data = {
         "diagnosis_id": "RCA-001",
-        "confidence": 0.9,
+        "confidence_score": 0.9,
+        "status": "CRITICAL",
         "root_cause_summary": "Summary",
         "technical_detail": "Detail",
         "suggested_fix": "Fix",
+        "evidence": ["Evidence"],
+        "sop_steps": [
+            {
+                "step_id": 1,
+                "action_type": "MEASUREMENT",
+                "instruction": "Measure",
+                "expected_value": "Value",
+                "file_path": "N/A"
+            }
+        ],
         "references": ["Ref"]
     }
     assert_roundtrip(RCAReport, data)
@@ -77,7 +88,7 @@ def test_sop_step_serialization():
 def test_consultant_response_serialization():
     data = {
         "diagnosis_id": "DIAG-001",
-        "confidence": 0.85,
+        "confidence_score": 0.85,
         "status": "WARNING",
         "root_cause_summary": "Summary",
         "evidence": ["Evidence"],
@@ -110,7 +121,7 @@ def test_supervisor_input_serialization():
 def test_pathologist_output_serialization():
     pathologist_data = {
         "suspected_module": "drivers/usb/dwc3/",
-        "confidence": 0.95,
+        "confidence_score": 0.95,
         "evidence": ["Attempted to access offset 0x20 of NULL pointer"],
         "sop_steps": [
             {
@@ -152,8 +163,8 @@ def test_hardware_advisor_output_serialization():
     hardware_output_data = {
         "voltage_specs": "1.8V",
         "timing_specs": "400kHz",
-        "soa_info": "Max 85C",
-        "confidence": 0.8,
+        "soa": "Max 85C",
+        "confidence_score": 0.8,
         "evidence": ["Datasheet Table 1"],
         "sop_steps": [
             {
@@ -171,8 +182,8 @@ def test_hardware_advisor_output_confidence_validation():
     invalid_hw_data = {
         "voltage_specs": "1.8V",
         "timing_specs": "400kHz",
-        "soa_info": "Max 85C",
-        "confidence": 1.5, # Out of bounds [0.0, 1.0]
+        "soa": "Max 85C",
+        "confidence_score": 1.5, # Out of bounds [0.0, 1.0]
         "evidence": [],
         "sop_steps": []
     }
@@ -182,7 +193,7 @@ def test_hardware_advisor_output_confidence_validation():
 def test_pathologist_output_confidence_validation():
     invalid_path_data = {
         "suspected_module": "module",
-        "confidence": -0.1, # Out of bounds [0.0, 1.0]
+        "confidence_score": -0.1, # Out of bounds [0.0, 1.0]
         "evidence": [],
         "sop_steps": []
     }
