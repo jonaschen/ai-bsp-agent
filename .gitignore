@@ -34,3 +34,6 @@ ENV/
 
 .pytest_cache/
 .DS_Store
+
+# Studio Checkpoints
+studio_checkpoints.db

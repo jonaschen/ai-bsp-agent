@@ -51,7 +51,7 @@ def reflector_node(state: StudioState) -> Dict:
 # --- THE ORCHESTRATOR CLASS ---
 
 class Orchestrator:
-    def __init__(self, engineer_app=None):
+    def __init__(self, engineer_app=None, checkpointer=None):
         self.logger = logging.getLogger("Orchestrator")
 
         # Initialize the Semantic Sensor
@@ -63,9 +63,9 @@ class Orchestrator:
 
         # Initialize the Supergraph with the Global StudioState
         self.workflow = StateGraph(StudioState)
-        self._setup_graph()
+        self._setup_graph(checkpointer=checkpointer)
 
-    def _setup_graph(self):
+    def _setup_graph(self, checkpointer=None):
         """
         Defines the System Topology (Nodes & Edges).
         Implements the Phase 2 Lifecycle Manager while retaining Router capabilities.
@@ -125,7 +125,7 @@ class Orchestrator:
         self.workflow.add_edge("scrum_master", END)
         self.workflow.add_edge("sop_guide_subgraph", END)
 
-        self.app = self.workflow.compile()
+        self.app = self.workflow.compile(checkpointer=checkpointer)
 
     # --- NODE: Product Owner (PLAN) ---
     async def node_product_owner(self, state: StudioState) -> Dict:

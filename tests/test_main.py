@@ -1,25 +1,31 @@
 import os
 import json
 import pytest
-from main import load_state, save_state, CLEAN_PATH
+from main import CLEAN_PATH
 from studio.memory import StudioState
+from studio.manager import StudioManager
 
-def test_load_state_new():
+def test_manager_load_state_new():
     if os.path.exists(CLEAN_PATH):
         os.remove(CLEAN_PATH)
-    state = load_state()
+    manager = StudioManager()
+    state = manager.state
     assert isinstance(state, StudioState)
-    assert state.system_version == "1.0.0"
+    # StudioManager's default system_version is 5.2.0
+    assert state.system_version == "5.2.0"
 
-def test_save_and_load_state():
-    state = load_state()
+def test_manager_save_and_load_state():
+    if os.path.exists(CLEAN_PATH):
+        os.remove(CLEAN_PATH)
+    manager = StudioManager()
+    state = manager.state
     state.orchestration.user_intent = "Test intent"
-    save_state(state)
+    manager._save_state()
 
     assert os.path.exists(CLEAN_PATH)
 
-    new_state = load_state()
-    assert new_state.orchestration.user_intent == "Test intent"
+    new_manager = StudioManager()
+    assert new_manager.state.orchestration.user_intent == "Test intent"
 
     os.remove(CLEAN_PATH)
 
