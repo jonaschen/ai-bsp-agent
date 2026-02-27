@@ -37,3 +37,4 @@ ENV/
 
 # Studio Checkpoints
 studio_checkpoints.db
+studio_state.json
