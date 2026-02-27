@@ -1,8 +1,6 @@
 # Android BSP AI Consultant Team (The Studio)
 
 [![AI Safety](https://img.shields.io/badge/AI-Safety-blue.svg)](https://example.com/ai-safety)
-[![arXiv](https://img.shields.io/badge/arXiv-2401.xxxxx-B31B1B.svg)](https://arxiv.org/abs/2401.xxxxx)
-[![Citation](https://img.shields.io/badge/citation-available-green.svg)](https://example.com/citation)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **Version:** v5.2.0 (Phase 3: Evolution & Reality)
