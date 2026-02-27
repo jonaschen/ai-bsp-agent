@@ -42,17 +42,24 @@ class StudioManager:
         """
         if not os.path.exists(self.state_path):
             # TDD Requirement: Fallback to seed if it exists
-            if os.path.exists(self.seed_path):
-                with open(self.seed_path, "r") as f:
-                    try:
-                        data = json.load(f)
-                        state = StudioState.model_validate(data)
-                        self.state = state
-                        self._save_state()
-                        return state
-                    except Exception:
-                        # If seed is corrupt, fallback to default
-                        pass
+            # We check both the local root_dir and the central studio/ directory
+            potential_seeds = [
+                self.seed_path,
+                os.path.join(self.root_dir, "studio", "studio_state.seed.json")
+            ]
+
+            for seed in potential_seeds:
+                if os.path.exists(seed):
+                    with open(seed, "r") as f:
+                        try:
+                            data = json.load(f)
+                            state = StudioState.model_validate(data)
+                            self.state = state
+                            self._save_state()
+                            return state
+                        except Exception:
+                            # If seed is corrupt, try next one
+                            continue
 
             state = self._get_default_state()
             self.state = state
