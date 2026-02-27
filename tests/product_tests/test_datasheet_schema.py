@@ -1,14 +1,14 @@
 import pytest
 from pydantic import ValidationError
 try:
-    from product.schemas.datasheet import Datasheet, DatasheetMetadata
+    from product.schemas import Datasheet, DatasheetMetadata
 except ImportError:
     Datasheet = None
     DatasheetMetadata = None
 
 def test_datasheet_imports():
-    assert Datasheet is not None, "Datasheet model not found in product.schemas.datasheet"
-    assert DatasheetMetadata is not None, "DatasheetMetadata model not found in product.schemas.datasheet"
+    assert Datasheet is not None, "Datasheet model not found in product.schemas"
+    assert DatasheetMetadata is not None, "DatasheetMetadata model not found in product.schemas"
 
 def test_datasheet_metadata_validation():
     if DatasheetMetadata is None:

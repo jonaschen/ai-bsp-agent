@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 # --- Base Support Models ---
@@ -35,7 +35,7 @@ class TriageReport(BaseModel):
 class RCAReport(BaseModel):
     """Root Cause Analysis Report."""
     diagnosis_id: str = Field(..., description="Unique identifier for this diagnosis", examples=["RCA-001", "RCA-BSP-042"])
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence in the diagnosis", examples=[0.95, 0.80])
+    confidence_score: float = Field(..., ge=0.0, le=1.0, description="Confidence in the diagnosis", examples=[0.95, 0.80])
     root_cause_summary: str = Field(..., description="Brief summary of the root cause", examples=["Null pointer dereference in mdss driver", "I2C bus contention during resume"])
     technical_detail: str = Field(..., description="Deep dive into the technical root cause", examples=["The driver attempted to access a clock pointer before it was initialized...", "A race condition between the I2C master and a slave device caused a timeout."])
     suggested_fix: str = Field(..., description="Recommended code or hardware fix", examples=["Add a NULL check for clk_ptr in mdss_dsi_probe", "Increase I2C timeout value in device tree"])
@@ -44,7 +44,7 @@ class RCAReport(BaseModel):
 class ConsultantResponse(BaseModel):
     """The standardized output for all Consultant agents."""
     diagnosis_id: str = Field(..., description="Unique ID for this diagnosis", examples=["RCA-BSP-001", "DIAG-PATH-001"])
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence in the diagnosis", examples=[0.85, 0.99])
+    confidence_score: float = Field(..., ge=0.0, le=1.0, description="Confidence in the diagnosis", examples=[0.85, 0.99])
     status: Literal["CRITICAL", "WARNING", "INFO", "CLARIFY_NEEDED"] = Field(..., description="Status of the analysis", examples=["CRITICAL", "INFO"])
     root_cause_summary: str = Field(..., description="Brief summary of the root cause", examples=["I2C bus contention during resume", "Null pointer dereference in kernel"])
     evidence: List[str] = Field(..., description="Evidence supporting the diagnosis (e.g., log lines)", examples=["[ 1450.02] i2c_transfer_timeout", "pc : [<ffffffc000080000>]"])
@@ -56,12 +56,13 @@ class SupervisorInput(BaseModel):
     """Input contract for the Supervisor Agent (User Query + Log File)."""
     user_query: str = Field(..., description="User's description of the problem", examples=["Kernel panic on boot", "Display flicker"])
     log_file: LogPayload = Field(..., description="The log content container", examples=[{"dmesg_content": "[ 0.000000] Linux version...", "logcat_content": "..."}])
+    log_file_format: str = Field("TEXT", description="The format of the log file", examples=["TEXT", "JSON", "CSV"])
     case_metadata: Optional[dict] = Field(None, description="Optional metadata about the device/source", examples=[{"device_model": "Pixel 8", "source_code_mode": "git"}])
 
 class PathologistOutput(BaseModel):
     """Output contract for the Kernel Pathologist Agent."""
     suspected_module: str = Field(..., description="The kernel module or subsystem suspected of failure", examples=["drivers/usb/dwc3/", "kernel/irq/"])
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence in the pathologist's diagnosis", examples=[0.95, 0.70])
+    confidence_score: float = Field(..., ge=0.0, le=1.0, description="Confidence in the pathologist's diagnosis", examples=[0.95, 0.70])
     evidence: List[str] = Field(..., description="Key log lines or patterns supporting the suspicion", examples=["[ 123.456] Unable to handle kernel NULL pointer dereference", "pc : [<ffffffc000080000>]"])
     sop_steps: List[SOPStep] = Field(..., description="Recommended SOP steps for verification or fix", examples=[{"step_id": 1, "action_type": "CODE_PATCH", "instruction": "Add NULL check", "expected_value": "No panic", "file_path": "drivers/usb/dwc3/gadget.c"}])
 
@@ -76,7 +77,45 @@ class HardwareAdvisorOutput(BaseModel):
     """Output contract for the Hardware Advisor Agent."""
     voltage_specs: Optional[str] = Field(None, description="Voltage requirements from datasheet", examples=["1.8V +/- 5%", "0.8V VDD_CORE"])
     timing_specs: Optional[str] = Field(None, description="Timing requirements from datasheet", examples=["tVAC min 100ns", "tCK 1.25ns"])
-    soa_info: Optional[str] = Field(None, description="Safe Operating Area details", examples=["Max junction temp 125C", "Max current 2A"])
-    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence in the specs retrieved", examples=[0.99, 0.85])
+    soa: Optional[str] = Field(None, description="Safe Operating Area details", examples=["Max junction temp 125C", "Max current 2A"])
+    confidence_score: float = Field(..., ge=0.0, le=1.0, description="Confidence in the specs retrieved", examples=[0.99, 0.85])
     evidence: List[str] = Field(..., description="Supporting excerpts from the datasheet", examples=["Table 5.1: VDD range 1.7V to 1.9V"])
     sop_steps: List[SOPStep] = Field(..., description="Measurement instructions for the human", examples=[{"step_id": 1, "action_type": "MEASUREMENT", "instruction": "Measure TP34", "expected_value": "1.8V", "file_path": "N/A"}])
+
+# --- Datasheet Models ---
+
+class DatasheetMetadata(BaseModel):
+    """
+    Metadata for a hardware component datasheet.
+    Used for filtering and structured retrieval in the RAG pipeline.
+    """
+    component_type: str = Field(..., description="Type of component (e.g., PMIC, DRAM, SoC)", examples=["PMIC", "DRAM"])
+    part_number: str = Field(..., description="Manufacturer part number", examples=["TPS6594", "MT53E"])
+    manufacturer: str = Field(..., description="Manufacturer name", examples=["TI", "Micron", "Qualcomm"])
+    voltage_range: Optional[Dict[str, Any]] = Field(None, description="Operating voltage range details", examples=[{"min": 0.6, "max": 3.3, "unit": "V"}])
+    timing_specs: Optional[Dict[str, Any]] = Field(None, description="Timing characteristics (e.g., clock speeds)", examples=[{"i2c_speed": "400kHz"}])
+    interfaces: List[str] = Field(default_factory=list, description="Supported interfaces (e.g., I2C, SPI, LPDDR5)", examples=[["I2C", "GPIO"]])
+
+class Datasheet(BaseModel):
+    """
+    The core representation of a datasheet in the repository.
+
+    ### Vector Embedding Strategy:
+    To optimize for RAG, the following fields are concatenated for vectorization:
+    - component_type
+    - part_number
+    - manufacturer
+    - interfaces
+    - content (summary or key sections)
+
+    The metadata is stored in the vector store's 'metadata' field for hard-filtering
+    (e.g., searching ONLY for 'PMIC' components).
+
+    ### Expected Retrieval Query Patterns:
+    1. "What is the voltage range for TPS6594?" -> Filter by part_number='TPS6594'
+    2. "List I2C PMICs for Pixel 8" -> Filter by component_type='PMIC' and search 'I2C'
+    3. "Timing specs for LPDDR5 on SoC SDM845" -> Search 'LPDDR5 SDM845 timing'
+    """
+    metadata: DatasheetMetadata = Field(..., description="Structured metadata for the component")
+    content: str = Field(..., description="Text content of the datasheet or relevant excerpts")
+    source_url: Optional[str] = Field(None, description="Link to the original PDF or source", examples=["https://example.com/datasheet.pdf"])
