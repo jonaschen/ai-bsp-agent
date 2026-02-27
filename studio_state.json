@@ -1,0 +1,31 @@
+{
+    "system_version": "5.2.0",
+    "circuit_breaker_triggered": false,
+    "escalation_triggered": false,
+    "orchestration": {
+        "session_id": "RECOVERY-TEST",
+        "user_intent": "BOOTSTRAP",
+        "full_logs": "",
+        "triage_status": null,
+        "guidance_sop": null,
+        "current_context_slice": null,
+        "task_queue": [],
+        "task_max_retries": 5,
+        "current_sprint_id": null,
+        "sprint_goal": null,
+        "sprint_backlog": [],
+        "completed_tasks_log": [],
+        "failed_tasks_log": []
+    },
+    "engineering": {
+        "current_task": null,
+        "verification_gate": {
+            "status": "PENDING",
+            "failure_counter": 0,
+            "blocking_reason": null
+        },
+        "proposed_patch": null,
+        "jules_meta": null
+    },
+    "privacy_mode": true
+}

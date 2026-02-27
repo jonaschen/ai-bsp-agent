@@ -2,6 +2,7 @@
 import asyncio
 import os
 import uuid
+import pytest
 from main import run_studio, STATE_FILE, CHECKPOINT_DB
 from studio.memory import StudioState
 from studio.manager import StudioManager
@@ -9,6 +10,7 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime
 
+@pytest.mark.asyncio
 async def test_recovery_logic():
     print("Testing recovery logic...")
 
