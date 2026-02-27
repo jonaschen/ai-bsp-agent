@@ -15,7 +15,8 @@ os.environ["GOOGLE_CLOUD_PROJECT"] = "mock-project"
 @patch("studio.orchestrator.GenerativeModel")
 @patch("studio.orchestrator.run_po_cycle")
 @patch("studio.orchestrator.run_scrum_retrospective")
-def test_orchestrator_coding_flow(mock_run_retrospective, mock_run_po, mock_gen_model, mock_vertex_judge):
+@patch("studio.orchestrator.sync_main_branch")
+def test_orchestrator_coding_flow(mock_sync, mock_run_retrospective, mock_run_po, mock_gen_model, mock_vertex_judge):
     # Setup state for CODING intent
     orch_state = OrchestrationState(
         session_id="test_1",

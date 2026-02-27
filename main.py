@@ -30,7 +30,7 @@ async def run_studio():
     config = {"configurable": {"thread_id": "studio-session-v1"}, "recursion_limit": 100}
 
     async with AsyncSqliteSaver.from_conn_string(CHECKPOINT_DB) as checkpointer:
-        orchestrator = Orchestrator(checkpointer=checkpointer)
+        orchestrator = Orchestrator(checkpointer=checkpointer, manager=manager)
 
         try:
             logging.info("Starting Orchestration Loop...")

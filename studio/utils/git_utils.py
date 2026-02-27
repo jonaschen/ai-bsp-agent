@@ -33,7 +33,7 @@ def checkout_pr_branch(branch_name: str):
 def sync_main_branch():
     """
     Synchronizes the local main branch with the remote origin.
-    Executes: git checkout main && git pull origin main
+    Executes: git checkout main && git pull origin main --rebase
     """
     logger.info("Synchronizing local workspace with main branch.")
 
