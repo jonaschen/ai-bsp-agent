@@ -1,7 +1,11 @@
 # Android BSP AI Consultant Team (The Studio)
 
+[![AI Safety](https://img.shields.io/badge/AI-Safety-blue.svg)](https://example.com/ai-safety)
+[![arXiv](https://img.shields.io/badge/arXiv-2401.xxxxx-B31B1B.svg)](https://arxiv.org/abs/2401.xxxxx)
+[![Citation](https://img.shields.io/badge/citation-available-green.svg)](https://example.com/citation)
+
 > **Version:** v5.2.0 (Phase 3: Evolution & Reality)
-> **Status:** Active Development / Simulation
+> **Status:** Research Prototype / Serious AI Systems Engineering
 >
 > *Note: While the system design targets Phase 3 (v5.2.0), the codebase currently initializes with a "Cold Start" version of v1.0.0 via `main.py`.*
 
@@ -10,6 +14,37 @@
 This repository hosts the **Recursive Cognitive Software Factory** (also known as "The Studio"), a specialized multi-agent system designed to autonomously build, verify, and maintain high-quality software products.
 
 The primary product being built is the **Android BSP Consultant**, an AI agent capable of analyzing Android Kernel logs, performing root cause analysis (RCA), and suggesting fixes for complex embedded systems issues (e.g., Suspend-to-Disk failures).
+
+### 市場定位 | Market Positioning
+The **Recursive Cognitive Software Factory** occupies a unique niche between general-purpose autonomous coding agents (like Devin) and domain-specific expert systems. It serves as a **Specialized AI Systems Research Prototype** for:
+*   **Autonomous Software Delivery:** Moving beyond code generation to the autonomous management of the entire software lifecycle (Planning, Execution, Governance, Evolution).
+*   **Domain-Specific Expertise:** Focusing on the high-stakes, log-intensive environment of Android Board Support Package (BSP) development.
+*   **Self-Evolving Systems:** Implementing OPRO (Optimization by PROmpting) to allow the factory to improve its own internal logic based on performance data.
+
+### 為何重要 | Why This Matters
+*   **AI Safety & Governance:** By implementing strict **Cognitive Guardrails** (Semantic Entropy) and an **Architect Agent** (Governance), we explore how to build autonomous systems that remain within safe operating boundaries.
+*   **Automation at Scale:** Traditional software engineering is bottlenecked by human review. The Studio demonstrates a path toward scaling engineering capacity through hierarchical, multi-agent collaboration.
+*   **Autonomous Software Delivery:** The project researches the feasibility of a "Lights-Out" software factory, where the system is the primary engineer and the human acts as a high-level supervisor/approver.
+
+### 當前功能快照 | Current Capability Snapshot
+*   **Hierarchical Orchestration:** Uses LangGraph to manage complex state transitions across multiple agent roles.
+*   **Autonomous TDD Loop:** Implementation of a strict Red-Green-Refactor cycle with automated testing (`pytest`) and code review.
+*   **Self-Optimization (OPRO):** Ability to analyze failure patterns and surgically update agent prompts in `prompts.json` to improve future performance.
+*   **Context Slicing & Guardrails:** Prevents context collapse and hallucinations via dynamic file filtering and Semantic Entropy monitoring (Circuit Breaker).
+*   **Multi-Specialist BSP RCA:** Specialized agents for Kernel Pathological analysis and Hardware Datasheet correlation.
+
+### 侷限性 | Limitations
+*   **Cold Start Latency:** Initial system initialization and state graph setup can be time-intensive.
+*   **Environment Specificity:** Currently optimized for Android BSP contexts; adapting to other domains requires significant blueprint and fixture updates.
+*   **Deterministic Bottlenecks:** While agents are non-deterministic, the governance layer relies on deterministic tests which may not cover all edge cases in complex system failures.
+*   **Model Dependency:** Highly optimized for the Gemini-2.5-Pro / Vertex AI stack; performance on smaller or different models is not yet validated.
+
+---
+
+### GitHub Topics
+`ai-systems`, `multi-agent`, `autonomous-software-factory`, `langgraph`, `vertex-ai`, `android-bsp`, `ai-safety`, `opro`, `software-engineering-automation`
+
+---
 
 ### Core Philosophy: Factory vs. Product
 *   **The Studio (`studio/`):** The "Factory" infrastructure. It contains the Orchestrator, Agents (Architect, Product Owner, Engineer, Scrum Master, Optimizer), and the Governance rules. This is the "meta-level" system that builds the software.
