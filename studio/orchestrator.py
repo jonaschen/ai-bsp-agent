@@ -218,7 +218,7 @@ class Orchestrator:
 
                 # Critical Transition: Task Completion/Failure - Persist state to disk
                 # Triggered only if status is terminal (COMPLETED or FAILED)
-                if updated_tkt.status in ["COMPLETED", "FAILED"] and self.manager:
+                if updated_tkt and updated_tkt.status in ["COMPLETED", "FAILED"] and self.manager:
                     self.manager.state = state.model_copy(update={"orchestration": orch})
                     self.manager._save_state()
                     self.logger.info(f"Explicit persistence triggered for task {updated_tkt.id} terminal status: {updated_tkt.status}.")
