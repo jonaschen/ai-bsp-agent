@@ -51,8 +51,9 @@ def reflector_node(state: StudioState) -> Dict:
 # --- THE ORCHESTRATOR CLASS ---
 
 class Orchestrator:
-    def __init__(self, engineer_app=None, checkpointer=None):
+    def __init__(self, engineer_app=None, checkpointer=None, manager=None):
         self.logger = logging.getLogger("Orchestrator")
+        self.manager = manager
 
         # Initialize the Semantic Sensor
         self.judge = VertexFlashJudge(GenerativeModel("gemini-2.5-pro"))
@@ -214,6 +215,12 @@ class Orchestrator:
                     orch.failed_tasks_log.append(updated_tkt)
                     self.logger.info(f"Task {updated_tkt.id} failed.")
 
+                # Persist state after terminal status - AGENTS.md Compliance
+                if self.manager:
+                    # Sync state object before saving
+                    self.manager.state.orchestration = orch
+                    self.manager._save_state()
+
         # 2. Pick the next ticket that is OPEN or IN_PROGRESS from the SPRINT BACKLOG
         next_ticket = next((t for t in orch.sprint_backlog if t.status in ["OPEN", "IN_PROGRESS"]), None)
 
@@ -342,6 +349,13 @@ class Orchestrator:
         if metric.is_tunneling:
             self.logger.critical(f"Cognitive Tunneling Detected (SE={metric.entropy_score})! Triggering Circuit Breaker.")
             updates["circuit_breaker_triggered"] = True
+
+            # Persist state immediately on circuit breaker - AGENTS.md Compliance
+            if self.manager:
+                # Merge updates into manager state
+                self.manager.state.engineering = eng_update
+                self.manager.state.circuit_breaker_triggered = True
+                self.manager._save_state()
 
         return updates
 

@@ -3,7 +3,7 @@
     "circuit_breaker_triggered": false,
     "escalation_triggered": false,
     "orchestration": {
-        "session_id": "RECOVERY-TEST",
+        "session_id": "SESSION-00",
         "user_intent": "BOOTSTRAP",
         "full_logs": "",
         "triage_status": null,

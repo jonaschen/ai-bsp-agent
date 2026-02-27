@@ -11,11 +11,12 @@ from studio.orchestrator import Orchestrator
 # Set mock project to avoid Google Auth errors
 os.environ["GOOGLE_CLOUD_PROJECT"] = "mock-project"
 
+@patch("studio.orchestrator.sync_main_branch")
 @patch("studio.orchestrator.VertexFlashJudge")
 @patch("studio.orchestrator.GenerativeModel")
 @patch("studio.orchestrator.run_po_cycle")
 @patch("studio.orchestrator.run_scrum_retrospective")
-def test_orchestrator_coding_flow(mock_run_retrospective, mock_run_po, mock_gen_model, mock_vertex_judge):
+def test_orchestrator_coding_flow(mock_run_retrospective, mock_run_po, mock_gen_model, mock_vertex_judge, mock_sync):
     # Setup state for CODING intent
     orch_state = OrchestrationState(
         session_id="test_1",
