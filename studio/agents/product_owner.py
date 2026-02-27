@@ -195,5 +195,35 @@ def run_po_cycle(orchestrator_state: Dict):
 
     analysis = po.analyze_specs(content, existing_titles)
 
-    logger.info(f"PO Cycle: Generated {len(analysis.new_tickets)} tickets (DAG Sorted).")
-    return analysis.new_tickets
+    # DEDUPLICATION LOGIC:
+    # We must filter out tickets that already exist in the OrchestrationState.
+    # This includes task_queue, sprint_backlog, completed_tasks_log, and failed_tasks_log.
+    existing_ids = set()
+
+    # 1. Gather all lists of tickets from the orchestration layer
+    all_ticket_lists = [
+        orch_layer.get("task_queue", []),
+        orch_layer.get("sprint_backlog", []),
+        orch_layer.get("completed_tasks_log", []),
+        orch_layer.get("failed_tasks_log", [])
+    ]
+
+    # 2. Extract IDs from all tickets in those lists
+    for t_list in all_ticket_lists:
+        if isinstance(t_list, dict):
+            # Dictionary case: keys are IDs, values are tickets
+            for tid, t in t_list.items():
+                existing_ids.add(tid)
+        elif isinstance(t_list, list):
+            # List case
+            for t in t_list:
+                if hasattr(t, 'id'):
+                    existing_ids.add(t.id)
+                elif isinstance(t, dict):
+                    existing_ids.add(t.get('id'))
+
+    # 3. Filter out duplicates
+    net_new_tickets = [t for t in analysis.new_tickets if t.id not in existing_ids]
+
+    logger.info(f"PO Cycle: Generated {len(analysis.new_tickets)} tickets. Filtered to {len(net_new_tickets)} net new tickets.")
+    return net_new_tickets
