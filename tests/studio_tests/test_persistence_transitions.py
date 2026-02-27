@@ -103,3 +103,49 @@ class TestPersistenceTransitions:
 
         assert disk_state.circuit_breaker_triggered is True
         assert disk_state.engineering.jules_meta.status == "WORKING"
+
+    @pytest.mark.asyncio
+    @patch("studio.orchestrator.VertexFlashJudge")
+    @patch("studio.orchestrator.GenerativeModel")
+    @patch("studio.orchestrator.sync_main_branch")
+    async def test_recovery_from_persisted_state(self, mock_sync, mock_gen_model, mock_vertex_judge, manager, temp_studio_dir):
+        # 1. Setup initial state with a completed task
+        ticket = Ticket(id="TKT-FINAL", title="Final Task", description="Done", priority="LOW", source_section_id="1")
+        orch_state = OrchestrationState(
+            session_id="recovery_session",
+            user_intent="CODING",
+            sprint_backlog=[ticket]
+        )
+        eng_state = EngineeringState(
+            current_task="TKT-FINAL",
+            jules_meta=JulesMetadata(status="COMPLETED")
+        )
+        state = StudioState(orchestration=orch_state, engineering=eng_state)
+        manager.state = state
+        manager._save_state()
+
+        orchestrator = Orchestrator(manager=manager)
+
+        # 2. Execute dispatcher - should move TKT-FINAL to completed_tasks_log and persist
+        await orchestrator.node_backlog_dispatcher(state)
+
+        # Verify it was completed in the manager's state
+        assert len(manager.state.orchestration.completed_tasks_log) == 1
+        assert manager.state.orchestration.completed_tasks_log[0].id == "TKT-FINAL"
+
+        # 3. Simulate Crash/Restart: Re-initialize manager and orchestrator from same dir
+        new_manager = StudioManager(root_dir=temp_studio_dir)
+        new_orchestrator = Orchestrator(manager=new_manager)
+
+        # Verify the new manager loaded the completed state
+        assert len(new_manager.state.orchestration.completed_tasks_log) == 1
+        assert new_manager.state.orchestration.completed_tasks_log[0].id == "TKT-FINAL"
+        assert len(new_manager.state.orchestration.sprint_backlog) == 0
+
+        # 4. Run dispatcher again - it should not find any tasks to dispatch
+        result = await new_orchestrator.node_backlog_dispatcher(new_manager.state)
+
+        # Result should show no new engineering state (meaning no new task dispatched)
+        # Because sprint_backlog is empty
+        assert "engineering" not in result
+        assert len(new_manager.state.orchestration.sprint_backlog) == 0
