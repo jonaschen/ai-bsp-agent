@@ -44,9 +44,9 @@ def sync_main_branch():
         logger.error(f"Git checkout main failed: {e}")
         raise
 
-    # 2. Pull from origin main (with rebase to handle divergent branches)
+    # 2. Pull from origin main (with rebase to avoid merge conflicts in automated flow)
     try:
-        subprocess.run(["git", "pull", "origin", "main", "--rebase"], check=True)
+        subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=True)
     except subprocess.CalledProcessError as e:
         logger.error(f"Git pull origin main failed: {e}")
         raise
