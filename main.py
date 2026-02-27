@@ -2,85 +2,63 @@ import os
 import json
 import argparse
 import asyncio
-import tempfile
 import logging
-from studio.memory import StudioState, OrchestrationState, EngineeringState, VerificationGate
+from studio.memory import StudioState
 from studio.orchestrator import Orchestrator
+from studio.manager import StudioManager
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 # Configuration
 STATE_FILE = "studio_state.json"
+CHECKPOINT_DB = "studio_checkpoints.db"
 CLEAN_PATH = STATE_FILE  # Exposed for testing
-
-def load_state() -> StudioState:
-    """
-    State Loading & Recovery Logic.
-    Prioritizes loading from disk; falls back to 'Cold Start' if missing.
-    """
-    if os.path.exists(STATE_FILE):
-        try:
-            with open(STATE_FILE, "r") as f:
-                data = json.load(f)
-                # Pydantic Validation ensures disk JSON matches memory Schema
-                return StudioState.model_validate(data)
-        except Exception as e:
-            logging.error(f"Failed to load state: {e}. Reverting to cold start.")
-
-    # Cold Start: Initialize a brand new StudioState
-    logging.info("Initializing fresh StudioState (Cold Start)...")
-    return StudioState(
-        system_version="1.0.0",
-        orchestration=OrchestrationState(
-            session_id="SESSION-01",
-            user_intent="SPRINT"
-        ),
-        engineering=EngineeringState(
-            verification_gate=VerificationGate(status="PENDING")
-        )
-    )
-
-def save_state(state: StudioState):
-    """
-    Atomic State Persistence.
-    Writes to a temporary file first, then renames to prevent corruption.
-    """
-    fd, temp_path = tempfile.mkstemp(dir=".", text=True)
-    try:
-        with os.fdopen(fd, 'w') as f:
-            f.write(state.model_dump_json(indent=4))
-        os.replace(temp_path, STATE_FILE)
-    except Exception as e:
-        os.remove(temp_path)
-        logging.error(f"Failed to save state: {e}")
 
 async def run_studio():
     """
     Orchestration Life-cycle Manager.
     Handles startup, execution, and shutdown.
     """
-    state = load_state()
+    manager = StudioManager()
+    state = manager.state
     logging.info(f"System Online. Version: {state.system_version}")
 
     # Pre-flight checks
     if not os.path.exists("PRODUCT_BLUEPRINT.md"):
         logging.warning("PRODUCT_BLUEPRINT.md not found. System may lack direction.")
 
-    orchestrator = Orchestrator()
+    # Execution Control: Manage LangGraph recursion depth and thread ID
+    config = {"configurable": {"thread_id": "studio-session-v1"}, "recursion_limit": 100}
 
-    # Execution Control: Manage LangGraph recursion depth
-    config = {"recursion_limit": 100}
+    async with AsyncSqliteSaver.from_conn_string(CHECKPOINT_DB) as checkpointer:
+        orchestrator = Orchestrator(checkpointer=checkpointer)
 
-    try:
-        logging.info("Starting Orchestration Loop...")
-        # Invoke the Supergraph
-        final_state_data = await orchestrator.app.ainvoke(state, config=config)
+        try:
+            logging.info("Starting Orchestration Loop...")
+            # Invoke the Supergraph
+            final_state_data = await orchestrator.app.ainvoke(state, config=config)
 
-        # Recover final state and persist
-        final_state = StudioState.model_validate(final_state_data)
-        save_state(final_state)
-        logging.info("Sprint cycle completed successfully.")
+            # Recover final state and persist via manager
+            final_state = StudioState.model_validate(final_state_data)
+            manager.state = final_state
+            manager._save_state()
+            logging.info("Sprint cycle completed successfully.")
 
-    except Exception as e:
-        logging.critical(f"System Crash in Orchestration Loop: {e}", exc_info=True)
+        except Exception as e:
+            logging.critical(f"System Crash in Orchestration Loop: {e}", exc_info=True)
+
+            # Crash Recovery Logic: Attempt to recover the last known state from checkpointer
+            logging.info("Attempting state recovery from SQLite checkpointer...")
+            try:
+                checkpoint_state = await checkpointer.aget(config)
+                if checkpoint_state and "channel_values" in checkpoint_state:
+                    recovered_state = StudioState.model_validate(checkpoint_state["channel_values"])
+                    manager.state = recovered_state
+                    manager._save_state()
+                    logging.info("Successfully recovered last known state from checkpointer.")
+                else:
+                    logging.warning("No checkpoint found for recovery.")
+            except Exception as recovery_error:
+                logging.error(f"Failed to recover state from checkpointer: {recovery_error}")
 
 def main():
     parser = argparse.ArgumentParser(description="Jules Studio - Production Entry Point")
@@ -97,9 +75,14 @@ def main():
     if args.command == "run":
         asyncio.run(run_studio())
     elif args.command == "clean":
-        if os.path.exists(STATE_FILE):
-            os.remove(STATE_FILE)
-            print(f"State wiped. {STATE_FILE} removed.")
+        files_removed = []
+        for f in [STATE_FILE, CHECKPOINT_DB]:
+            if os.path.exists(f):
+                os.remove(f)
+                files_removed.append(f)
+
+        if files_removed:
+            print(f"Cleaned: {', '.join(files_removed)}")
         else:
             print("Already clean.")
     else:

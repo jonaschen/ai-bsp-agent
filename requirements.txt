@@ -12,4 +12,5 @@ python-dotenv
 docker
 networkx
 langgraph
+langgraph-checkpoint-sqlite
 unidiff
