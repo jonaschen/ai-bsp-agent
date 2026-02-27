@@ -29,3 +29,24 @@ def checkout_pr_branch(branch_name: str):
     except subprocess.CalledProcessError as e:
         logger.error(f"Git checkout {branch_name} failed: {e}")
         raise
+
+def sync_main_branch():
+    """
+    Synchronizes the local main branch with the remote origin.
+    Executes: git checkout main && git pull origin main
+    """
+    logger.info("Synchronizing local workspace with main branch.")
+
+    # 1. Checkout main
+    try:
+        subprocess.run(["git", "checkout", "main"], check=True)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Git checkout main failed: {e}")
+        raise
+
+    # 2. Pull from origin main
+    try:
+        subprocess.run(["git", "pull", "origin", "main"], check=True)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Git pull origin main failed: {e}")
+        raise
