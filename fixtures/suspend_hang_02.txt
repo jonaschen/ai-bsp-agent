@@ -1,0 +1,36 @@
+[  45.112233] PM: suspend entry (deep)
+[  45.115778] Filesystems sync: 0.004 seconds
+[  45.121335] Freezing user space processes ... (elapsed 0.001 seconds) done.
+[  45.128201] OOM killer disabled.
+[  45.131401] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) done.
+[  45.138822] printk: Suspending console(s) (use no_console_suspend to debug)
+[  45.146018] mmc0: starting suspend
+[  45.149701] wlan0: suspending interface
+[  45.153442] PM: Suspending system (deep)
+[  45.158987] psci: CPU3 killed
+[  45.162103] psci: CPU2 killed
+[  45.165219] psci: CPU1 killed
+[  45.169552] wlan0: firmware suspend command issued
+[  65.177882] watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [swapper/0:0]
+[  65.184792] Modules linked in: cfg80211 rfkill
+[  65.189240] CPU: 0 PID: 0 Comm: swapper/0 Not tainted 6.12.0 #1
+[  65.195182] Hardware name: Generic ARM64 Embedded Board
+[  65.200476] pstate: 40400009 (nZcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[  65.207472] pc : wlan_fw_suspend_wait+0x88/0x120
+[  65.212119] lr : wlan_pm_suspend+0x60/0xe0
+[  65.216168] sp : ffff800080003e80
+[  65.219472] Call trace:
+[  65.221959]  wlan_fw_suspend_wait+0x88/0x120
+[  65.226099]  wlan_pm_suspend+0x60/0xe0
+[  65.229725]  dpm_run_callback+0x58/0x150
+[  65.233684]  __device_suspend+0xf0/0x380
+[  65.237649]  dpm_suspend+0x110/0x360
+[  65.241178]  suspend_devices_and_enter+0x150/0x5c0
+[  65.246044]  pm_suspend+0x2b0/0x350
+[  65.249492]  state_store+0x70/0xd0
+[  65.252939]  kernfs_fop_write_iter+0x128/0x1e0
+[  65.257325]  vfs_write+0x2e0/0x410
+[  65.260769]  ksys_write+0x70/0x110
+[  65.264217]  __arm64_sys_write+0x24/0x30
+[  65.268173] watchdog: soft lockup - CPU#0 stuck for 26s!
+[  85.290112] reboot: Watchdog detected hard LOCKUP on cpu 0

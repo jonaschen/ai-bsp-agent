@@ -1,0 +1,21 @@
+[    0.000000] Linux version 6.12.0 (builder@buildhost)
+[    0.000000] Machine model: Generic ARM64 Embedded Board
+[    0.000000] efi: UEFI not found.
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] CPU features: detected: GIC system register CPU interface
+[    0.000000] Detected VIPT I-cache on CPU0
+[    0.000000] Memory: 2048000K/2097152K available
+[    0.102334] mmc0: new HS400 MMC card at address 0001
+[    0.205112] EXT4-fs (mmcblk0p2): mounted filesystem
+[    0.310442] cfg80211: Loading compiled-in X.509 certificates
+[    0.345782] wlan0: registered netdevice
+[    0.512334] systemd[1]: System time before build time, advancing clock.
+[    1.120334] IPv6: ADDRCONF(NETDEV_CHANGE): eth0: link becomes ready
+[    1.442118] wlan0: authenticated
+[    1.446011] wlan0: associated
+[    1.450223] IPv6: ADDRCONF(NETDEV_CHANGE): wlan0: link becomes ready
+[    2.004882] random: crng init done
+[    2.448118] systemd[1]: Reached target Multi-User System.
+[    2.553221] systemd[1]: Startup finished in 2.412s.
