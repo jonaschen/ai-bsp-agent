@@ -20,6 +20,7 @@ class StudioManager:
     def __init__(self, root_dir: str = "."):
         self.root_dir = root_dir
         self.state_path = os.path.join(self.root_dir, "studio_state.json")
+        self.seed_path = os.path.join(self.root_dir, "studio_state.seed.json")
         self.lock = threading.RLock()
         self.state = self._load_state()
 
@@ -39,8 +40,29 @@ class StudioManager:
         """
         AGENTS.md Sec 9.1: Manager is the State Owner.
         Verify it creates a valid default state file if none exists.
+        Attempts to load from studio_state.seed.json if studio_state.json is missing.
         """
         if not os.path.exists(self.state_path):
+            # TDD Requirement: Fallback to seed if it exists
+            # We check both the local root_dir and the central studio/ directory
+            potential_seeds = [
+                self.seed_path,
+                os.path.join(self.root_dir, "studio", "studio_state.seed.json")
+            ]
+
+            for seed in potential_seeds:
+                if os.path.exists(seed):
+                    with open(seed, "r") as f:
+                        try:
+                            data = json.load(f)
+                            state = StudioState.model_validate(data)
+                            self.state = state
+                            self._save_state()
+                            return state
+                        except Exception:
+                            # If seed is corrupt, try next one
+                            continue
+
             state = self._get_default_state()
             self.state = state
             self._save_state()

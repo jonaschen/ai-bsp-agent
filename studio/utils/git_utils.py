@@ -33,7 +33,7 @@ def checkout_pr_branch(branch_name: str):
 def sync_main_branch():
     """
     Synchronizes the local main branch with the remote origin.
-    Executes: git checkout main && git pull origin main
+    Executes: git checkout main && git pull origin main --rebase
     """
     logger.info("Synchronizing local workspace with main branch.")
 
@@ -44,9 +44,9 @@ def sync_main_branch():
         logger.error(f"Git checkout main failed: {e}")
         raise
 
-    # 2. Pull from origin main
+    # 2. Pull from origin main (with rebase to handle divergent branches)
     try:
-        subprocess.run(["git", "pull", "origin", "main"], check=True)
+        subprocess.run(["git", "pull", "origin", "main", "--rebase"], check=True)
     except subprocess.CalledProcessError as e:
         logger.error(f"Git pull origin main failed: {e}")
         raise

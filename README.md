@@ -1,5 +1,7 @@
 # Android BSP AI Consultant Team (The Studio)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > **Version:** v5.2.0 (Phase 3: Evolution & Reality)
 > **Status:** Research Prototype / Serious AI Systems Engineering
 >
@@ -10,6 +12,17 @@
 This repository hosts the **Recursive Cognitive Software Factory** (also known as "The Studio"), a specialized multi-agent system designed to autonomously build, verify, and maintain high-quality software products.
 
 The primary product being built is the **Android BSP Consultant**, an AI agent capable of analyzing Android Kernel logs, performing root cause analysis (RCA), and suggesting fixes for complex embedded systems issues (e.g., Suspend-to-Disk failures).
+
+### 市場定位 | Market Positioning
+The **Recursive Cognitive Software Factory** occupies a unique niche between general-purpose autonomous coding agents (like Devin) and domain-specific expert systems. It serves as a **Specialized AI Systems Research Prototype** for:
+*   **Autonomous Software Delivery:** Moving beyond code generation to the autonomous management of the entire software lifecycle (Planning, Execution, Governance, Evolution).
+*   **Domain-Specific Expertise:** Focusing on the high-stakes, log-intensive environment of Android Board Support Package (BSP) development.
+*   **Self-Evolving Systems:** Implementing OPRO (Optimization by PROmpting) to allow the factory to improve its own internal logic based on performance data.
+
+### 為何重要 | Why This Matters
+*   **AI Safety & Governance:** By implementing strict **Cognitive Guardrails** (Semantic Entropy) and an **Architect Agent** (Governance), we explore how to build autonomous systems that remain within safe operating boundaries.
+*   **Automation at Scale:** Traditional software engineering is bottlenecked by human review. The Studio demonstrates a path toward scaling engineering capacity through hierarchical, multi-agent collaboration.
+*   **Autonomous Software Delivery:** The project researches the feasibility of a "Lights-Out" software factory, where the system is the primary engineer and the human acts as a high-level supervisor/approver.
 
 ### 當前功能快照 | Current Capability Snapshot
 *   **Hierarchical Orchestration:** Uses LangGraph to manage complex state transitions across multiple agent roles.
@@ -157,4 +170,8 @@ PYTHONPATH=. python main.py run
 ```
 
 ## License
-[License Information Here]
+
+This project is licensed under the **MIT License**.
+
+- **SPDX Identifier:** [MIT](https://opensource.org/licenses/MIT)
+- **License Text:** See the [LICENSE](LICENSE) file in this repository for full details.
