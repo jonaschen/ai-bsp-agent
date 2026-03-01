@@ -1,21 +1,113 @@
-[    0.000000] Linux version 6.12.0 (builder@buildhost)
+[    0.000000] Linux version 6.12.0 (builder@buildhost) (aarch64-linux-gnu-gcc 13.2.0)
 [    0.000000] Machine model: Generic ARM64 Embedded Board
 [    0.000000] efi: UEFI not found.
+[    0.000000] OF: reserved mem: initialized node linux,cma
+[    0.000000] Reserved memory: created CMA memory pool at 0x0000000040000000, size 256 MiB
 [    0.000000] psci: probing for conduit method from DT.
-[    0.000000] psci: PSCIv1.1 detected
+[    0.000000] psci: PSCIv1.1 detected in firmware.
 [    0.000000] psci: Using standard PSCI v0.2 function IDs
-[    0.000000] CPU features: detected: GIC system register CPU interface
+[    0.000000] psci: MIGRATE_INFO_TYPE not supported.
+[    0.000000] CPU features: detected: ARMv8.2-A
+[    0.000000] CPU features: detected: CRC32 instructions
+[    0.000000] CPU features: detected: Privileged Access Never
+[    0.000000] CPU features: detected: Spectre-v2
 [    0.000000] Detected VIPT I-cache on CPU0
-[    0.000000] Memory: 2048000K/2097152K available
-[    0.102334] mmc0: new HS400 MMC card at address 0001
-[    0.205112] EXT4-fs (mmcblk0p2): mounted filesystem
-[    0.310442] cfg80211: Loading compiled-in X.509 certificates
-[    0.345782] wlan0: registered netdevice
-[    0.512334] systemd[1]: System time before build time, advancing clock.
-[    1.120334] IPv6: ADDRCONF(NETDEV_CHANGE): eth0: link becomes ready
-[    1.442118] wlan0: authenticated
-[    1.446011] wlan0: associated
-[    1.450223] IPv6: ADDRCONF(NETDEV_CHANGE): wlan0: link becomes ready
-[    2.004882] random: crng init done
-[    2.448118] systemd[1]: Reached target Multi-User System.
-[    2.553221] systemd[1]: Startup finished in 2.412s.
+[    0.000000] CPU0: Booted secondary processor 0x0000000001 [0x410fd034]
+[    0.000000] CPU1: Booted secondary processor 0x0000000002 [0x410fd034]
+[    0.000000] CPU2: Booted secondary processor 0x0000000003 [0x410fd034]
+[    0.000000] SMP: Total of 4 processors activated.
+[    0.000000] Memory: 1867456K/2097152K available (8192K kernel code)
+[    0.000000] Kernel command line: root=/dev/mmcblk0p2 rw console=ttyAMA0 loglevel=7
+[    0.000000] Dentry cache hash table entries: 1048576
+[    0.000000] Inode-cache hash table entries: 524288
+[    0.011221] SLUB: HWalign=64, Order=0-3, MinObjects=0
+[    0.016551] rcu: Hierarchical RCU implementation.
+[    0.021442] rcu: RCU restricting CPUs from NR_CPUS=8 to nr_cpu_ids=4.
+[    0.028334] sched_clock: 56 bits at 24MHz, resolution 41ns
+[    0.035114] clocksource: arch_sys_counter: mask: 0xffffffffffffff
+[    0.043221] Console: colour dummy device 80x25
+[    0.047881] printk: console [ttyAMA0] enabled
+[    0.053441] ACPI: Interpreter disabled.
+[    0.059221] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[    0.066114] DMA: preallocated 256 KiB GFP_KERNEL pool for atomic allocations
+[    0.073442] thermal_sys: Registered thermal governor 'step_wise'
+[    0.080551] cpuidle: using governor menu
+[    0.085442] cpufreq: cpufreq_online: CPU0: Running at 1000000 KHz
+[    0.092551] cpufreq: cpufreq_online: CPU1: Running at 1000000 KHz
+[    0.099442] cpufreq: cpufreq_online: CPU2: Running at 1000000 KHz
+[    0.106551] cpufreq: cpufreq_online: CPU3: Running at 1000000 KHz
+[    0.114442] hw-breakpoint: found 6 breakpoint and 4 watchpoint registers.
+[    0.121551] Serial: AMBA PL011 UART driver
+[    0.126442] 9000000.pl011: ttyAMA0 at MMIO 0x9000000 (irq = 33)
+[    0.134551] SCSI subsystem initialized
+[    0.139442] usbcore: registered new interface driver usbfs
+[    0.145551] usbcore: registered new interface driver hub
+[    0.151442] usbcore: registered new device driver usb
+[    0.158551] PCI: CLS 0 bytes, default 64
+[    0.163442] PCI host bridge to bus 0000:00
+[    0.168551] pci_bus 0000:00: root bus resource [mem 0x40000000-0x4fffffff]
+[    0.177442] pci 0000:00:00.0: bridge configuration invalid ([bus 00-00]), reconfiguring
+[    0.188551] pci 0000:01:00.0: enabling device (0000 -> 0002)
+[    0.196442] mmc0: SDHCI controller on 10000000.mmc
+[    0.203551] mmc0: new HS400 MMC card at address 0001
+[    0.210442] mmcblk0: mmc0:0001 32GMMC 29.1 GiB
+[    0.216551]  mmcblk0: p1 p2
+[    0.222442] EXT4-fs (mmcblk0p2): mounted filesystem
+[    0.229551] VFS: Mounted root (ext4 filesystem) on device 179:2.
+[    0.237442] devtmpfs: mounted
+[    0.242551] Freeing unused kernel memory: 2048K
+[    0.249442] Run /sbin/init as init process
+[    0.311551] systemd[1]: System time before build time, advancing clock.
+[    0.327442] systemd[1]: Detected architecture arm64.
+[    0.338551] random: crng init done
+[    0.345442] cfg80211: Loading compiled-in X.509 certificates
+[    0.352551] cfg80211: Loaded X.509 cert 'sforshee'
+[    0.361442] wlan0: firmware request timeout, retrying...
+[    0.372551] wlan0: firmware version 1.2.3 loaded
+[    0.381442] wlan0: firmware ready
+[    0.389551] NET: Registered PF_INET protocol family
+[    0.396442] TCP established hash table entries: 65536
+[    0.403551] UDP hash table entries: 4096
+[    0.410442] NET: Registered PF_INET6 protocol family
+[    0.418551] nf_conntrack version 0.5.0
+[    0.426442] nf_tables: registered
+[    0.433551] bridge: filtering via arp/ip/ip6tables is no longer available by default
+[    0.445442] usb 1-1: new high-speed USB device number 2
+[    0.453551] usb-storage 1-1:1.0: USB Mass Storage device detected
+[    0.462442] scsi host0: usb-storage 1-1:1.0
+[    0.512551] scsi 0:0:0:0: Direct-Access     USB Flash Disk     8.07
+[    0.522442] sd 0:0:0:0: [sda] 62521344 512-byte logical blocks
+[    0.531551] i2c /dev entries driver
+[    0.537442] spi_master spi0: registered master spi0
+[    0.544551] spi-nor spi0.0: w25q128 (16384 Kbytes)
+[    0.553442] drm: Initialized simpledrm 1.0.0
+[    0.560551] Console: switching to colour frame buffer device
+[    0.569442] snd_soc_core: snd_soc_register_card failed (-517)
+[    0.578551] snd_soc_core: retrying card registration
+[    0.587442] ALSA device list:
+[    0.594551]   #0: simple-audio-card
+[    0.602442] thermal thermal_zone0: registered
+[    0.609551] watchdog: watchdog0: watchdog started
+[    0.618442] cryptomgr_test (33) passed
+[    0.625551] alg: self-tests for sha256 passed
+[    0.633442] alg: self-tests for aes-gcm passed
+[    0.642551] systemd[1]: Started udev Kernel Device Manager.
+[    0.655442] systemd[1]: Reached target Local File Systems.
+[    0.668551] overlayfs: upper fs does not support tmpfile.
+[    0.679442] cgroup: cgroup2: unknown option "nsdelegate"
+[    0.688551] systemd[1]: Starting Network Service...
+[    0.699442] wlan0: authenticated
+[    0.705551] wlan0: associated
+[    0.712442] IPv6: ADDRCONF(NETDEV_CHANGE): wlan0: link becomes ready
+[    0.721551] wlan0: Limiting TX power to 20 dBm
+[    0.733442] systemd-networkd[212]: wlan0: Gained carrier
+[    0.744551] systemd[1]: Started Network Service.
+[    0.755442] systemd[1]: Starting OpenSSH Daemon...
+[    0.766551] systemd[1]: Started OpenSSH Daemon.
+[    0.777442] systemd[1]: Starting containerd service...
+[    0.788551] containerd[345]: loading plugin io.containerd.snapshotter.v1.overlayfs
+[    0.802442] containerd[345]: loading plugin io.containerd.runtime.v2.task
+[    0.814551] containerd[345]: serving...
+[    0.823442] systemd[1]: Started containerd service.
+[    0.835551] systemd[1]: Reached target Multi-User System.
+[    0.848442] systemd[1]: Startup finished in 1.402s.
