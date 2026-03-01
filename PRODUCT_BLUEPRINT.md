@@ -88,7 +88,7 @@ To enforce **Test-Driven Development** and prevent infrastructure-before-specifi
 * **Acceptance Criteria:**
   - All 3 log fixtures exist and are valid (can be parsed by real dmesg parsers)
   - Expected outputs follow the SOP schema from Section 3
-  - At least one fixture exceeds 50MB to test chunking logic (Fix #3)
+  - Ensure at least one log fixture contains approximately 1500 lines of standard system noise preceding the actual crash event. This will serve as the benchmark to test the Supervisor's keyword filtering and log segmentation logic."
 * **Blocked By:** TKT-002
 * **Blocks:** TKT-005 (Agent Implementation)
 
@@ -99,7 +99,8 @@ To enforce **Test-Driven Development** and prevent infrastructure-before-specifi
 * **Acceptance Criteria:**
   - Passes on TKT-003 fixtures
   - Correctly routes to Pathologist vs. Hardware Advisor
-  - Implements chunking for logs > 50MB
+  - The Supervisor Agent MUST implement a pre-processing pipeline for log files. It must not send raw logs directly to the LLM.
+* **Requirement:** Implement a slicing and keyword-analysis algorithm (e.g., searching for Call trace:, Kernel panic, watchdog:, BUG:) that takes a ~1500-line raw log and extracts a concentrated segment of < 500 lines. Only this filtered segment is passed to the Kernel Pathologist."
 * **Blocked By:** TKT-003
 * **Blocks:** TKT-008 (End-to-End Tests)
 
