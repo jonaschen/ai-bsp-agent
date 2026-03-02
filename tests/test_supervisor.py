@@ -8,7 +8,7 @@ def test_consultant_response_schema():
     """Test A (Schema Compliance): The output MUST validate against the JSON Schema."""
     valid_data = {
         "diagnosis_id": "RCA-BSP-001",
-        "confidence": 0.9,
+        "confidence_score": 0.9,
         "status": "CRITICAL",
         "root_cause_summary": "Null Pointer Dereference",
         "evidence": ["Timestamp 1456.78: null pointer dereference"],
