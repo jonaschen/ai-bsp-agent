@@ -1,3 +1,4 @@
+# TODO: Tech Debt - Architectural Refactor Needed (Stability Protocol Fallback)
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
