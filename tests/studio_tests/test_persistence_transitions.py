@@ -31,6 +31,7 @@ class TestPersistenceTransitions:
     @patch("studio.orchestrator.GenerativeModel")
     @patch("studio.orchestrator.sync_main_branch")
     async def test_persistence_on_task_completion(self, mock_sync, mock_gen_model, mock_vertex_judge, manager):
+        mock_sync.return_value = None
         # Setup state with an IN_PROGRESS task
         ticket = Ticket(id="TKT-1", title="Test Task", description="Desc", priority="HIGH", source_section_id="1")
         orch_state = OrchestrationState(
@@ -102,7 +103,10 @@ class TestPersistenceTransitions:
             disk_state = StudioState.model_validate(disk_data)
 
         assert disk_state.circuit_breaker_triggered is True
-        assert disk_state.engineering.jules_meta.status == "WORKING"
+        # Check as dict or object depending on implementation
+        jules_meta = disk_state.engineering.jules_meta
+        status = jules_meta["status"] if isinstance(jules_meta, dict) else jules_meta.status
+        assert status == "WORKING"
 
     @pytest.mark.asyncio
     @patch("studio.orchestrator.VertexFlashJudge")

@@ -69,7 +69,8 @@ async def test_decide_loop_route_uses_sprint_backlog(mock_gen_model, mock_vertex
 @pytest.mark.asyncio
 @patch("studio.orchestrator.VertexFlashJudge")
 @patch("studio.orchestrator.GenerativeModel")
-async def test_status_updates_apply_to_sprint_backlog(mock_gen_model, mock_vertex_judge):
+@patch("studio.orchestrator.sync_main_branch")
+async def test_status_updates_apply_to_sprint_backlog(mock_sync, mock_gen_model, mock_vertex_judge):
     """
     TDD: Proves that completed/failed status updates apply to sprint_backlog.
     """
