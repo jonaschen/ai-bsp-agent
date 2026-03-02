@@ -44,10 +44,11 @@ async def test_node_watch_tower_sleeps():
 
         # 4. Run the node
         result = await node_watch_tower(state)
+        jules_meta = JulesMetadata(**result["jules_metadata"]) if isinstance(result["jules_metadata"], dict) else result["jules_metadata"]
 
         # 5. Assertions
         mock_sleep.assert_called_once_with(0.05)
-        assert result["jules_metadata"].status == "WORKING"
+        assert jules_meta.status == "WORKING"
         mock_client_instance.get_status.assert_called_once_with("123")
 
 @pytest.mark.asyncio
@@ -83,7 +84,8 @@ async def test_node_watch_tower_completion():
         )
 
         result = await node_watch_tower(state)
+        jules_meta = JulesMetadata(**result["jules_metadata"]) if isinstance(result["jules_metadata"], dict) else result["jules_metadata"]
 
-        assert result["jules_metadata"].status == "VERIFYING"
-        assert len(result["jules_metadata"].generated_artifacts) == 1
-        assert result["jules_metadata"].generated_artifacts[0].diff_content == "test-diff"
+        assert jules_meta.status == "VERIFYING"
+        assert len(jules_meta.generated_artifacts) == 1
+        assert jules_meta.generated_artifacts[0].diff_content == "test-diff"

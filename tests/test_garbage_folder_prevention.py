@@ -101,14 +101,18 @@ async def test_node_task_dispatcher_garbage_paths():
     }
 
     with patch("studio.subgraphs.engineer.get_settings") as mock_settings, \
-         patch("studio.subgraphs.engineer.JulesGitHubClient") as mock_client:
+         patch("studio.subgraphs.engineer.JulesGitHubClient") as mock_client_class:
+
+        mock_client = mock_client_class.return_value
+        mock_client.dispatch_task.return_value = "task-123"
 
         mock_settings.return_value.github_token = "fake"
         mock_settings.return_value.github_repository = "fake/repo"
         mock_settings.return_value.jules_username = "jules"
 
         result = await node_task_dispatcher(state)
-        target_files = result["jules_metadata"].active_context_slice.files
+        jules_meta = JulesMetadata(**result["jules_metadata"]) if isinstance(result["jules_metadata"], dict) else result["jules_metadata"]
+        target_files = jules_meta.active_context_slice.files
 
         # Assert garbage paths are NOT included
         garbage_paths = [
@@ -160,8 +164,11 @@ async def test_no_garbage_folders_created_on_disk():
     }
 
     with patch("studio.subgraphs.engineer.get_settings") as mock_settings, \
-         patch("studio.subgraphs.engineer.JulesGitHubClient"), \
+         patch("studio.subgraphs.engineer.JulesGitHubClient") as mock_client_class, \
          patch("studio.subgraphs.engineer.logger"): # Suppress logs during test
+
+        mock_client = mock_client_class.return_value
+        mock_client.dispatch_task.return_value = "task-123"
 
         mock_settings.return_value.github_token = "fake"
         mock_settings.return_value.github_repository = "fake/repo"

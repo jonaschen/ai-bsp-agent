@@ -76,7 +76,8 @@ async def test_task_dispatcher_dynamic_logic():
             result = await node_task_dispatcher(state)
 
             assert os.path.exists(root_file)
-            assert root_file in result["jules_metadata"].active_context_slice.files
+            jules_meta = JulesMetadata(**result["jules_metadata"]) if isinstance(result["jules_metadata"], dict) else result["jules_metadata"]
+            assert root_file in jules_meta.active_context_slice.files
 
     finally:
         if os.path.exists(root_file): os.remove(root_file)
