@@ -1,36 +1,31 @@
-[  45.112233] PM: suspend entry (deep)
-[  45.115778] Filesystems sync: 0.004 seconds
-[  45.121335] Freezing user space processes ... (elapsed 0.001 seconds) done.
-[  45.128201] OOM killer disabled.
-[  45.131401] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) done.
-[  45.138822] printk: Suspending console(s) (use no_console_suspend to debug)
-[  45.146018] mmc0: starting suspend
-[  45.149701] wlan0: suspending interface
-[  45.153442] PM: Suspending system (deep)
-[  45.158987] psci: CPU3 killed
-[  45.162103] psci: CPU2 killed
-[  45.165219] psci: CPU1 killed
-[  45.169552] wlan0: firmware suspend command issued
-[  65.177882] watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [swapper/0:0]
-[  65.184792] Modules linked in: cfg80211 rfkill
-[  65.189240] CPU: 0 PID: 0 Comm: swapper/0 Not tainted 6.12.0 #1
-[  65.195182] Hardware name: Generic ARM64 Embedded Board
-[  65.200476] pstate: 40400009 (nZcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
-[  65.207472] pc : wlan_fw_suspend_wait+0x88/0x120
-[  65.212119] lr : wlan_pm_suspend+0x60/0xe0
-[  65.216168] sp : ffff800080003e80
-[  65.219472] Call trace:
-[  65.221959]  wlan_fw_suspend_wait+0x88/0x120
-[  65.226099]  wlan_pm_suspend+0x60/0xe0
-[  65.229725]  dpm_run_callback+0x58/0x150
-[  65.233684]  __device_suspend+0xf0/0x380
-[  65.237649]  dpm_suspend+0x110/0x360
-[  65.241178]  suspend_devices_and_enter+0x150/0x5c0
-[  65.246044]  pm_suspend+0x2b0/0x350
-[  65.249492]  state_store+0x70/0xd0
-[  65.252939]  kernfs_fop_write_iter+0x128/0x1e0
-[  65.257325]  vfs_write+0x2e0/0x410
-[  65.260769]  ksys_write+0x70/0x110
-[  65.264217]  __arm64_sys_write+0x24/0x30
-[  65.268173] watchdog: soft lockup - CPU#0 stuck for 26s!
-[  85.290112] reboot: Watchdog detected hard LOCKUP on cpu 0
+[  300.123456] PM: suspend entry (deep)
+[  300.125678] PM: Syncing filesystems ... done.
+[  300.450122] Freezing user space processes ... (elapsed 0.001 seconds) done.
+[  300.452344] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) done.
+[  301.100451] sd 0:0:0:0: [sda] Synchronizing SCSI cache
+[  301.150784] sd 0:0:0:0: [sda] Stopping disk
+[  301.200117] PM: suspend devices ...
+[  301.500455] i2c i2c-1: suspending device
+[  301.550788] dwc3 4000000.usb: suspending device
+[  302.100121] PM: suspend devices took 0.900 seconds
+[  302.102343] PM: suspend of devices complete after 902.123 msecs
+[  302.105678] PM: late suspend of devices complete after 3.456 msecs
+[  302.110890] PM: noirq suspend of devices complete after 5.213 msecs
+[  302.112345] Disabling non-boot CPUs ...
+[  302.150789] CPU1: shutdown
+[  302.200112] CPU2: shutdown
+[  302.250456] CPU3: shutdown
+[  302.300123] watchdog: Watchdog detected hard lockup on CPU 0
+[  302.305678] Modules linked in: cfg80211 rfkill snd_soc_core
+[  302.310890] CPU: 0 PID: 0 Comm: swapper/0 Not tainted 6.12.0 #1
+[  302.315678] pc : arch_cpu_idle+0x18/0x28
+[  302.320900] lr : default_idle_call+0x34/0x110
+[  302.325678] Call trace:
+[  302.330900]  arch_cpu_idle+0x18/0x28
+[  302.335678]  default_idle_call+0x34/0x110
+[  302.340900]  do_idle+0x210/0x280
+[  302.345678]  cpu_startup_entry+0x28/0x30
+[  302.350900]  rest_init+0x120/0x130
+[  302.355678]  arch_post_acpi_subsys_init+0x0/0x8
+[  302.360900]  start_kernel+0x620/0x650
+[  302.365678] Kernel panic - not syncing: watchdog: Watchdog detected hard lockup on CPU 0
