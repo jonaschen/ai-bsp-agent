@@ -1,0 +1,19 @@
+{
+  "diagnosis_id": "RCA-BSP-001",
+  "confidence_score": 0.95,
+  "status": "CRITICAL",
+  "root_cause_summary": "Null Pointer Dereference in mdss_dsi driver.",
+  "evidence": [
+    "[ 102.553882] BUG: kernel NULL pointer dereference, address: 0000000000000008",
+    "pc : mdss_dsi_probe+0x34/0x110"
+  ],
+  "sop_steps": [
+    {
+      "step_id": 1,
+      "action_type": "CODE_PATCH",
+      "instruction": "Add NULL check for clock pointer in mdss_dsi_probe before access.",
+      "expected_value": "Kernel boots without panic.",
+      "file_path": "drivers/gpu/drm/msm/mdss_dsi.c"
+    }
+  ]
+}

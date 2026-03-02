@@ -1,0 +1,19 @@
+{
+  "diagnosis_id": "RCA-BSP-002",
+  "confidence_score": 0.85,
+  "status": "CRITICAL",
+  "root_cause_summary": "Watchdog Timeout / Hard Lockup during suspend.",
+  "evidence": [
+    "watchdog: Watchdog detected hard lockup on CPU 0",
+    "Kernel panic - not syncing: watchdog: Watchdog detected hard lockup on CPU 0"
+  ],
+  "sop_steps": [
+    {
+      "step_id": 1,
+      "action_type": "MEASUREMENT",
+      "instruction": "Connect JTAG and check Program Counter (PC) to identify the hang location.",
+      "expected_value": "PC points to a specific loop or blocked function.",
+      "file_path": "N/A"
+    }
+  ]
+}
