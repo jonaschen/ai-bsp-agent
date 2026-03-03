@@ -41,6 +41,20 @@
         "retry_count": 0,
         "closure_reason": "Completed prior to SQLite migration"
       }
+      {
+        "id": "TKT-003",        
+        "title": "Create RCA Workflow Test Fixtures",
+        "description": "Create RCA Workflow Test Fixtures",
+        "priority": "HIGH",
+        "dependencies": [
+          "TKT-002"
+        ],
+        "source_section_id": "Phase 1",
+        "status": "COMPLETED",
+        "failure_log": null,
+        "retry_count": 0,                
+        "closure_reason": "Merged via PR #290"
+      }      
     ],
     "failed_tasks_log": []
   },
