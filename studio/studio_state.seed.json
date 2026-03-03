@@ -40,7 +40,7 @@
         "failure_log": null,
         "retry_count": 0,
         "closure_reason": "Completed prior to SQLite migration"
-      }
+      },
       {
         "id": "TKT-003",        
         "title": "Create RCA Workflow Test Fixtures",
