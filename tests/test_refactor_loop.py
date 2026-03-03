@@ -88,6 +88,7 @@ async def test_refactor_loop():
     # Patching necessary components
     with patch("studio.orchestrator.run_po_cycle"), \
          patch("studio.orchestrator.run_scrum_retrospective"), \
+         patch("studio.orchestrator.sync_main_branch", return_value=None), \
          patch("studio.subgraphs.engineer.SemanticEntropyCalculator.measure_uncertainty", new_callable=AsyncMock) as mock_measure_sub, \
          patch("studio.orchestrator.SemanticEntropyCalculator.measure_uncertainty", new_callable=AsyncMock) as mock_measure_orch, \
          patch("studio.subgraphs.engineer.ArchitectAgent") as mock_architect_class, \
@@ -143,11 +144,13 @@ async def test_refactor_loop():
         if isinstance(final_state, dict):
             engineering = final_state.get("engineering")
             if hasattr(engineering, "jules_meta"):
-                jules_meta = engineering.jules_meta
+                jules_meta_raw = engineering.jules_meta
             else:
-                jules_meta = engineering["jules_meta"]
+                jules_meta_raw = engineering["jules_meta"]
         else:
-            jules_meta = final_state.engineering.jules_meta
+            jules_meta_raw = final_state.engineering.jules_meta
+
+        jules_meta = JulesMetadata(**jules_meta_raw) if isinstance(jules_meta_raw, dict) else jules_meta_raw
 
         assert jules_meta.status == "COMPLETED"
         assert jules_meta.retry_count == 1

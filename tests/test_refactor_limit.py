@@ -63,7 +63,7 @@ async def test_refactor_retry_limit_reached():
         result = await node_architect_gate(state)
 
         # 4. Assertions
-        meta = result["jules_metadata"]
+        meta = JulesMetadata(**result["jules_metadata"]) if isinstance(result["jules_metadata"], dict) else result["jules_metadata"]
         assert meta.status == "COMPLETED" # Should be COMPLETED (fallback)
         assert meta.is_refactoring is False
 
@@ -114,7 +114,7 @@ async def test_refactor_breaks_qa_fallback():
         result = await node_qa_verifier(state)
 
         # 4. Assertions
-        meta = result["jules_metadata"]
+        meta = JulesMetadata(**result["jules_metadata"]) if isinstance(result["jules_metadata"], dict) else result["jules_metadata"]
         assert meta.status == "COMPLETED" # Accepted fallback
         assert meta.is_refactoring is False
 

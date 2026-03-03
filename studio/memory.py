@@ -184,7 +184,7 @@ class AgentState(TypedDict):
 
     # Subgraph Metadata integration
     # This is the dedicated slot for the Jules Proxy state
-    jules_metadata: JulesMetadata
+    jules_metadata: Union[Dict[str, Any], JulesMetadata]
 
 
 # Layer 1: Orchestration (The Runtime)
@@ -299,7 +299,7 @@ class EngineeringState(BaseModel):
     verification_gate: VerificationGate = Field(default_factory=lambda: VerificationGate(status="PENDING"))
     # Code artifacts are stored here, but only sliced versions are sent to agents
     proposed_patch: Optional[str] = None
-    jules_meta: Optional[JulesMetadata] = None
+    jules_meta: Optional[Union[Dict[str, Any], JulesMetadata]] = None
 
 # --- ROOT: Studio State ---
 class StudioState(BaseModel):

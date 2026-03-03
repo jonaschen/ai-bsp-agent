@@ -38,7 +38,8 @@ async def test_watch_tower_hash_check():
         )
 
         result = await node_watch_tower(state)
-        assert result["jules_metadata"].status == "WORKING" # Remains WORKING because hash is same
+        jules_meta = JulesMetadata(**result["jules_metadata"]) if isinstance(result["jules_metadata"], dict) else result["jules_metadata"]
+        assert jules_meta.status == "WORKING" # Remains WORKING because hash is same
 
         # Scenario 2: Hash has changed
         mock_client.get_status.return_value = WorkStatus(
@@ -50,9 +51,10 @@ async def test_watch_tower_hash_check():
         )
 
         result = await node_watch_tower(state)
-        assert result["jules_metadata"].status == "VERIFYING"
-        assert result["jules_metadata"].last_verified_commit == "hash2"
-        assert result["jules_metadata"].last_verified_pr_number == 42
+        jules_meta = JulesMetadata(**result["jules_metadata"]) if isinstance(result["jules_metadata"], dict) else result["jules_metadata"]
+        assert jules_meta.status == "VERIFYING"
+        assert jules_meta.last_verified_commit == "hash2"
+        assert jules_meta.last_verified_pr_number == 42
 
 @pytest.mark.asyncio
 async def test_feedback_loop_reuse_task():
@@ -77,9 +79,10 @@ async def test_feedback_loop_reuse_task():
         mock_client = MockClient.return_value
 
         result = await node_feedback_loop(state)
+        jules_meta = JulesMetadata(**result["jules_metadata"]) if isinstance(result["jules_metadata"], dict) else result["jules_metadata"]
 
-        assert result["jules_metadata"].status == "WORKING"
-        assert result["jules_metadata"].retry_count == 1
+        assert jules_meta.status == "WORKING"
+        assert jules_meta.retry_count == 1
         mock_client.post_feedback.assert_called_once()
 
 def test_route_feedback_loop_working():
@@ -153,6 +156,7 @@ async def test_architect_gate_request_changes_on_violation():
         mock_architect.review_code.return_value = mock_verdict
 
         result = await node_architect_gate(state)
+        jules_meta = JulesMetadata(**result["jules_metadata"]) if isinstance(result["jules_metadata"], dict) else result["jules_metadata"]
 
         mock_client.review_pr.assert_called_once()
         args, kwargs = mock_client.review_pr.call_args
@@ -160,7 +164,7 @@ async def test_architect_gate_request_changes_on_violation():
         assert args[0] == 99
         assert kwargs.get("event") == "REQUEST_CHANGES"
         mock_client.merge_pr.assert_not_called()
-        assert result["jules_metadata"].status == "FAILED"
+        assert jules_meta.status == "FAILED"
 
 def test_jules_client_review_pr():
     """

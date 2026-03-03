@@ -91,7 +91,8 @@ async def node_task_dispatcher(state: AgentState) -> Dict[str, Any]:
        feedback from previous failures if applicable.
     """
     logger.info("Task_Dispatcher: Initializing engineering task.")
-    jules_data = state["jules_metadata"]
+    jules_metadata_raw = state["jules_metadata"]
+    jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
 
     # 1. Determine Task Context (Retry vs New)
     is_retry = jules_data.retry_count > 0
@@ -185,7 +186,7 @@ async def node_task_dispatcher(state: AgentState) -> Dict[str, Any]:
         jules_data.external_task_id = task_id
         jules_data.status = "WORKING"
 
-    return {"jules_metadata": jules_data}
+    return {"jules_metadata": jules_data.model_dump()}
 
 
 # --- 2. Watch Tower Node (The Asynchronous Poller) ---
@@ -200,7 +201,8 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
     2. Handles 'Long-Running' tasks by creating a check-pointable loop.
     3. Identifies 'NEEDS_INFO' states to trigger Human-in-the-loop interrupts.
     """
-    jules_data = state["jules_metadata"]
+    jules_metadata_raw = state["jules_metadata"]
+    jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
     settings = get_settings()
 
     # 0. Wait for the configured interval before polling
@@ -219,7 +221,7 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
 
     if not jules_data.external_task_id:
         # Safety check - should not happen due to graph topology
-        return {"jules_metadata": jules_data}
+        return {"jules_metadata": jules_data.model_dump()}
 
     logger.info(f"Watch_Tower: Polling task {jules_data.external_task_id}")
 
@@ -229,7 +231,7 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Polling failed: {e}")
         # Transient error handling strategy could be implemented here
-        return {"jules_metadata": jules_data} # Retry next loop
+        return {"jules_metadata": jules_data.model_dump()} # Retry next loop
 
     # 2. State Mapping
     if remote_status.status == "COMPLETED":
@@ -250,7 +252,7 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
         if remote_status.last_commit_hash == jules_data.last_verified_commit:
             logger.info(f"Review ready but commit hash {remote_status.last_commit_hash} already verified. Waiting for new changes.")
             jules_data.status = "WORKING"
-            return {"jules_metadata": jules_data}
+            return {"jules_metadata": jules_data.model_dump()}
 
         logger.info(f"New commit detected ({remote_status.last_commit_hash}). Proceeding to Entropy Check/Verification.")
         jules_data.status = "VERIFYING"
@@ -275,7 +277,7 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
         # WORKING or QUEUED
         jules_data.status = "WORKING"
 
-    return {"jules_metadata": jules_data}
+    return {"jules_metadata": jules_data.model_dump()}
 
 
 # --- 3. Entropy Guard Node (The Cognitive Circuit Breaker) ---
@@ -290,7 +292,8 @@ async def node_entropy_guard(state: AgentState) -> Dict[str, Any]:
     2. Triggers the 'Circuit Breaker' if SE > 7.0.
     3. Prevents invalid code from reaching the QA stage.
     """
-    jules_data = state["jules_metadata"]
+    jules_metadata_raw = state["jules_metadata"]
+    jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
 
     # We only run this check if the agent claims it is done.
     # We verify if it's *actually* done or just hallucinating completion.
@@ -340,11 +343,11 @@ async def node_entropy_guard(state: AgentState) -> Dict[str, Any]:
 
         # Inject a meta-message to the graph history
         return {
-            "jules_metadata": jules_data,
+            "jules_metadata": jules_data.model_dump(),
             "messages": [AIMessage(content="**SYSTEM**: Circuit Breaker Tripped. Cognitive Tunneling detected.")]
         }
 
-    return {"jules_metadata": jules_data}
+    return {"jules_metadata": jules_data.model_dump()}
 
 
 # --- 4. QA Verifier Node (The Gatekeeper) ---
@@ -359,7 +362,8 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
     2. Runs the test suite to validate TDD (Red/Green) compliance.
     3. Generates 'Evidence Snippets' for the feedback loop.
     """
-    jules_data = state["jules_metadata"]
+    jules_metadata_raw = state["jules_metadata"]
+    jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
 
     if jules_data.status != "VERIFYING":
         return {}
@@ -381,7 +385,7 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
             )
             jules_data.test_results_history.append(result)
             jules_data.status = "FAILED"
-            return {"jules_metadata": jules_data}
+            return {"jules_metadata": jules_data.model_dump()}
 
     # 1. Prepare Files
     # We need to gather all relevant files (context + modified)
@@ -526,11 +530,11 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
 
             jules_data.status = "COMPLETED" # We accept the fallback
             jules_data.is_refactoring = False
-            return {"jules_metadata": jules_data}
+            return {"jules_metadata": jules_data.model_dump()}
 
         jules_data.status = "FAILED"
 
-    return {"jules_metadata": jules_data}
+    return {"jules_metadata": jules_data.model_dump()}
 
 # --- 5. Architect Gate Node (The Design Authority) ---
 
@@ -544,7 +548,8 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
     2. Enforces SOLID principles and 'AGENTS.md' compliance.
     3. Rejects sloppy 'Green' code, forcing a refactor cycle.
     """
-    jules_data = state["jules_metadata"]
+    jules_metadata_raw = state["jules_metadata"]
+    jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
 
     # Only run if QA passed
     if jules_data.status != "COMPLETED":
@@ -628,7 +633,7 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
                 client.review_pr(jules_data.last_verified_pr_number, event="REQUEST_CHANGES", body=feedback)
 
             return {
-                "jules_metadata": jules_data,
+                "jules_metadata": jules_data.model_dump(),
                 "messages": [AIMessage(content="**SYSTEM**: Architect rejected the solution. Refactor attempt 1/1 initiated.")]
             }
         else:
@@ -647,7 +652,7 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
                 jules_data.status = "COMPLETED"
                 jules_data.is_refactoring = False
                 return {
-                    "jules_metadata": jules_data,
+                    "jules_metadata": jules_data.model_dump(),
                     "messages": [AIMessage(content="**SYSTEM**: Refactor limit reached. Fallback to Green state with Tech Debt tag.")]
                 }
 
@@ -661,7 +666,7 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
         logger.info(f"Architect_Gate: Merging PR #{jules_data.last_verified_pr_number}")
         client.merge_pr(jules_data.last_verified_pr_number)
 
-    return {"jules_metadata": jules_data}
+    return {"jules_metadata": jules_data.model_dump()}
 
 
 # --- 6. Feedback Loop Node (The Correction Engine) ---
@@ -676,7 +681,8 @@ async def node_feedback_loop(state: AgentState) -> Dict[str, Any]:
     2. Constructs a 'Interactive Debugging Guide' for the Agent.
     3. Decides whether to Retry (Self-Correction) or Escalate (Human Help).
     """
-    jules_data = state["jules_metadata"]
+    jules_metadata_raw = state["jules_metadata"]
+    jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
     messages = []
 
     logger.info("Feedback_Loop: Analyzing failure for correction.")
@@ -766,7 +772,7 @@ async def node_feedback_loop(state: AgentState) -> Dict[str, Any]:
         messages.append(AIMessage(content="**SYSTEM**: Max retries exceeded. Escalating to Orchestrator/Human for manual intervention."))
 
     return {
-        "jules_metadata": jules_data,
+        "jules_metadata": jules_data.model_dump(),
         "messages": messages
     }
 
@@ -776,7 +782,9 @@ def route_watch_tower(state: AgentState) -> Literal["entropy_guard", "watch_towe
     """
     Decides if we should keep polling, interrupt for human input, or proceed.
     """
-    status = state["jules_metadata"].status
+    jules_metadata_raw = state["jules_metadata"]
+    jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
+    status = jules_data.status
     if status == "BLOCKED":
         return "interrupt_human" # LangGraph interrupt
     if status in ["WORKING", "QUEUED", "PLANNING"]:
@@ -787,7 +795,8 @@ def route_entropy_guard(state: AgentState) -> Literal["qa_verifier", "feedback_l
     """
     Decides routing based on cognitive health.
     """
-    meta = state["jules_metadata"]
+    jules_metadata_raw = state["jules_metadata"]
+    meta = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
 
     if meta.cognitive_tunneling_detected:
         return "feedback_loop" # Immediate circuit break
@@ -804,7 +813,9 @@ def route_qa_verifier(state: AgentState) -> Literal["architect_gate", "feedback_
     """
     Decides if the task is done (proceed to Architect) or needs correction.
     """
-    if state["jules_metadata"].status == "COMPLETED":
+    jules_metadata_raw = state["jules_metadata"]
+    jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
+    if jules_data.status == "COMPLETED":
         return "architect_gate"
     return "feedback_loop"
 
@@ -812,7 +823,9 @@ def route_architect_gate(state: AgentState) -> Literal["end", "feedback_loop"]:
     """
     Decides if the task is architecturally sound.
     """
-    if state["jules_metadata"].status == "COMPLETED":
+    jules_metadata_raw = state["jules_metadata"]
+    jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
+    if jules_data.status == "COMPLETED":
         return "end"
     return "feedback_loop"
 
@@ -820,9 +833,11 @@ def route_feedback_loop(state: AgentState) -> Literal["task_dispatcher", "watch_
     """
     Decides whether to retry the loop or give up.
     """
-    if state["jules_metadata"].status == "QUEUED": # Traditional retry (new task)
+    jules_metadata_raw = state["jules_metadata"]
+    jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
+    if jules_data.status == "QUEUED": # Traditional retry (new task)
         return "task_dispatcher"
-    if state["jules_metadata"].status == "WORKING": # PR feedback loop (reuse task)
+    if jules_data.status == "WORKING": # PR feedback loop (reuse task)
         return "watch_tower"
     return "end" # Max retries exceeded
 

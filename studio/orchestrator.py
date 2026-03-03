@@ -183,7 +183,10 @@ class Orchestrator:
 
         # 1. Process results from the previous execution
         if eng.current_task and eng.jules_meta:
-            self.logger.info(f"Processing result for task: {eng.current_task}, status: {eng.jules_meta.status}")
+            # Handle both dict and object for jules_meta
+            jules_meta_raw = eng.jules_meta
+            jules_meta = JulesMetadata(**jules_meta_raw) if isinstance(jules_meta_raw, dict) else jules_meta_raw
+            self.logger.info(f"Processing result for task: {eng.current_task}, status: {jules_meta.status}")
 
             # Helper to update a list and return the updated ticket if found
             def update_and_filter(ticket_list):
@@ -191,11 +194,11 @@ class Orchestrator:
                 found_ticket = None
                 for t in ticket_list:
                     if t.id == eng.current_task or f"{t.title}: {t.description}" == eng.current_task:
-                        if eng.jules_meta.status == "COMPLETED":
+                        if jules_meta.status == "COMPLETED":
                             t.status = "COMPLETED"
                             found_ticket = t
                             continue # Remove from active list
-                        elif eng.jules_meta.status == "FAILED":
+                        elif jules_meta.status == "FAILED":
                             t.status = "FAILED"
                             found_ticket = t
                             continue # Remove from active list
@@ -233,12 +236,16 @@ class Orchestrator:
             for t in orch.task_queue:
                 if t.id == next_ticket.id:
                     t.status = "IN_PROGRESS"
+
+            # Pydantic model must be dumped to dict for msgpack serialization in Checkpointer
+            jules_meta = JulesMetadata(
+                session_id=orch.session_id,
+                max_retries=orch.task_max_retries
+            ).model_dump()
+
             new_eng = EngineeringState(
                 current_task=f"{next_ticket.title}: {next_ticket.description}",
-                jules_meta=JulesMetadata(
-                    session_id=orch.session_id,
-                    max_retries=orch.task_max_retries
-                )
+                jules_meta=jules_meta
             )
             return {
                 "orchestration": orch,
@@ -305,10 +312,18 @@ class Orchestrator:
             )
 
         # 1. Prepare AgentState for the Subgraph
+        jules_metadata_raw = state.engineering.jules_meta or JulesMetadata(session_id=state.orchestration.session_id)
+        # Ensure it is a dict for the Subgraph which expects Union[Dict, JulesMetadata]
+        # and ultimately dumps it back.
+        if isinstance(jules_metadata_raw, JulesMetadata):
+            jules_metadata = jules_metadata_raw.model_dump()
+        else:
+            jules_metadata = jules_metadata_raw
+
         agent_state = {
             "messages": [HumanMessage(content=state.engineering.current_task or "Fix the bug")],
             "system_constitution": "ENFORCE SOLID.",
-            "jules_metadata": state.engineering.jules_meta or JulesMetadata(session_id=state.orchestration.session_id),
+            "jules_metadata": jules_metadata,
             "next_agent": None
         }
 
@@ -317,7 +332,10 @@ class Orchestrator:
         result = await self.engineer_app.ainvoke(agent_state)
 
         # 3. Process results
-        jules_meta = result["jules_metadata"]
+        # result["jules_metadata"] will be a dict from the subgraph
+        jules_meta_raw = result["jules_metadata"]
+        jules_meta = JulesMetadata(**jules_meta_raw) if isinstance(jules_meta_raw, dict) else jules_meta_raw
+
         updates = {}
 
         proposed_patch = None
@@ -339,9 +357,10 @@ class Orchestrator:
         metric = await self.calculator.measure_uncertainty(state.engineering.current_task or "Fix the bug", slice_obj.intent)
 
         # Map output back to StudioState
+        # Store as dict for serialization
         eng_update = state.engineering.model_copy(update={
             "proposed_patch": proposed_patch or "No patch generated",
-            "jules_meta": jules_meta,
+            "jules_meta": jules_meta.model_dump(),
             "verification_gate": VerificationGate(status=gate_status)
         })
 
@@ -459,8 +478,10 @@ class Orchestrator:
         if state.circuit_breaker_triggered:
             return "tunneling"
 
-        jules_meta = state.engineering.jules_meta
-        if jules_meta and jules_meta.status == "QUEUED":
-            return "retry"
+        jules_meta_raw = state.engineering.jules_meta
+        if jules_meta_raw:
+            jules_meta = JulesMetadata(**jules_meta_raw) if isinstance(jules_meta_raw, dict) else jules_meta_raw
+            if jules_meta.status == "QUEUED":
+                return "retry"
 
         return "healthy"

@@ -41,9 +41,10 @@ async def test_permission_error_no_retry():
             state["jules_metadata"] = result_qa["jules_metadata"]
 
             # Verify status is FAILED
-            assert state["jules_metadata"].status == "FAILED"
-            assert state["jules_metadata"].test_results_history[-1].status == "ERROR"
-            assert "Permission denied" in state["jules_metadata"].test_results_history[-1].logs
+            jules_meta = JulesMetadata(**state["jules_metadata"]) if isinstance(state["jules_metadata"], dict) else state["jules_metadata"]
+            assert jules_meta.status == "FAILED"
+            assert jules_meta.test_results_history[-1].status == "ERROR"
+            assert "Permission denied" in jules_meta.test_results_history[-1].logs
 
             # Now run node_feedback_loop
             # Mock JulesGitHubClient to avoid network calls
@@ -51,9 +52,10 @@ async def test_permission_error_no_retry():
                 mock_client = mock_client_class.return_value
 
                 result_feedback = await node_feedback_loop(state)
+                jules_meta_feedback = JulesMetadata(**result_feedback["jules_metadata"]) if isinstance(result_feedback["jules_metadata"], dict) else result_feedback["jules_metadata"]
 
                 # Assertions: retry_count should NOT increment, status should NOT be QUEUED
                 # This is the expected behavior after the fix.
                 # Currently (Before fix), it will probably be retry_count=1 and status=QUEUED
-                assert result_feedback["jules_metadata"].retry_count == 0
-                assert result_feedback["jules_metadata"].status == "FAILED"
+                assert jules_meta_feedback.retry_count == 0
+                assert jules_meta_feedback.status == "FAILED"
