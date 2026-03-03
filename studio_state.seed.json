@@ -3,7 +3,7 @@
   "circuit_breaker_triggered": false,
   "escalation_triggered": false,
   "orchestration": {
-    "session_id": "SESSION-00",
+    "session_id": "SESSION-01",
     "user_intent": "SPRINT",
     "full_logs": "",
     "triage_status": null,
