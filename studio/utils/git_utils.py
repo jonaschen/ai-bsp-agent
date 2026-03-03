@@ -29,7 +29,15 @@ def checkout_pr_branch(branch_name: str):
     except subprocess.CalledProcessError as e:
         logger.error(f"Git checkout {branch_name} failed: {e}")
         raise
-
+        
+    # 4. === 新增：強制將本地分支重置為遠端的最新狀態 ===
+    try:
+        logger.info(f"Hard resetting local branch to origin/{branch_name}")
+        subprocess.run(["git", "reset", "--hard", f"origin/{branch_name}"], check=True)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Git hard reset failed: {e}")
+        raise
+        
 def sync_main_branch():
     """
     Synchronizes the local main branch with the remote origin.
