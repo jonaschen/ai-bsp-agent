@@ -57,8 +57,8 @@ def _ingest_sync(directory: str, settings, embeddings):
         # We first instantiate the vector store via from_components, then add documents.
         # This is a robust way to ensure we're using the correct index/endpoint.
         vs = VectorSearchVectorStore.from_components(
-            project_id=settings.google_cloud_project,
-            region=settings.google_cloud_region,
+            project=settings.google_cloud_project,
+            location=settings.google_cloud_region,
             index_id=settings.vector_search_index_id,
             endpoint_id=settings.vector_search_endpoint_id,
             embedding=embeddings,

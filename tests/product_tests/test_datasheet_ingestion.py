@@ -38,6 +38,15 @@ async def test_datasheet_ingestion_pipeline(mock_vertex_settings):
 
         # Verify that indexing was attempted correctly
         assert mock_vs.from_components.called
+        # Verify correct parameter naming
+        mock_vs.from_components.assert_called_with(
+            project="test-project",
+            location="us-central1",
+            index_id="test-index",
+            endpoint_id="test-endpoint",
+            embedding=mock_emb.return_value,
+            gcs_bucket_name="test-bucket"
+        )
         assert mock_vs_inst.add_documents.called
 
         # Check if all 5 fixtures were processed

@@ -19,6 +19,7 @@ async def test_vector_store_manager_init(temp_vector_store):
         mock_settings = MagicMock()
         mock_settings.vector_store_path = temp_vector_store
         mock_settings.google_cloud_project = "test-project"
+        mock_settings.google_cloud_region = "us-central1"
         mock_settings.embedding_model = "test-model"
         mock_settings.vector_search_index_id = "test-index"
         mock_settings.vector_search_endpoint_id = "test-endpoint"
@@ -31,7 +32,15 @@ async def test_vector_store_manager_init(temp_vector_store):
             model_name="test-model",
             project="test-project"
         )
-        mock_vs.from_components.assert_called_once()
+        # Verify correct parameter naming
+        mock_vs.from_components.assert_called_once_with(
+            project="test-project",
+            location="us-central1",
+            index_id="test-index",
+            endpoint_id="test-endpoint",
+            embedding=mock_embeddings.return_value,
+            gcs_bucket_name="test-bucket"
+        )
 
 @pytest.mark.asyncio
 async def test_vector_store_manager_add_and_search(temp_vector_store):
@@ -43,6 +52,7 @@ async def test_vector_store_manager_add_and_search(temp_vector_store):
         mock_settings = MagicMock()
         mock_settings.vector_store_path = temp_vector_store
         mock_settings.google_cloud_project = "test-project"
+        mock_settings.google_cloud_region = "us-central1"
         mock_settings.embedding_model = "test-model"
         mock_settings.vector_search_index_id = "test-index"
         mock_settings.vector_search_endpoint_id = "test-endpoint"
@@ -57,7 +67,7 @@ async def test_vector_store_manager_add_and_search(temp_vector_store):
         import asyncio
         f_search = asyncio.Future()
         f_search.set_result([mock_doc])
-        mock_vs_inst.asimilarity_search.return_value = f_search
+        mock_vs_inst.asimilarity_search = MagicMock(return_value=f_search)
 
         # Setup aadd_texts
         f_add = asyncio.Future()
@@ -90,6 +100,7 @@ async def test_vector_store_persistence(temp_vector_store):
 
         mock_settings = MagicMock()
         mock_settings.google_cloud_project = "test-project"
+        mock_settings.google_cloud_region = "us-central1"
         mock_settings.embedding_model = "test-model"
         mock_settings.vector_search_index_id = "test-index"
         mock_settings.vector_search_endpoint_id = "test-endpoint"
