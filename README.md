@@ -158,7 +158,7 @@ PYTHONPATH=. pytest tests/
 
 
 ### Running the Factory
-``bash
+```bash
 # To start the Docker daemon (the engine) before you try to apply group permissions or interact with it.
 sudo systemctl start docker 
 # Logging into a new shell session where your primary group ID is temporarily changed to the docker group.
