@@ -1,10 +1,10 @@
 import os
 import json
+import asyncio
 import logging
 from typing import List
 from langchain_core.documents import Document
 from product.schemas.datasheet import Datasheet
-from product.bsp_agent.core.vector_store import VectorStoreManager
 from langchain_google_vertexai import VectorSearchVectorStore, VertexAIEmbeddings
 from studio.config import get_settings
 
@@ -36,10 +36,8 @@ def process_datasheet(filepath: str) -> Document:
         metadata=datasheet.metadata.model_dump()
     )
 
-async def ingest_datasheets(directory: str = "fixtures/datasheets/"):
-    """Ingests all JSON datasheets from a directory into Vertex Search."""
-    settings = get_settings()
-
+def _ingest_sync(directory: str, settings, embeddings):
+    """Synchronous helper for ingestion to be run in a thread."""
     documents = []
     for filename in os.listdir(directory):
         if filename.endswith(".json"):
@@ -55,28 +53,29 @@ async def ingest_datasheets(directory: str = "fixtures/datasheets/"):
         logger.warning("No valid datasheets found for ingestion.")
         return
 
-    # Use VectorSearchVectorStore.from_components for initial indexing (or from_documents)
-    # Note: Vertex AI Vector Search is typically batch-oriented for indexing.
-    # from_components provides a way to interact with an existing index or initialize it.
+    if settings.vector_search_index_id and settings.vector_search_endpoint_id and settings.vector_search_gcs_bucket:
+        # We first instantiate the vector store via from_components, then add documents.
+        # This is a robust way to ensure we're using the correct index/endpoint.
+        vs = VectorSearchVectorStore.from_components(
+            project_id=settings.google_cloud_project,
+            region=settings.google_cloud_region,
+            index_id=settings.vector_search_index_id,
+            endpoint_id=settings.vector_search_endpoint_id,
+            embedding=embeddings,
+            gcs_bucket_name=settings.vector_search_gcs_bucket
+        )
+        vs.add_documents(documents)
+        logger.info(f"Successfully triggered indexing for {len(documents)} documents.")
+    else:
+        logger.error("Indexing skipped: Vector Search IDs not configured in settings.")
 
+async def ingest_datasheets(directory: str = "fixtures/datasheets/"):
+    """Ingests all JSON datasheets from a directory into Vertex Search."""
+    settings = get_settings()
     embeddings = VertexAIEmbeddings(
         model_name=settings.embedding_model,
         project=settings.google_cloud_project
     )
 
-    # For MVP/Automation, we use the static method to 'create/sync' the index if possible.
-    # In a real environment, this would involve long-running GCP operations.
-    if settings.vector_search_index_id and settings.vector_search_endpoint_id and settings.vector_search_gcs_bucket:
-        # Initial ingestion usually uses from_components with documents
-        VectorSearchVectorStore.from_components(
-            project_id=settings.google_cloud_project,
-            region="us-central1",
-            index_id=settings.vector_search_index_id,
-            endpoint_id=settings.vector_search_endpoint_id,
-            embedding=embeddings,
-            gcs_bucket_name=settings.vector_search_gcs_bucket,
-            documents=documents
-        )
-        logger.info(f"Successfully triggered indexing for {len(documents)} documents.")
-    else:
-        logger.error("Indexing skipped: Vector Search IDs not configured in settings.")
+    # Run blocking I/O in a separate thread to avoid blocking the event loop
+    await asyncio.to_thread(_ingest_sync, directory, settings, embeddings)

@@ -13,6 +13,7 @@ class VectorStoreManager:
     def __init__(self, collection_name: str = "bsp_datasheets"):
         settings = get_settings()
         self.project = settings.google_cloud_project
+        self.region = settings.google_cloud_region
         self.index_id = settings.vector_search_index_id
         self.endpoint_id = settings.vector_search_endpoint_id
         self.gcs_bucket = settings.vector_search_gcs_bucket
@@ -28,7 +29,7 @@ class VectorStoreManager:
         if self.index_id and self.endpoint_id and self.gcs_bucket:
             self.vector_store = VectorSearchVectorStore.from_components(
                 project_id=self.project,
-                region="us-central1", # Default region
+                region=self.region,
                 index_id=self.index_id,
                 endpoint_id=self.endpoint_id,
                 embedding=self.embeddings,
@@ -84,6 +85,6 @@ class VectorStoreManager:
             filters["part_number"] = part_number
 
         if filters:
-            return await self.vector_store.asimilarity_search(query, k=k, filter=filters)
+            return await self.asimilarity_search(query, k=k, filter=filters)
 
-        return await self.vector_store.asimilarity_search(query, k=k)
+        return await self.asimilarity_search(query, k=k)
