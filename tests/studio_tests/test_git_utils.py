@@ -12,7 +12,7 @@ class TestGitUtils(unittest.TestCase):
         checkout_pr_branch(branch_name)
 
         # Verify the sequence of git commands
-        self.assertEqual(mock_run.call_count, 3)
+        self.assertEqual(mock_run.call_count, 4)
 
         # 1. git stash
         mock_run.assert_any_call(["git", "stash"], check=False)
@@ -22,6 +22,9 @@ class TestGitUtils(unittest.TestCase):
 
         # 3. git checkout branch_name
         mock_run.assert_any_call(["git", "checkout", branch_name], check=True)
+
+        # 4. git reset --hard origin/branch_name
+        mock_run.assert_any_call(["git", "reset", "--hard", f"origin/{branch_name}"], check=True)
 
 if __name__ == "__main__":
     unittest.main()
