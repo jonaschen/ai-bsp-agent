@@ -54,7 +54,21 @@
         "failure_log": null,
         "retry_count": 0,                
         "closure_reason": "Merged via PR #290"
-      }   
+      },
+      {
+        "id": "TKT-004",        
+        "title": "Implement Vector Store Manager for Datasheet Indexing",
+        "description": "Build the datasheet indexing and retrieval system using Vertex Vector Search",
+        "priority": "HIGH",
+        "dependencies": [
+          "TKT-003"
+        ],
+        "source_section_id": "Phase 1",
+        "status": "COMPLETED",
+        "failure_log": null,
+        "retry_count": 0,                
+        "closure_reason": "Merged via PR #298"
+      }  
     ],
     "failed_tasks_log": []
   },
