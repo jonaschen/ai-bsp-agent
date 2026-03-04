@@ -17,6 +17,11 @@ from product.bsp_agent.agents.supervisor import SupervisorAgent
 def supervisor():
     return SupervisorAgent(model_name="gemini-1.5-pro")
 
+@pytest.fixture
+def fixtures_dir(request):
+    """Fixture providing the path to the fixtures directory."""
+    return request.config.rootpath / "fixtures"
+
 def test_chunk_log_large_file(supervisor):
     # Create a dummy log with 1000 lines
     large_log = "\n".join([f"[{i}.000000] some log message" for i in range(1000)])
@@ -90,8 +95,8 @@ def test_route_clarify_needed(mock_llm_class, supervisor):
     route = supervisor.route(state)
     assert route == "clarify_needed"
 
-def test_chunk_log_with_tkt003_panic(supervisor):
-    with open("fixtures/panic_log_01.txt", "r") as f:
+def test_chunk_log_with_tkt003_panic(supervisor, fixtures_dir):
+    with open(fixtures_dir / "panic_log_01.txt", "r") as f:
         log = f.read()
 
     chunked = supervisor.chunk_log(log)
@@ -100,8 +105,8 @@ def test_chunk_log_with_tkt003_panic(supervisor):
     assert len(lines) < 500
     assert "BUG: kernel NULL pointer dereference" in chunked
 
-def test_chunk_log_with_tkt003_suspend(supervisor):
-    with open("fixtures/suspend_hang_02.txt", "r") as f:
+def test_chunk_log_with_tkt003_suspend(supervisor, fixtures_dir):
+    with open(fixtures_dir / "suspend_hang_02.txt", "r") as f:
         log = f.read()
 
     chunked = supervisor.chunk_log(log)
