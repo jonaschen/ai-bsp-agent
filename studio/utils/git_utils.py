@@ -30,6 +30,14 @@ def checkout_pr_branch(branch_name: str):
         logger.error(f"Git checkout {branch_name} failed: {e}")
         raise
 
+    # 4. Force synchronization with origin (Hard Reset)
+    # This ensures local branch perfectly mirrors origin, avoiding "Checkout Trap"
+    try:
+        subprocess.run(["git", "reset", "--hard", f"origin/{branch_name}"], check=True)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Git reset --hard origin/{branch_name} failed: {e}")
+        raise
+
 def sync_main_branch():
     """
     Synchronizes the local main branch with the remote origin.
