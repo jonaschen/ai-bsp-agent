@@ -14,8 +14,12 @@ class Settings(BaseSettings):
     github_repository: str = Field(default="google/jules-studio")
     jules_username: str = Field(default="google-jules")
     google_cloud_project: str = Field(default="mock-project")
+    google_cloud_region: str = Field(default="us-central1")
     vector_store_path: str = Field(default="data/vector_store")
     embedding_model: str = Field(default="textembedding-gecko@003")
+    vector_search_index_id: Optional[str] = Field(default=None)
+    vector_search_endpoint_id: Optional[str] = Field(default=None)
+    vector_search_gcs_bucket: Optional[str] = Field(default=None)
 
     # Model Stratification Strategy
     thinking_model: str = "gemini-2.5-pro"
