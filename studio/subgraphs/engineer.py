@@ -186,7 +186,7 @@ async def node_task_dispatcher(state: AgentState) -> Dict[str, Any]:
         jules_data.external_task_id = task_id
         jules_data.status = "WORKING"
 
-    return {"jules_metadata": jules_data.model_dump()}
+    return {"jules_metadata": jules_data.model_dump(mode='json')}
 
 
 # --- 2. Watch Tower Node (The Asynchronous Poller) ---
@@ -221,7 +221,7 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
 
     if not jules_data.external_task_id:
         # Safety check - should not happen due to graph topology
-        return {"jules_metadata": jules_data.model_dump()}
+        return {"jules_metadata": jules_data.model_dump(mode='json')}
 
     logger.info(f"Watch_Tower: Polling task {jules_data.external_task_id}")
 
@@ -231,7 +231,7 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Polling failed: {e}")
         # Transient error handling strategy could be implemented here
-        return {"jules_metadata": jules_data.model_dump()} # Retry next loop
+        return {"jules_metadata": jules_data.model_dump(mode='json')} # Retry next loop
 
     # 2. State Mapping
     if remote_status.status == "COMPLETED":
@@ -252,7 +252,7 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
         if remote_status.last_commit_hash == jules_data.last_verified_commit:
             logger.info(f"Review ready but commit hash {remote_status.last_commit_hash} already verified. Waiting for new changes.")
             jules_data.status = "WORKING"
-            return {"jules_metadata": jules_data.model_dump()}
+            return {"jules_metadata": jules_data.model_dump(mode='json')}
 
         logger.info(f"New commit detected ({remote_status.last_commit_hash}). Proceeding to Entropy Check/Verification.")
         jules_data.status = "VERIFYING"
@@ -277,7 +277,7 @@ async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
         # WORKING or QUEUED
         jules_data.status = "WORKING"
 
-    return {"jules_metadata": jules_data.model_dump()}
+    return {"jules_metadata": jules_data.model_dump(mode='json')}
 
 
 # --- 3. Entropy Guard Node (The Cognitive Circuit Breaker) ---
@@ -343,11 +343,11 @@ async def node_entropy_guard(state: AgentState) -> Dict[str, Any]:
 
         # Inject a meta-message to the graph history
         return {
-            "jules_metadata": jules_data.model_dump(),
+            "jules_metadata": jules_data.model_dump(mode='json'),
             "messages": [AIMessage(content="**SYSTEM**: Circuit Breaker Tripped. Cognitive Tunneling detected.")]
         }
 
-    return {"jules_metadata": jules_data.model_dump()}
+    return {"jules_metadata": jules_data.model_dump(mode='json')}
 
 
 # --- 4. QA Verifier Node (The Gatekeeper) ---
@@ -385,7 +385,7 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
             )
             jules_data.test_results_history.append(result)
             jules_data.status = "FAILED"
-            return {"jules_metadata": jules_data.model_dump()}
+            return {"jules_metadata": jules_data.model_dump(mode='json')}
 
     # 1. Prepare Files
     # We need to gather all relevant files (context + modified)
@@ -530,11 +530,11 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
 
             jules_data.status = "COMPLETED" # We accept the fallback
             jules_data.is_refactoring = False
-            return {"jules_metadata": jules_data.model_dump()}
+            return {"jules_metadata": jules_data.model_dump(mode='json')}
 
         jules_data.status = "FAILED"
 
-    return {"jules_metadata": jules_data.model_dump()}
+    return {"jules_metadata": jules_data.model_dump(mode='json')}
 
 # --- 5. Architect Gate Node (The Design Authority) ---
 
@@ -633,7 +633,7 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
                 client.review_pr(jules_data.last_verified_pr_number, event="REQUEST_CHANGES", body=feedback)
 
             return {
-                "jules_metadata": jules_data.model_dump(),
+                "jules_metadata": jules_data.model_dump(mode='json'),
                 "messages": [AIMessage(content="**SYSTEM**: Architect rejected the solution. Refactor attempt 1/1 initiated.")]
             }
         else:
@@ -652,7 +652,7 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
                 jules_data.status = "COMPLETED"
                 jules_data.is_refactoring = False
                 return {
-                    "jules_metadata": jules_data.model_dump(),
+                    "jules_metadata": jules_data.model_dump(mode='json'),
                     "messages": [AIMessage(content="**SYSTEM**: Refactor limit reached. Fallback to Green state with Tech Debt tag.")]
                 }
 
@@ -666,7 +666,7 @@ async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
         logger.info(f"Architect_Gate: Merging PR #{jules_data.last_verified_pr_number}")
         client.merge_pr(jules_data.last_verified_pr_number)
 
-    return {"jules_metadata": jules_data.model_dump()}
+    return {"jules_metadata": jules_data.model_dump(mode='json')}
 
 
 # --- 6. Feedback Loop Node (The Correction Engine) ---
@@ -772,7 +772,7 @@ async def node_feedback_loop(state: AgentState) -> Dict[str, Any]:
         messages.append(AIMessage(content="**SYSTEM**: Max retries exceeded. Escalating to Orchestrator/Human for manual intervention."))
 
     return {
-        "jules_metadata": jules_data.model_dump(),
+        "jules_metadata": jules_data.model_dump(mode='json'),
         "messages": messages
     }
 

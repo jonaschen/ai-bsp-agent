@@ -241,7 +241,7 @@ class Orchestrator:
             jules_meta = JulesMetadata(
                 session_id=orch.session_id,
                 max_retries=orch.task_max_retries
-            ).model_dump()
+            ).model_dump(mode='json')
 
             new_eng = EngineeringState(
                 current_task=f"{next_ticket.title}: {next_ticket.description}",
@@ -316,7 +316,7 @@ class Orchestrator:
         # Ensure it is a dict for the Subgraph which expects Union[Dict, JulesMetadata]
         # and ultimately dumps it back.
         if isinstance(jules_metadata_raw, JulesMetadata):
-            jules_metadata = jules_metadata_raw.model_dump()
+            jules_metadata = jules_metadata_raw.model_dump(mode='json')
         else:
             jules_metadata = jules_metadata_raw
 
@@ -360,7 +360,7 @@ class Orchestrator:
         # Store as dict for serialization
         eng_update = state.engineering.model_copy(update={
             "proposed_patch": proposed_patch or "No patch generated",
-            "jules_meta": jules_meta.model_dump(),
+            "jules_meta": jules_meta.model_dump(mode='json'),
             "verification_gate": VerificationGate(status=gate_status)
         })
 
