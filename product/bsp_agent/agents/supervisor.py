@@ -5,7 +5,7 @@ from product.bsp_agent.core.state import AgentState
 # Pre-compiled patterns for optimization
 LOG_TS_PATTERN = re.compile(r"\[\s*(\d+\.\d+)\]")
 FAILURE_PATTERN = re.compile(
-    r"(?:NULL pointer dereference|soft lockup|hard lockup|Kernel panic|Oops:|BUG:|Call trace:|Watchdog detected hard lockup)",
+    r"(?:NULL pointer dereference|soft lockup|hard lockup|Kernel panic|Oops:|BUG:|Call trace:|watchdog:|Watchdog detected hard lockup)",
     re.IGNORECASE
 )
 
