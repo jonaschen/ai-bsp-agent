@@ -68,6 +68,20 @@
         "failure_log": null,
         "retry_count": 0,                
         "closure_reason": "Merged via PR #298"
+      },  
+      {
+        "id": "TKT-005",        
+        "title": "Implement Supervisor Agent",
+        "description": "Build the triage and routing agent.",
+        "priority": "HIGH",
+        "dependencies": [
+          "TKT-004"
+        ],
+        "source_section_id": "Phase 1",
+        "status": "COMPLETED",
+        "failure_log": null,
+        "retry_count": 0,                
+        "closure_reason": "Completed in previous sprint"
       }  
     ],
     "failed_tasks_log": []
