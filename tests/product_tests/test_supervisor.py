@@ -21,12 +21,22 @@ def supervisor():
 @pytest.fixture
 def fixtures_dir():
     """Fixture providing the path to the fixtures directory."""
-    # Robustly find fixtures relative to the test file
     test_dir = os.path.dirname(os.path.abspath(__file__))
-    # Assuming the structure is tests/product_tests/test_supervisor.py
-    # and fixtures is at the root: fixtures/
-    root_dir = os.path.abspath(os.path.join(test_dir, "..", ".."))
-    return os.path.join(root_dir, "fixtures")
+
+    # Strategy: Search in multiple likely locations to ensure compatibility with different CI environments
+    candidates = [
+        os.path.abspath(os.path.join(test_dir, "../../fixtures")),    # Root fixtures/
+        os.path.abspath(os.path.join(test_dir, "../fixtures")),       # tests/fixtures/
+        os.path.abspath(os.path.join(os.getcwd(), "fixtures")),        # CWD/fixtures/
+        os.path.abspath(os.path.join(os.getcwd(), "tests/fixtures")), # CWD/tests/fixtures/
+    ]
+
+    for candidate in candidates:
+        if os.path.isdir(candidate) and os.path.exists(os.path.join(candidate, "panic_log_01.txt")):
+            return candidate
+
+    # Fallback to the standard repo structure
+    return os.path.abspath(os.path.join(test_dir, "../../fixtures"))
 
 def test_chunk_log_large_file(supervisor):
     # Create a dummy log with 1000 lines
