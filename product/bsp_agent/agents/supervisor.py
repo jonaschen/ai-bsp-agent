@@ -23,20 +23,13 @@ class SupervisorAgent:
 
     def chunk_log(self, text: str) -> str:
         """
-        If Log Size > threshold, extract a concentrated segment of < 500 lines.
+        Extract a concentrated segment of < 500 lines.
         Algorithm:
         1. Search for failure keywords (FAILURE_PATTERN).
         2. If found, identify the LAST occurrence.
         3. Return 400 lines before and ~100 lines after (total < 500).
         4. Fallback to last 499 lines if no pattern found.
         """
-        if len(text) <= self.chunk_threshold:
-            # Even if below threshold, if it's too long in lines, we should still chunk it
-            # but the task says "If Log Size > threshold"
-            # However, the requirement says "extract a concentrated segment of < 500 lines"
-            # To be safe and pass tests, let's always ensure it's < 500 lines if it's large.
-            pass
-
         lines = text.splitlines()
 
         # Find all matches for failure patterns
@@ -71,6 +64,8 @@ class SupervisorAgent:
         if not self.validate_input(log_content):
             return "clarify_needed"
 
+        # Escape curly braces in log content for f-string safety
+        safe_log_content = log_content.replace("{", "{{").replace("}", "}}")
         prompt = f"""
         You are a BSP Supervisor Agent. Triage the following Android kernel log and decide the next specialist to route to.
         - If it's a software panic, null pointer dereference, or kernel oops, route to 'kernel_pathologist'.
@@ -78,7 +73,7 @@ class SupervisorAgent:
         - If it's a healthy boot or not enough information, return 'clarify_needed'.
 
         Log content:
-        {log_content}
+        {safe_log_content}
 
         Return ONLY the name of the specialist: 'kernel_pathologist', 'hardware_advisor', or 'clarify_needed'.
         """
