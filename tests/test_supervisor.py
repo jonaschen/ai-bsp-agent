@@ -33,58 +33,53 @@ def test_supervisor_validation(mock_chat):
     assert agent.validate_input("Hello, how are you?") is False
 
 @patch("product.bsp_agent.agents.supervisor.ChatVertexAI")
-def test_supervisor_chunking(mock_chat):
-    """Test C (Chunking Protocol - Fix #3): Large logs should be chunked."""
-    # Use a small threshold for testing to avoid memory issues
+def test_supervisor_chunking_size(mock_chat):
+    """Test C (Chunking Protocol): Concentrated segment MUST be < 500 lines."""
     agent = SupervisorAgent(chunk_threshold_mb=0)
-    # Generate dummy log
-    large_log = "log line\n" * 6000
+    # Generate dummy log without timestamps but with many lines
+    large_log = "log line\n" * 1000
     chunked = agent.chunk_log(large_log)
-
-    # Assertion: Verify the agent extracts only the last 5000 lines
-    # (Simplified for mock: check that the result is smaller than original)
-    assert len(chunked.splitlines()) <= 5000
+    assert len(chunked.splitlines()) < 500
 
 @patch("product.bsp_agent.agents.supervisor.ChatVertexAI")
-def test_supervisor_chunking_window(mock_chat):
-    """Test C (Chunking Protocol - Fix #3): ±10s window around failure."""
+def test_supervisor_chunking_keywords(mock_chat):
+    """Test C (Chunking Protocol): Identify keywords like 'Call trace:'."""
     agent = SupervisorAgent(chunk_threshold_mb=0)
-    log_content = [
-        "[   10.000000] normal log",
-        "[  100.000000] more normal log",
-        "[  200.000000] Kernel panic - not syncing: Fatal exception",
-        "[  201.000000] after panic",
-        "[  215.000000] far after panic"
-    ]
+    # Large log with a keyword in the middle
+    log_content = ["noise"] * 600 + ["Call trace:"] + ["more noise"] * 100
     text = "\n".join(log_content)
     chunked = agent.chunk_log(text)
 
-    # ±10s around 200 should include 190 to 210.
-    # So 100 is excluded, 215 is excluded.
-    assert "[  200.000000] Kernel panic" in chunked
-    assert "[  201.000000] after panic" in chunked
-    assert "[   10.000000] normal log" not in chunked
-    assert "[  215.000000] far after panic" not in chunked
+    assert "Call trace:" in chunked
+    assert len(chunked.splitlines()) < 500
 
+@pytest.mark.parametrize("log_file, expected_node", [
+    ("panic_log_01.txt", "kernel_pathologist"),
+    ("suspend_hang_02.txt", "hardware_advisor"),
+    ("healthy_boot_03.txt", "clarify_needed"),
+])
 @patch("product.bsp_agent.agents.supervisor.ChatVertexAI")
-def test_supervisor_routing(mock_chat):
-    """Test D (Golden Set Routing): Supervisor identifies Software Panic and routes to Kernel Pathologist."""
-    # Mock LLM response for routing
+def test_supervisor_golden_set_routing(mock_chat, log_file, expected_node):
+    """Test D (Golden Set Routing): Supervisor correctly routes TKT-003 fixtures."""
     mock_llm = MagicMock()
     mock_chat.return_value = mock_llm
 
-    # Mock response to route to Kernel Pathologist
-    mock_llm.invoke.return_value.content = "KERNEL_PATHOLOGIST"
+    # Mock LLM response based on expected_node
+    mock_llm.invoke.return_value.content = expected_node.upper()
 
     agent = SupervisorAgent()
-    with open("tests/fixtures/panic_log_01.txt", "r") as f:
+    # Using root fixtures/ directory
+    with open(f"fixtures/{log_file}", "r") as f:
         log_content = f.read()
+
+    # Pre-process log as the orchestrator would
+    chunked_log = agent.chunk_log(log_content)
 
     state: AgentState = {
         "messages": [("user", log_content)],
-        "current_log_chunk": log_content,
+        "current_log_chunk": chunked_log,
         "diagnosis_report": None
     }
 
     next_node = agent.route(state)
-    assert next_node == "kernel_pathologist"
+    assert next_node == expected_node
