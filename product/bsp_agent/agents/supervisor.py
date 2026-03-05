@@ -10,7 +10,7 @@ FAILURE_PATTERN = re.compile(
 )
 
 class SupervisorAgent:
-    def __init__(self, model_name: str = "gemini-1.5-pro", chunk_threshold_mb: int = 50):
+    def __init__(self, model_name: str = "gemini-2.5-pro", chunk_threshold_mb: int = 50):
         self.llm = ChatVertexAI(model_name=model_name)
         self.chunk_threshold = chunk_threshold_mb * 1024 * 1024
 
@@ -39,7 +39,6 @@ class SupervisorAgent:
             # Get the last match
             last_match = matches[-1]
             # Find which line it belongs to
-            # This is slightly inefficient but safe for logs of moderate size
             pre_text = text[:last_match.start()]
             target_line_idx = pre_text.count('\n')
 
@@ -64,8 +63,6 @@ class SupervisorAgent:
         if not self.validate_input(log_content):
             return "clarify_needed"
 
-        # Escape curly braces in log content for f-string safety
-        safe_log_content = log_content.replace("{", "{{").replace("}", "}}")
         prompt = f"""
         You are a BSP Supervisor Agent. Triage the following Android kernel log and decide the next specialist to route to.
         - If it's a software panic, null pointer dereference, or kernel oops, route to 'kernel_pathologist'.
@@ -73,7 +70,7 @@ class SupervisorAgent:
         - If it's a healthy boot or not enough information, return 'clarify_needed'.
 
         Log content:
-        {safe_log_content}
+        {log_content}
 
         Return ONLY the name of the specialist: 'kernel_pathologist', 'hardware_advisor', or 'clarify_needed'.
         """

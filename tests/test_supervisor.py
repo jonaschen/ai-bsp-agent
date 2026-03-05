@@ -68,8 +68,8 @@ def test_supervisor_golden_set_routing(mock_chat, log_file, expected_node):
     mock_llm.invoke.return_value.content = expected_node.upper()
 
     agent = SupervisorAgent()
-    # Using root fixtures/ directory
-    with open(f"fixtures/{log_file}", "r") as f:
+    # Reverting fixture path to tests/fixtures/ for consistency
+    with open(f"tests/fixtures/{log_file}", "r") as f:
         log_content = f.read()
 
     # Pre-process log as the orchestrator would
