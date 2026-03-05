@@ -406,12 +406,18 @@ async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
         affected_files = extract_affected_files(diff_content)
         all_target_files.update(affected_files)
 
-    # 3. Ensure core testing infrastructure is included
-    # This prevents sandbox crashes when Jules doesn't touch tests
-    infra_files = ["pytest.ini", "requirements.txt"]
-    for f in infra_files:
-        if os.path.exists(f):
-            all_target_files.add(f)
+    # 3. Ensure core testing infrastructure and fixtures are included
+    # This prevents sandbox crashes and FileNotFoundError in tests
+    infra_paths = ["pytest.ini", "requirements.txt", "fixtures"]
+    for p in infra_paths:
+        if os.path.exists(p):
+            if os.path.isfile(p):
+                all_target_files.add(p)
+            else:
+                # Recursively add directory contents
+                for root, _, files in os.walk(p):
+                    for file in files:
+                        all_target_files.add(os.path.join(root, file))
 
     # If no tests are currently identified, pull in the tests/ directory
     # to ensure 'pytest tests/' has targets.
