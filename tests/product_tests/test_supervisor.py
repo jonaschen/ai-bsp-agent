@@ -1,4 +1,5 @@
 import sys
+import os
 from unittest.mock import MagicMock
 
 # Mock dependencies before importing SupervisorAgent
@@ -18,9 +19,14 @@ def supervisor():
     return SupervisorAgent(model_name="gemini-1.5-pro")
 
 @pytest.fixture
-def fixtures_dir(request):
+def fixtures_dir():
     """Fixture providing the path to the fixtures directory."""
-    return request.config.rootpath / "fixtures"
+    # Robustly find fixtures relative to the test file
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    # Assuming the structure is tests/product_tests/test_supervisor.py
+    # and fixtures is at the root: fixtures/
+    root_dir = os.path.abspath(os.path.join(test_dir, "..", ".."))
+    return os.path.join(root_dir, "fixtures")
 
 def test_chunk_log_large_file(supervisor):
     # Create a dummy log with 1000 lines
@@ -96,7 +102,7 @@ def test_route_clarify_needed(mock_llm_class, supervisor):
     assert route == "clarify_needed"
 
 def test_chunk_log_with_tkt003_panic(supervisor, fixtures_dir):
-    with open(fixtures_dir / "panic_log_01.txt", "r") as f:
+    with open(os.path.join(fixtures_dir, "panic_log_01.txt"), "r") as f:
         log = f.read()
 
     chunked = supervisor.chunk_log(log)
@@ -106,7 +112,7 @@ def test_chunk_log_with_tkt003_panic(supervisor, fixtures_dir):
     assert "BUG: kernel NULL pointer dereference" in chunked
 
 def test_chunk_log_with_tkt003_suspend(supervisor, fixtures_dir):
-    with open(fixtures_dir / "suspend_hang_02.txt", "r") as f:
+    with open(os.path.join(fixtures_dir, "suspend_hang_02.txt"), "r") as f:
         log = f.read()
 
     chunked = supervisor.chunk_log(log)
