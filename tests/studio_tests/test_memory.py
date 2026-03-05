@@ -105,3 +105,35 @@ def test_jules_metadata_union_type_support():
     state_dump = studio_state.model_dump()
     json_str = json.dumps(state_dump)
     assert json_str is not None
+
+def test_jules_metadata_httpurl_serialization():
+    """
+    Verifies that JulesMetadata with HttpUrl can be serialized when using mode='json'.
+    This is the specific fix for the reported system crash.
+    """
+    from studio.memory import CodeChangeArtifact
+    import ormsgpack
+
+    artifact = CodeChangeArtifact(
+        diff_content="--- a/file.py\n+++ b/file.py\n@@ -1,1 +1,1 @@\n-old\n+new",
+        pr_link="https://github.com/test/repo/pull/1"
+    )
+    meta = JulesMetadata(
+        session_id="test-session",
+        generated_artifacts=[artifact]
+    )
+
+    # 1. model_dump() without mode='json' should STILL contain HttpUrl object (fails msgpack)
+    dump_raw = meta.model_dump()
+    assert not isinstance(dump_raw["generated_artifacts"][0]["pr_link"], str)
+
+    with pytest.raises(TypeError, match="Type is not msgpack serializable: HttpUrl"):
+        ormsgpack.packb(dump_raw)
+
+    # 2. model_dump(mode='json') MUST convert HttpUrl to string (passes msgpack)
+    dump_json = meta.model_dump(mode='json')
+    assert isinstance(dump_json["generated_artifacts"][0]["pr_link"], str)
+    assert dump_json["generated_artifacts"][0]["pr_link"] == "https://github.com/test/repo/pull/1"
+
+    packed = ormsgpack.packb(dump_json)
+    assert packed is not None

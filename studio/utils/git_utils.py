@@ -38,12 +38,25 @@ def checkout_pr_branch(branch_name: str):
         logger.error(f"Git reset --hard origin/{branch_name} failed: {e}")
         raise
 
+    # 5. Clean untracked files
+    try:
+        subprocess.run(["git", "clean", "-fd"], check=True)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Git clean -fd failed: {e}")
+        raise
+
 def sync_main_branch():
     """
     Synchronizes the local main branch with the remote origin.
-    Executes: git checkout main && git pull origin main --rebase
+    Executes: git stash && git checkout main && git fetch origin main && git reset --hard origin/main && git clean -fd
     """
     logger.info("Synchronizing local workspace with main branch.")
+
+    # 0. Stash local changes
+    try:
+        subprocess.run(["git", "stash"], check=False)
+    except Exception as e:
+        logger.warning(f"Git stash failed: {e}")
 
     # 1. Checkout main
     try:
@@ -52,9 +65,23 @@ def sync_main_branch():
         logger.error(f"Git checkout main failed: {e}")
         raise
 
-    # 2. Pull from origin main (with rebase to avoid merge conflicts in automated flow)
+    # 2. Fetch from origin main
     try:
-        subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=True)
+        subprocess.run(["git", "fetch", "origin", "main"], check=True)
     except subprocess.CalledProcessError as e:
-        logger.error(f"Git pull origin main failed: {e}")
+        logger.error(f"Git fetch origin main failed: {e}")
+        raise
+
+    # 3. Force synchronization with origin/main
+    try:
+        subprocess.run(["git", "reset", "--hard", "origin/main"], check=True)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Git reset --hard origin/main failed: {e}")
+        raise
+
+    # 4. Clean untracked files
+    try:
+        subprocess.run(["git", "clean", "-fd"], check=True)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Git clean -fd failed: {e}")
         raise
