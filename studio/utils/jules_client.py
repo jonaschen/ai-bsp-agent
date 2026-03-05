@@ -110,7 +110,7 @@ class JulesGitHubClient:
         self._repo_cache: Optional[Repository.Repository] = None
 
     @property
-    def repo(self) -> Repository.Repository:
+    def repo(self) -> "Repository.Repository":
         """Lazy load the repo object."""
         if not self._repo_cache:
             try:
