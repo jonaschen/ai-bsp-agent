@@ -15,7 +15,6 @@ import re
 from typing import Literal, Dict, Any, List
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-from pydantic import SecretStr
 
 from studio.memory import (
     AgentState,
