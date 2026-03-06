@@ -1,22 +1,32 @@
 import os
 import sys
 
-# DEEP ANCESTOR PATH RESOLUTION
-def setup_path():
+# AGGRESSIVE CI PATH RESOLUTION
+def setup_ci_path():
+    # 1. Absolute root identification
     current = os.path.abspath(os.path.dirname(__file__))
-    # Add all ancestors to sys.path to ensure 'product' is found regardless of where pytest starts
-    while current != os.path.dirname(current):
-        if current not in sys.path:
-            sys.path.insert(0, current)
-        if os.path.exists(os.path.join(current, "PRODUCT_BLUEPRINT.md")):
+    root = current
+    while root != os.path.dirname(root):
+        if os.path.exists(os.path.join(root, "PRODUCT_BLUEPRINT.md")):
             break
-        current = os.path.dirname(current)
-    # Extra safety for common sandbox environments
+        root = os.path.dirname(root)
+
+    # 2. Strategic sys.path insertion
+    if root not in sys.path:
+        sys.path.insert(0, root)
+
+    # 3. Handle common sandbox mount points
     for p in ["/workspace", "/app"]:
         if os.path.exists(p) and p not in sys.path:
             sys.path.insert(0, p)
 
-setup_path()
+    # 4. Explicit package path injection to avoid ModuleNotFoundError in submodules
+    # This helps when 'product.schemas' is found but 'product.schemas.datasheet' fails
+    product_path = os.path.join(root, "product")
+    if os.path.exists(product_path) and product_path not in sys.path:
+        sys.path.insert(0, product_path)
+
+setup_ci_path()
 
 import pytest
 import json
@@ -40,9 +50,11 @@ def test_pathologist_panic_diagnosis(mock_chat):
     mock_llm.invoke.return_value.content = '{"diagnosis_id": "RCA-BSP-001", "confidence_score": 0.95, "status": "CRITICAL", "root_cause_summary": "Null Pointer", "evidence": [], "sop_steps": []}'
 
     agent = KernelPathologistAgent()
-    # Resolve fixture path relative to root
-    root = sys.path[0]
+
+    # Find root for fixtures
+    root = [p for p in sys.path if os.path.exists(os.path.join(p, "fixtures"))][0]
     fixture_path = os.path.join(root, "fixtures/panic_log_01.txt")
+
     with open(fixture_path, "r") as f:
         log_content = f.read()
     response = agent.analyze(log_content)
@@ -69,7 +81,7 @@ def test_pathologist_hang_diagnosis(mock_chat):
     mock_llm.invoke.return_value.content = '{"diagnosis_id": "RCA-BSP-002", "confidence_score": 0.85, "status": "CRITICAL", "root_cause_summary": "Watchdog", "evidence": [], "sop_steps": []}'
 
     agent = KernelPathologistAgent()
-    root = sys.path[0]
+    root = [p for p in sys.path if os.path.exists(os.path.join(p, "fixtures"))][0]
     fixture_path = os.path.join(root, "fixtures/suspend_hang_02.txt")
     with open(fixture_path, "r") as f:
         log_content = f.read()
@@ -84,7 +96,7 @@ def test_pathologist_healthy_boot(mock_chat):
     mock_llm.invoke.return_value.content = '{"diagnosis_id": "RCA-BSP-003", "confidence_score": 0.95, "status": "INFO", "root_cause_summary": "No Anomaly", "evidence": [], "sop_steps": []}'
 
     agent = KernelPathologistAgent()
-    root = sys.path[0]
+    root = [p for p in sys.path if os.path.exists(os.path.join(p, "fixtures"))][0]
     fixture_path = os.path.join(root, "fixtures/healthy_boot_03.txt")
     with open(fixture_path, "r") as f:
         log_content = f.read()
