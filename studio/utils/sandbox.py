@@ -26,7 +26,7 @@ logger = logging.getLogger("studio.utils.sandbox")
 # Try to import docker, handle missing dependency for scaffolding
 try:
     import docker
-    from docker.errors import DockerException, ContainerError
+    from docker.errors import DockerException
     from docker.models.containers import Container
 except ImportError:
     docker = None
