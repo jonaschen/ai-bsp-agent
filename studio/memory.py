@@ -13,7 +13,7 @@ from typing import List, Dict, Optional, Literal, Any, TypedDict, Annotated, Uni
 import operator
 from datetime import datetime
 import uuid
-from pydantic import BaseModel, Field, HttpUrl, validator
+from pydantic import BaseModel, Field, HttpUrl
 
 # --- SECTION 1: Mathematical Guardrails (Semantic Entropy) ---
 class SemanticHealthMetric(BaseModel):
