@@ -4,8 +4,11 @@ import json
 import sys
 from unittest.mock import MagicMock, patch
 
-# Ensure the project root is in the path for CI environments
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+# Robust path resolution for CI/CD environments
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../../"))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 from product.schemas import ConsultantResponse
 from product.bsp_agent.agents.pathologist import KernelPathologistAgent
@@ -25,6 +28,7 @@ def test_pathologist_panic_diagnosis(mock_chat):
     mock_llm = MagicMock()
     mock_chat.return_value = mock_llm
 
+    # Mock LLM to return the expected JSON for a NULL pointer panic
     mock_llm.invoke.return_value.content = """
     {
       "diagnosis_id": "RCA-BSP-001",
@@ -49,9 +53,10 @@ def test_pathologist_panic_diagnosis(mock_chat):
 
     agent = KernelPathologistAgent()
 
+    # Mock verify_file_exists to return True for the suggested file
     with patch.object(agent, 'verify_file_exists', return_value=True):
-        # Use absolute path for fixtures to be safe in CI
-        fixture_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../fixtures/panic_log_01.txt"))
+        # Resolve fixtures using absolute paths
+        fixture_path = os.path.join(ROOT_DIR, "fixtures/panic_log_01.txt")
         with open(fixture_path, "r") as f:
             log_content = f.read()
 
@@ -89,6 +94,7 @@ def test_pathologist_file_not_found_handling(mock_chat):
 
     agent = KernelPathologistAgent()
 
+    # Ensure verify_file_exists returns False for the missing file
     with patch.object(agent, 'verify_file_exists', return_value=False):
         response = agent.analyze("dummy log")
 
@@ -102,6 +108,7 @@ def test_pathologist_hang_diagnosis(mock_chat):
     mock_llm = MagicMock()
     mock_chat.return_value = mock_llm
 
+    # Mock LLM to return the expected JSON for a watchdog hang
     mock_llm.invoke.return_value.content = """
     {
       "diagnosis_id": "RCA-BSP-002",
@@ -126,7 +133,7 @@ def test_pathologist_hang_diagnosis(mock_chat):
 
     agent = KernelPathologistAgent()
 
-    fixture_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../fixtures/suspend_hang_02.txt"))
+    fixture_path = os.path.join(ROOT_DIR, "fixtures/suspend_hang_02.txt")
     with open(fixture_path, "r") as f:
         log_content = f.read()
 
@@ -142,6 +149,7 @@ def test_pathologist_healthy_boot(mock_chat):
     mock_llm = MagicMock()
     mock_chat.return_value = mock_llm
 
+    # Mock LLM to return the expected JSON for a healthy boot
     mock_llm.invoke.return_value.content = """
     {
       "diagnosis_id": "RCA-BSP-003",
@@ -155,7 +163,7 @@ def test_pathologist_healthy_boot(mock_chat):
 
     agent = KernelPathologistAgent()
 
-    fixture_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../fixtures/healthy_boot_03.txt"))
+    fixture_path = os.path.join(ROOT_DIR, "fixtures/healthy_boot_03.txt")
     with open(fixture_path, "r") as f:
         log_content = f.read()
 

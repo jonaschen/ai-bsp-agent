@@ -34,6 +34,8 @@ class KernelPathologistAgent:
         for step in steps:
             if step.action_type == "CODE_PATCH":
                 if not self.verify_file_exists(step.file_path):
+                    # If the file doesn't exist, we cannot recommend a CODE_PATCH.
+                    # We downgrade it to a MEASUREMENT or a generic instruction.
                     step.action_type = "MEASUREMENT"
                     step.instruction = f"[FILE NOT FOUND: {step.file_path}] " + step.instruction
                     step.file_path = "N/A"
@@ -70,21 +72,37 @@ class KernelPathologistAgent:
               "action_type": "MEASUREMENT" | "CODE_PATCH",
               "instruction": "Detailed instruction",
               "expected_value": "Expected outcome",
-              "file_path": "File path or 'N/A'"
+              "file_path": "Relevant file path or 'N/A'"
             }
           ]
         }
         """
 
-        prompt = f"{system_prompt}\n\nAnalyze the following log content:\n{log_content}\n\nReturn ONLY the JSON response."
+        prompt = f"""
+        {system_prompt}
+
+        Analyze the following log content:
+        {log_content}
+
+        Return ONLY the JSON response.
+        """
+
         response = self.llm.invoke(prompt)
 
+        # Extract JSON from the response content
         json_match = re.search(r'\{.*\}', response.content, re.DOTALL)
         if not json_match:
             raise ValueError(f"Could not find valid JSON in LLM response: {response.content}")
 
-        data = json.loads(json_match.group(0))
+        try:
+            data = json.loads(json_match.group(0))
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Failed to parse LLM response as JSON: {str(e)}")
+
+        # Create the response object
         diagnosis = ConsultantResponse(**data)
+
+        # Post-process and validate SOP steps using the required tool
         diagnosis.sop_steps = self._validate_sop_steps(diagnosis.sop_steps)
 
         return diagnosis
