@@ -39,7 +39,7 @@ def my_bsp_skill(input: MySkillInput) -> MySkillOutput:
 
 | Module | Function | Domain |
 |--------|----------|--------|
-| *(pending)* | `analyze_std_hibernation_error` | STD / Suspend-to-Disk |
+| `bsp_diagnostics/std_hibernation.py` | `analyze_std_hibernation_error` | STD / Suspend-to-Disk |
 
 ## Domains
 

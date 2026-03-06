@@ -1,3 +1,4 @@
+anthropic
 langchain
 langchain-google-vertexai
 langchain-community
