@@ -11,7 +11,7 @@ class KernelPathologistAgent:
         Initialize the Kernel Pathologist Agent.
 
         Args:
-            model_name: The Gemini model to use (default gemini-1.5-pro for stability).
+            model_name: The Gemini model to use (default gemini-1.5-pro).
             cached_content: Optional Vertex AI Context Cache ID for the kernel source tree.
         """
         self.llm = ChatVertexAI(
@@ -34,8 +34,6 @@ class KernelPathologistAgent:
         for step in steps:
             if step.action_type == "CODE_PATCH":
                 if not self.verify_file_exists(step.file_path):
-                    # If the file doesn't exist, we cannot recommend a CODE_PATCH.
-                    # We downgrade it to a MEASUREMENT or a generic instruction.
                     step.action_type = "MEASUREMENT"
                     step.instruction = f"[FILE NOT FOUND: {step.file_path}] " + step.instruction
                     step.file_path = "N/A"
@@ -49,60 +47,22 @@ class KernelPathologistAgent:
         """
         system_prompt = """
         You are a Kernel Pathologist Agent, a specialized software analysis expert for Android BSP.
-        Your task is to analyze kernel logs (dmesg, logcat, kernel_trace) and identify root causes for panics, hangs, or other anomalies.
-
-        You have access to the full kernel source tree via Vertex AI Context Caching. Use this context to pinpoint exact code locations.
+        Analyze kernel logs (dmesg, logcat, kernel_trace) and identify root causes.
 
         Guidelines:
-        - Parse the provided logs carefully, looking for patterns like 'BUG: kernel NULL pointer dereference', 'watchdog:', 'Kernel panic', 'Oops:', 'Call trace:', etc.
-        - If you identify a software bug, provide a detailed diagnosis and a recommended fix.
-        - If a code patch is suggested, ensure you provide the correct file path.
-        - Your output MUST be a valid JSON object matching the ConsultantResponse schema.
-
-        ConsultantResponse Schema:
-        {
-          "diagnosis_id": "Unique ID",
-          "confidence_score": 0.0 to 1.0,
-          "status": "CRITICAL" | "WARNING" | "INFO",
-          "root_cause_summary": "Brief summary",
-          "evidence": ["Key log lines"],
-          "sop_steps": [
-            {
-              "step_id": 1,
-              "action_type": "MEASUREMENT" | "CODE_PATCH",
-              "instruction": "Detailed instruction",
-              "expected_value": "Expected outcome",
-              "file_path": "Relevant file path or 'N/A'"
-            }
-          ]
-        }
+        - Look for panics, null pointers, watchdogs, etc.
+        - Output MUST be valid JSON matching ConsultantResponse schema.
         """
 
-        prompt = f"""
-        {system_prompt}
-
-        Analyze the following log content:
-        {log_content}
-
-        Return ONLY the JSON response.
-        """
-
+        prompt = f"{system_prompt}\n\nLog Content:\n{log_content}\n\nReturn JSON only."
         response = self.llm.invoke(prompt)
 
-        # Extract JSON from the response content
         json_match = re.search(r'\{.*\}', response.content, re.DOTALL)
         if not json_match:
-            raise ValueError(f"Could not find valid JSON in LLM response: {response.content}")
+            raise ValueError("No valid JSON in response")
 
-        try:
-            data = json.loads(json_match.group(0))
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse LLM response as JSON: {str(e)}")
-
-        # Create the response object
+        data = json.loads(json_match.group(0))
         diagnosis = ConsultantResponse(**data)
-
-        # Post-process and validate SOP steps using the required tool
         diagnosis.sop_steps = self._validate_sop_steps(diagnosis.sop_steps)
 
         return diagnosis
