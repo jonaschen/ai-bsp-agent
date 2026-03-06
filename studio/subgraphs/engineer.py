@@ -27,7 +27,6 @@ from studio.memory import (
 from studio.utils.jules_client import JulesGitHubClient, TaskPayload, WorkStatus, TaskPriority
 from vertexai.generative_models import GenerativeModel
 from studio.utils.entropy_math import SemanticEntropyCalculator, VertexFlashJudge
-from studio.utils.sandbox import DockerSandbox
 from studio.utils.patching import apply_virtual_patch, extract_affected_files
 from studio.utils.git_utils import checkout_pr_branch
 from studio.agents.architect import ArchitectAgent, ReviewVerdict
@@ -188,95 +187,19 @@ async def node_task_dispatcher(state: AgentState) -> Dict[str, Any]:
     return {"jules_metadata": jules_data.model_dump(mode='json')}
 
 
-# --- 2. Watch Tower Node (The Asynchronous Poller) ---
+# --- 2. Watch Tower Node (The Asynchronous Poller) --- DEPRECATED (Pivot Phase 1)
 
 async def node_watch_tower(state: AgentState) -> Dict[str, Any]:
     """
-    Node: Watch_Tower
-    Role: Asynchronous Polling & Lifecycle Management.
+    DEPRECATED (Pivot Phase 1): This node is no longer included in the active engineer
+    subgraph. The Jules-proxy async polling loop has been removed. In the Skill-Based
+    Expert architecture, task execution is synchronous and does not require external
+    GitHub polling.
 
-    Responsibilities:
-    1. Polls the external agent status (WORKING, COMPLETED, FAILED).
-    2. Handles 'Long-Running' tasks by creating a check-pointable loop.
-    3. Identifies 'NEEDS_INFO' states to trigger Human-in-the-loop interrupts.
+    Kept for reference only.
     """
-    jules_metadata_raw = state["jules_metadata"]
-    jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
-    settings = get_settings()
-
-    # 0. Wait for the configured interval before polling
-    # Because jules need time to finish PR implementation
-    logger.info(
-        f"Watch_Tower: Waiting {settings.jules_poll_interval} "
-        "seconds before polling..."
-    )
-    await asyncio.sleep(settings.jules_poll_interval)
-
-    client = JulesGitHubClient(
-        github_token=settings.github_token,
-        repo_name=settings.github_repository,
-        jules_username=settings.jules_username
-    )
-
-    if not jules_data.external_task_id:
-        # Safety check - should not happen due to graph topology
-        return {"jules_metadata": jules_data.model_dump(mode='json')}
-
-    logger.info(f"Watch_Tower: Polling task {jules_data.external_task_id}")
-
-    # 1. Fetch Remote Status
-    try:
-        remote_status: WorkStatus = await asyncio.to_thread(client.get_status, jules_data.external_task_id)
-    except Exception as e:
-        logger.error(f"Polling failed: {e}")
-        # Transient error handling strategy could be implemented here
-        return {"jules_metadata": jules_data.model_dump(mode='json')} # Retry next loop
-
-    # 2. State Mapping
-    if remote_status.status == "COMPLETED":
-        # Merged or closed
-        logger.info("Remote task completed. Proceeding to Entropy Check.")
-        jules_data.status = "VERIFYING" # Treat as VERIFYING to ensure tests run
-
-        if remote_status.raw_diff:
-            artifact = CodeChangeArtifact(
-                diff_content=remote_status.raw_diff,
-                change_type="MODIFY",
-                pr_link=remote_status.pr_url
-            )
-            jules_data.generated_artifacts = [artifact]
-
-    elif remote_status.status == "REVIEW_READY":
-        # Hash Check: Don't re-test the same code
-        if remote_status.last_commit_hash == jules_data.last_verified_commit:
-            logger.info(f"Review ready but commit hash {remote_status.last_commit_hash} already verified. Waiting for new changes.")
-            jules_data.status = "WORKING"
-            return {"jules_metadata": jules_data.model_dump(mode='json')}
-
-        logger.info(f"New commit detected ({remote_status.last_commit_hash}). Proceeding to Entropy Check/Verification.")
-        jules_data.status = "VERIFYING"
-        jules_data.last_verified_commit = remote_status.last_commit_hash
-        jules_data.last_verified_pr_number = remote_status.linked_pr_number
-        jules_data.current_branch = remote_status.branch_name
-
-        # Retrieve artifacts (virtual patches, diffs)
-        if remote_status.raw_diff:
-            artifact = CodeChangeArtifact(
-                diff_content=remote_status.raw_diff,
-                change_type="MODIFY",
-                pr_link=remote_status.pr_url
-            )
-            jules_data.generated_artifacts = [artifact]
-
-    elif remote_status.status == "BLOCKED": # Was NEEDS_INFO or BLOCKED
-        logger.warning("Agent requires human intervention.")
-        jules_data.status = "BLOCKED"
-
-    else:
-        # WORKING or QUEUED
-        jules_data.status = "WORKING"
-
-    return {"jules_metadata": jules_data.model_dump(mode='json')}
+    # This node is not reachable from the active graph.
+    return {}
 
 
 # --- 3. Entropy Guard Node (The Cognitive Circuit Breaker) ---
@@ -349,192 +272,19 @@ async def node_entropy_guard(state: AgentState) -> Dict[str, Any]:
     return {"jules_metadata": jules_data.model_dump(mode='json')}
 
 
-# --- 4. QA Verifier Node (The Gatekeeper) ---
+# --- 4. QA Verifier Node (The Gatekeeper) --- DEPRECATED (Pivot Phase 1)
 
 async def node_qa_verifier(state: AgentState) -> Dict[str, Any]:
     """
-    Node: QA_Verifier
-    Role: Functional Verification & TDD Enforcement.
+    DEPRECATED (Pivot Phase 1): This node is no longer included in the active engineer
+    subgraph. Docker sandbox execution has been removed. Skill-based testing is handled
+    outside the LangGraph loop via direct pytest invocation.
 
-    Responsibilities:
-    1. Executes the 'Virtual Patch' in a clean Sandbox.
-    2. Runs the test suite to validate TDD (Red/Green) compliance.
-    3. Generates 'Evidence Snippets' for the feedback loop.
+    Kept for reference only. Replacement: human-run `pytest tests/` against the
+    `skills/bsp_diagnostics/` directory.
     """
-    jules_metadata_raw = state["jules_metadata"]
-    jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
-
-    if jules_data.status != "VERIFYING":
-        return {}
-
-    logger.info("QA_Verifier: Running dynamic verification in sandbox.")
-
-    # 0. Sync workspace with PR branch (Replace Virtual Patching)
-    if jules_data.current_branch:
-        logger.info(f"QA_Verifier: Syncing workspace to branch {jules_data.current_branch}")
-        try:
-            checkout_pr_branch(jules_data.current_branch)
-        except Exception as e:
-            logger.error(f"QA_Verifier: Checkout failed: {e}")
-            result = TestResult(
-                test_id="git_checkout",
-                status="ERROR",
-                logs=f"Failed to checkout branch {jules_data.current_branch}: {str(e)}",
-                attempt_count=jules_data.retry_count + 1
-            )
-            jules_data.test_results_history.append(result)
-            jules_data.status = "FAILED"
-            return {"jules_metadata": jules_data.model_dump(mode='json')}
-
-    # 1. Prepare Files
-    # We need to gather all relevant files (context + modified)
-    # and apply the virtual patch.
-
-    files_to_patch = {}
-    test_files = []
-
-    # 1. Gather files from context slice
-    all_target_files = set()
-    if jules_data.active_context_slice and jules_data.active_context_slice.files:
-        all_target_files.update(jules_data.active_context_slice.files)
-
-    # 2. Get the diff and extract ALL affected files (Dynamic Context Sync)
-    diff_content = ""
-    if jules_data.generated_artifacts:
-        diff_content = jules_data.generated_artifacts[0].diff_content
-        affected_files = extract_affected_files(diff_content)
-        all_target_files.update(affected_files)
-
-    # 3. Ensure core testing infrastructure is included
-    # This prevents sandbox crashes when Jules doesn't touch tests
-    infra_files = ["pytest.ini", "requirements.txt"]
-    for f in infra_files:
-        if os.path.exists(f):
-            all_target_files.add(f)
-
-    # If no tests are currently identified, pull in the tests/ directory
-    # to ensure 'pytest tests/' has targets.
-    has_tests = any(f.endswith(".py") and ("test" in f or "spec" in f) for f in all_target_files)
-    if not has_tests and os.path.exists("tests"):
-        for root, _, files in os.walk("tests"):
-            for file in files:
-                if file.endswith(".py") and ("test" in file or "spec" in file):
-                    all_target_files.add(os.path.join(root, file))
-
-    # 4. Load files from disk to populate the Sandbox
-    for filepath in all_target_files:
-        try:
-            # In a real deployment, we'd fetch these from the repo
-            if os.path.exists(filepath):
-                with open(filepath, "r", encoding="utf-8") as f:
-                    files_to_patch[filepath] = f.read()
-
-            # Identify tests to run
-            if filepath.endswith(".py") and ("test" in filepath or "spec" in filepath):
-                test_files.append(filepath)
-        except FileNotFoundError:
-            logger.warning(f"File not found during sandbox prep: {filepath}")
-
-    # 4. Use synced local files (formerly Apply Patch)
-    # Since we checked out the branch, files_to_patch (read from disk)
-    # already contains the changes from Jules.
-    patched_files = files_to_patch
-
-    # 2. Setup Sandbox
-    # Replicates the Engineer's environment for validation
-    sandbox = None
-    try:
-        sandbox = DockerSandbox()
-
-        # Inject Code + Tests
-        if not sandbox.setup_workspace(patched_files):
-             raise RuntimeError("Failed to setup workspace")
-
-        # 3. Install Deps
-        if "requirements.txt" in patched_files:
-            # Prefer requirements.txt for full project dependencies if available
-            sandbox.run_command("pip install -r requirements.txt")
-
-        sandbox.install_dependencies(["pytest", "mock"]) # Basic deps
-
-        # 4. Run Tests
-        # If no specific tests identified, run all in tests/
-        target = "tests/"
-        if test_files:
-             target = " ".join(test_files)
-
-        test_output = sandbox.run_pytest(target)
-
-        sandbox.teardown()
-        sandbox = None
-
-        status = "PASS" if test_output.passed else "FAIL"
-        logs = test_output.error_log or "Tests Passed"
-
-    except PermissionError as e:
-        status = "ERROR"
-        logs = f"INFRASTRUCTURE_ERROR: PermissionError - {str(e)}"
-        if sandbox:
-            try:
-                sandbox.teardown()
-            except Exception:
-                pass
-    except Exception as e:
-        if "PermissionError" in str(e):
-            status = "ERROR"
-            logs = f"INFRASTRUCTURE_ERROR: {str(e)}"
-        else:
-            status = "ERROR"
-            logs = str(e)
-
-        if sandbox:
-            try:
-                sandbox.teardown()
-            except Exception:
-                pass
-
-    # 3. Record Result
-    result = TestResult(
-        test_id="e2e_verification",
-        status=status,
-        logs=logs,
-        attempt_count=jules_data.retry_count + 1
-    )
-    jules_data.test_results_history.append(result)
-
-    # 4. Status Promotion/Demotion
-    if result.status == "PASS":
-        logger.info("QA_Verifier: Tests PASSED. Promoting status to COMPLETED.")
-        jules_data.status = "COMPLETED"
-    else:
-        logger.warning(f"QA_Verifier: Tests FAILED. Demoting status to FAILED. Logs: {logs[:100]}...")
-
-        # Stability Protocol Fallback: If refactor breaks tests, fallback to Green
-        if jules_data.is_refactoring and jules_data.green_patch:
-            logger.warning("QA_Verifier: Refactor broke tests. Falling back to Green state.")
-
-            # Initialize client for fallback
-            settings = get_settings()
-            client = JulesGitHubClient(
-                github_token=settings.github_token,
-                repo_name=settings.github_repository,
-                jules_username=settings.jules_username
-            )
-
-            if jules_data.last_verified_pr_number:
-                body = "Refactor broke functional tests. Falling back to Green state with #TODO: Tech Debt."
-                client.fallback_to_green(jules_data.last_verified_pr_number, jules_data.green_patch)
-                client.review_pr(jules_data.last_verified_pr_number, event="APPROVE", body=body)
-                client.merge_pr(jules_data.last_verified_pr_number)
-
-            jules_data.status = "COMPLETED" # We accept the fallback
-            jules_data.is_refactoring = False
-            return {"jules_metadata": jules_data.model_dump(mode='json')}
-
-        jules_data.status = "FAILED"
-
-    return {"jules_metadata": jules_data.model_dump(mode='json')}
-
+    # This node is not reachable from the active graph.
+    return {}
 # --- 5. Architect Gate Node (The Design Authority) ---
 
 async def node_architect_gate(state: AgentState) -> Dict[str, Any]:
@@ -790,9 +540,11 @@ def route_watch_tower(state: AgentState) -> Literal["entropy_guard", "watch_towe
         return "watch_tower" # Keep polling
     return "entropy_guard" # Task finished (success or fail), check entropy
 
-def route_entropy_guard(state: AgentState) -> Literal["qa_verifier", "feedback_loop", "watch_tower"]:
+def route_entropy_guard(state: AgentState) -> Literal["architect_gate", "feedback_loop"]:
     """
     Decides routing based on cognitive health.
+    Watch_Tower and QA_Verifier are deprecated (Pivot Phase 1); routes directly to
+    architect_gate on success, or feedback_loop on failure/tunneling.
     """
     jules_metadata_raw = state["jules_metadata"]
     meta = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
@@ -800,13 +552,10 @@ def route_entropy_guard(state: AgentState) -> Literal["qa_verifier", "feedback_l
     if meta.cognitive_tunneling_detected:
         return "feedback_loop" # Immediate circuit break
 
-    if meta.status == "VERIFYING":
-        return "qa_verifier" # Proceed to functional test
-
     if meta.status == "FAILED":
         return "feedback_loop" # Remote task failed (e.g. build error)
 
-    return "watch_tower" # Default fallback
+    return "architect_gate" # Proceed directly (qa_verifier deprecated)
 
 def route_qa_verifier(state: AgentState) -> Literal["architect_gate", "feedback_loop"]:
     """
@@ -828,16 +577,17 @@ def route_architect_gate(state: AgentState) -> Literal["end", "feedback_loop"]:
         return "end"
     return "feedback_loop"
 
-def route_feedback_loop(state: AgentState) -> Literal["task_dispatcher", "watch_tower", "end"]:
+def route_feedback_loop(state: AgentState) -> Literal["task_dispatcher", "end"]:
     """
     Decides whether to retry the loop or give up.
+    Watch_Tower is deprecated (Pivot Phase 1); WORKING status routes back to task_dispatcher.
     """
     jules_metadata_raw = state["jules_metadata"]
     jules_data = JulesMetadata(**jules_metadata_raw) if isinstance(jules_metadata_raw, dict) else jules_metadata_raw
     if jules_data.status == "QUEUED": # Traditional retry (new task)
         return "task_dispatcher"
-    if jules_data.status == "WORKING": # PR feedback loop (reuse task)
-        return "watch_tower"
+    if jules_data.status == "WORKING": # Retry: route back to dispatcher (watch_tower deprecated)
+        return "task_dispatcher"
     return "end" # Max retries exceeded
 
 # --- Subgraph Builder ---
@@ -845,47 +595,25 @@ def route_feedback_loop(state: AgentState) -> Literal["task_dispatcher", "watch_
 def build_engineer_subgraph() -> StateGraph:
     workflow = StateGraph(AgentState)
 
-    # Add Nodes
+    # Add Nodes (watch_tower and qa_verifier removed in Pivot Phase 1)
     workflow.add_node("task_dispatcher", node_task_dispatcher)
-    workflow.add_node("watch_tower", node_watch_tower)
     workflow.add_node("entropy_guard", node_entropy_guard)
-    workflow.add_node("qa_verifier", node_qa_verifier)
     workflow.add_node("architect_gate", node_architect_gate)
     workflow.add_node("feedback_loop", node_feedback_loop)
 
     # Set Entry Point
     workflow.set_entry_point("task_dispatcher")
 
-    # Add Edges
-    workflow.add_edge("task_dispatcher", "watch_tower")
+    # Add Edges: task_dispatcher → entropy_guard (watch_tower deprecated)
+    workflow.add_edge("task_dispatcher", "entropy_guard")
 
     # Conditional Edges
-    workflow.add_conditional_edges(
-        "watch_tower",
-        route_watch_tower,
-        {
-            "watch_tower": "watch_tower",
-            "entropy_guard": "entropy_guard",
-            "interrupt_human": END # Handled by Supergraph interrupt logic
-        }
-    )
-
     workflow.add_conditional_edges(
         "entropy_guard",
         route_entropy_guard,
         {
-            "qa_verifier": "qa_verifier",
-            "feedback_loop": "feedback_loop",
-            "watch_tower": "watch_tower"
-        }
-    )
-
-    workflow.add_conditional_edges(
-        "qa_verifier",
-        route_qa_verifier,
-        {
             "architect_gate": "architect_gate",
-            "feedback_loop": "feedback_loop"
+            "feedback_loop": "feedback_loop",
         }
     )
 
@@ -903,7 +631,6 @@ def build_engineer_subgraph() -> StateGraph:
         route_feedback_loop,
         {
             "task_dispatcher": "task_dispatcher",
-            "watch_tower": "watch_tower",
             "end": END # Escalation
         }
     )
