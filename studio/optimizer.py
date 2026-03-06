@@ -7,8 +7,6 @@ from dotenv import load_dotenv
 from langchain_google_vertexai import ChatVertexAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from studio.utils.sandbox import OptimizerSandbox
-
 load_dotenv()
 
 # Configure logging
@@ -49,52 +47,14 @@ class OptimizerAgent:
         # ENFORCE ACL
         verify_write_permission(str(candidate_path))
 
-        # Initialize the sandbox for this update
-        sandbox = None
-        try:
-            self.logger.info("Optimizer: Initializing OptimizerSandbox for secure write operation...")
-            sandbox = OptimizerSandbox()
-        except Exception as e:
-            self.logger.warning(f"Optimizer: Failed to initialize Docker sandbox: {e}. Falling back to ACL-only host execution.")
-
-        if sandbox:
-            self._apply_prompt_update_sandboxed(sandbox, original_path.name, new_content)
-            sandbox.teardown()
-        else:
-            # Fallback to direct host write with ACL protection
-            os.makedirs(candidate_dir, exist_ok=True)
-            candidate_path.write_text(new_content)
+        # Direct ACL-only host write
+        os.makedirs(candidate_dir, exist_ok=True)
+        candidate_path.write_text(new_content)
 
         # Log for the Manager/Reviewer
         self.logger.info(
             f"Candidate written to product/prompts/{original_path.name}. Waiting for Reviewer verification."
         )
-
-    def _apply_prompt_update_sandboxed(self, sandbox: OptimizerSandbox, filename: str, content: str):
-        """
-        Executes the prompt update inside the restricted OptimizerSandbox.
-        """
-        self.logger.info(f"Optimizer: Executing sandboxed write for file: {filename}")
-
-        import base64
-        encoded_content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
-
-        # Path in container (mounted RW from host product/prompts/)
-        path = f"/app/product/prompts/{filename}"
-
-        py_script = f"""
-import base64
-path = '{path}'
-content = base64.b64decode('{encoded_content}').decode('utf-8')
-with open(path, 'w') as f:
-    f.write(content)
-"""
-        result = sandbox.run_command(f"python3 -c \"{py_script}\"")
-        if result.exit_code != 0:
-            self.logger.error(f"Optimizer: Sandboxed write failed: {result.stderr}")
-            # Fallback to host write
-            candidate_path = Path("product/prompts") / filename
-            candidate_path.write_text(content)
 
     def analyze_failures(self, target_file: str) -> str:
         """
