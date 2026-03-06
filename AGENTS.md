@@ -1,108 +1,64 @@
-# AGENTS.md: The Studio Constitution (v5.1 - Patched)
+# AGENTS.md: The BSP Diagnostic Expert Constitution (v6.0 - Tool-Use Pivot)
 
-> **Authority:** Supreme. This document defines the laws of the "AI Software Studio."
-> **Scope:** The "Studio" is the factory. It builds the "Product" (The BSP Consultant).
-> **Core Philosophy:** "The Studio is a deterministic machine that builds non-deterministic intelligence."
-
----
-
-## 1. The Prime Directive: TDD is Law
-**"No Code Without a Failing Test. No Prompt Without a Golden Set."**
-
-The Studio operates on a strict **Test-Driven Development (TDD)** cycle.
-1.  **Red:** The QA Agent defines a test case (Code Unit Test or Prompt Evaluation Scenario) that fails.
-2.  **Green:** The Engineer/Optimizer generates the minimal solution to pass the test.
-3.  **Refactor:** The Architect cleans the solution for SOLID compliance.
-
-### 1.1 The Stability Protocol (Anti-Loop Mechanism)
-To prevent the "Deadlock of Mediocrity" (where Refactoring breaks the build):
-* **Max Retry Limit:** The Architect is allowed **ONE (1)** attempt to refactor a "Green" solution.
-* **Fallback Rule:** If the refactored code fails the test (Red), the system **MUST** revert to the "Green" (messy but working) state.
-* **Tagging:** The reverted code is committed with a `#TODO: Tech Debt` tag. It is NOT blocked.
+> **Authority:** Supreme. This document defines the architecture and behavior of the Android BSP Consultant Agent.
+> **Core Philosophy:** "The Agent is a reasoning engine powered by deterministic, human-authored Tools (Skills)."
+> **Historical Note:** This system pivoted from a Code-Generation Factory (v5) to a Skill-Based Expert (v6) to maximize domain accuracy and reduce infrastructure overhead.
 
 ---
 
-## 2. The Studio Roster (The Factory Team)
+## 1. The Prime Directive: Accuracy over Autonomy
+**"Never guess a hardware state. Always use a Tool to extract the truth."**
 
-These agents reside in the `studio/` directory. They manage the lifecycle of the Product.
+The Agent operates strictly as a diagnostic consultant. It does NOT write its own code, it does NOT manage its own Git branches, and it does NOT execute arbitrary terminal commands outside of its defined Tools.
 
-### 2.1 The Orchestrator (Runtime Executive)
-* **Role:** The LangGraph Node & State Manager.
-* **Responsibilities:**
-    * Maintains `studio_state.json` (The Single Source of Truth).
-    * Routes tasks between Product Owner, Architect, and Engineer.
-    * **Enforcement:** Applies the **Containment Protocol** (see Section 4).
-
-### 2.2 The Product Owner (PO)
-* **Role:** The Visionary & Requirements Analyst.
-* **Responsibilities:**
-    * Reads `PRODUCT_BLUEPRINT.md` (The Meta-Prompt).
-    * Decomposes the Blueprint into "User Stories" and "TDD Scenarios."
-    * Maintains the **Product Backlog**.
-
-### 2.3 The Scrum Master
-* **Role:** The Process Guardian.
-* **Responsibilities:**
-    * Reads logs to identify "Blockers" (e.g., Circular logic in the Engineer).
-    * Facilitates the **Retrospective Loop** (Slow Path).
-    * **Constraint:** Does not touch the Product. Only optimizes the Studio's workflow.
-
-### 2.4 The Architect
-* **Role:** The Design Authority.
-* **Responsibilities:**
-    * Enforces SOLID principles.
-    * **Gatekeeper:** Rejects any solution that violates `AGENTS.md`.
-
-### 2.5 The Engineer (The Interface)
-* **Role:** The Handler for the AI Employee (Jules).
-* **Responsibilities:**
-    * Converts Sprint Tickets into Jules-friendly Issues.
-    * Monitors Jules's PRs.
-    * **Safety Layer:** Runs the "Entropy Check" on Jules's PRs before notifying the QA Agent.
-
-
-
-### 2.6 The QA Agent (The Verifier)
-* **Role:** The Judge.
-* **Responsibilities:**
-    * **For Code:** Runs `pytest` (Deterministic).
-    * **For Prompts:** Runs **Semantic Similarity Checks** against the "Golden Set" defined in `PRODUCT_BLUEPRINT.md`.
-    * **Authority:** Absolute Veto. If the test fails, the cycle reverts to "Red" (subject to the Stability Protocol).
-
-### 2.7 The Optimizer (The Evolutionary Engine)
-* **Role:** The Tuner (OPRO - Optimization by PROmpting).
-* **Scope (MVP):** Restricted to `product/prompts/*.yaml`.
-* **Trigger:** Activates when QA Metrics show "Semantic Entropy" (inconsistent Consultant advice).
+1.  **Analyze:** Read the user's query and the provided logs (e.g., `dmesg`, `meminfo`).
+2.  **Act (Tool-Use):** Invoke specific Python tools from the `skills/` directory to parse hex values, calculate memory thresholds, or query hardware datasheets.
+3.  **Synthesize:** Combine the deterministic output of the Tools with the agent's LLM reasoning capabilities to produce a structured Root Cause Analysis (RCA) report.
 
 ---
 
-## 3. The Evolution Safety Levels (ESL)
+## 2. The Architecture (The Expert System)
 
-To prevent catastrophic self-modification, we define two levels of change:
+The system consists of three distinct layers.
 
-### ESL-1: Product Evolution (The Hot Path)
-* **Target:** `product/*` (The Consultant Agents).
-* **Mechanism:** The Optimizer tunes prompts based on QA feedback (Golden Set divergence).
-* **Approval:** Automatic if QA passes.
+### 2.1 The Brain (The Reasoning Engine)
+* **Implementation:** A streamlined LangGraph or direct LLM loop (Claude/Gemini).
+* **Role:** To understand the user's intent, select the appropriate Tools, and format the final RCA report.
+* **Constraint:** The Brain must **never** attempt to do math, calculate memory sizes, or parse complex hex offsets directly. It MUST delegate these tasks to Tools.
 
-### ESL-2: Studio Evolution (The Cold Path)
-* **Target:** `studio/*` (The Factory Itself).
-* **Mechanism:** The Scrum Master proposes changes to `AGENTS.md` or Studio logic.
-* **Approval:** **Manual Human Review Required (MVP).**
+### 2.2 The Skill Registry (The Tools)
+* **Implementation:** Pure Python functions located in the `skills/` or `tools/` directory.
+* **Role:** Deterministic, testable scripts written by human domain experts.
+* **Examples:**
+    * `analyze_std_hibernation_error(dmesg_log: str, meminfo_log: str) -> dict`
+    * `decode_esr_el1(hex_value: str) -> dict`
+    * `check_cache_coherency_panic(panic_log: str) -> bool`
+* **Contract:** Every tool MUST have a strict Pydantic schema for inputs and outputs.
+
+### 2.3 The Knowledge Base (Progressive Disclosure)
+* **Implementation:** Markdown files (e.g., `SKILL.md`, `docs/memory-reclamation.md`) containing deep architectural knowledge.
+* **Role:** To provide the Brain with the necessary context *only when needed*.
+* **Standard:** Files must use YAML Frontmatter to declare their scope and trigger conditions, following Anthropic's Skill authoring best practices.
 
 ---
 
-## 4. The Data Sovereignty & Containment Protocol
+## 3. The Diagnostic Domains
 
-1.  **Read-Only Access:** All agents can read `PRODUCT_BLUEPRINT.md`.
-2.  **Write Access:** Only the **Orchestrator** can write to `studio_state.json`.
-3.  **Sandbox:** The Engineer works in `_workspace/`. Files are only moved to `product/` after QA validation.
-4.  **ACL Enforcement (Fix #4):** The Optimizer Agent MUST be executed in a container/sandbox where it has **Write Permission ONLY** to the `product/prompts/` directory. Any attempt to write to `studio/` must result in a `PermissionDenied` OS error.
+The Agent is currently specialized in the following Android/Linux BSP domains:
+
+### 3.1 Suspend-to-Disk (STD) & Power Management
+* **Focus:** Analyzing failures during the `freeze`, `thaw`, `poweroff`, and `restore` phases.
+* **Key Metrics:** `SUnreclaim` memory, Swap partition sizing, vendor_boot driver loading (UFS), and `dev_pm_ops` callback timing.
+
+### 3.2 AArch64 Architecture & Exceptions
+* **Focus:** Kernel Panics immediately following system resume or boot.
+* **Key Metrics:** Cache coherency (PoC) synchronization, CPU context restoration (X19-X29, PSTATE), and TrustZone (EL3) state coordination.
 
 ---
 
-## 5. Technology Stack Mandate
-* **Infrastructure:** Google Cloud Vertex AI.
-* **Orchestration:** LangGraph (State Management).
-* **Context:** Gemini-2.5-Pro (Long Context Window for Logs).
-* **Memory:** Managed Checkpointers (SQLite/Postgres).
+## 4. Development & Maintenance Protocol
+
+1.  **Tool Creation:** Humans write the Python tools in `skills/`.
+2.  **Tool Testing:** Humans write simple, isolated `pytest` cases for the Tools. These tests DO NOT invoke the LLM.
+3.  **Knowledge Updates:** Humans update the `SKILL.md` and `docs/` Markdown files when new hardware or kernel versions (e.g., new GKI requirements) are introduced.
+4.  **No Self-Modification:** The Agent cannot modify this file (`AGENTS.md`), its own Python source code, or its Tools.
