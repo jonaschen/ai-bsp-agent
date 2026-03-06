@@ -15,16 +15,25 @@ These test bugs are the most urgent because running the test suite modifies the 
 
 ### TEST-01 🔴 CRITICAL: Tests Invoke Real `sync_main_branch()` — Destroys Uncommitted Changes
 
-**Files:** `tests/test_context_slicing.py`, `tests/test_tdd_loop.py`
-**Symptom:** When these tests run, `sync_main_branch()` is called on the live host repository. This executes `git stash` (silently hiding local changes), `git reset --hard origin/main`, and `git clean -fd`. Changes that have not been pushed to upstream are lost in the stash with no `git stash pop` to restore them.
+**Files (confirmed missing patch, COMPLETED outcome):**
+- `tests/test_context_slicing.py`
+- `tests/test_tdd_loop.py`
+- `tests/test_architect_veto.py`
+- `tests/test_router_diversion.py` (function `test_router_case_a_coding_with_log`)
+- `tests/test_lifecycle_manager.py`
 
-**Root cause — `test_context_slicing.py`:**
-The test mocks `run_po_cycle`, `run_scrum_retrospective`, `VertexFlashJudge`, and `GenerativeModel`, but is **missing** `@patch("studio.orchestrator.sync_main_branch")`. The mock engineer app returns `status="COMPLETED"`, which causes `node_backlog_dispatcher` (line `orchestrator.py:222`) to call `await asyncio.to_thread(sync_main_branch)`.
+**Symptom:** When any of these tests run, `sync_main_branch()` is called on the live host repository. This executes `git stash` (silently hiding local changes), `git reset --hard origin/main`, and `git clean -fd`. Changes that have not been pushed to upstream are lost in the stash with no `git stash pop` to restore them.
 
-**Root cause — `test_tdd_loop.py`:**
-Same missing patch. The test's second QA run returns `pass_result` (status=COMPLETED), propagating a COMPLETED status back through `_engineer_wrapper` into `node_backlog_dispatcher`, triggering `sync_main_branch()`.
+**Root cause (shared):** Each test invokes the full Orchestrator graph via `orchestrator.app.ainvoke(state)` and the mock engineer returns at least one ticket with `status="COMPLETED"`. This causes `node_backlog_dispatcher` (`orchestrator.py:222`) to call `await asyncio.to_thread(sync_main_branch)`. All five tests are missing `@patch("studio.orchestrator.sync_main_branch")`.
 
-**Fix:** Add `@patch("studio.orchestrator.sync_main_branch")` (or `patch(...)` inside the `with` block) to both tests. Make this a project-wide convention: any test that invokes the Orchestrator's full graph MUST patch `sync_main_branch`.
+Specific triggering paths:
+- `test_context_slicing.py` — mock engineer returns `status="COMPLETED"` for the one ticket
+- `test_tdd_loop.py` — second QA pass returns `status="COMPLETED"`, propagated via `_engineer_wrapper`
+- `test_architect_veto.py` — architect approves, task completes as `COMPLETED`
+- `test_router_diversion.py::test_router_case_a_coding_with_log` — mock engineer returns `status="COMPLETED"`
+- `test_lifecycle_manager.py` — TKT-1 completes as `COMPLETED` (TKT-2 fails, but the first task already triggered the call)
+
+**Fix:** Add `@patch("studio.orchestrator.sync_main_branch")` to all five tests. Establish it as a project-wide convention: any test that invokes the Orchestrator full graph MUST patch both `sync_main_branch` and (where `current_branch` is set) `checkout_pr_branch`.
 
 ---
 
@@ -365,12 +374,44 @@ The QA verifier runs tests inside this isolated worktree. The main repo is never
 
 ---
 
+### TEST-10 🟠 HIGH: `test_main.py` Uses Production `CLEAN_PATH` Without Isolation
+
+**File:** `tests/test_main.py:8-40`
+**Symptom:** `test_manager_load_state_new()` and `test_manager_save_and_load_state()` import `CLEAN_PATH` directly from `main.py` (the production `studio_state.json` path) and unconditionally delete or overwrite it. If the factory is running concurrently, this silently corrupts live sprint state. This is the same class of bug as TEST-02 (`test_recovery.py`), just in a different file.
+
+**Root cause:** No path isolation — tests operate on the real project-root state file.
+
+**Fix:** Use `tmp_path` and monkeypatch to redirect the state file location:
+```python
+def test_manager_load_state_new(tmp_path, monkeypatch):
+    monkeypatch.setattr("main.CLEAN_PATH", str(tmp_path / "state.json"))
+    manager = StudioManager(root_dir=str(tmp_path))
+    ...
+```
+Or pass `root_dir=tmp_path` to `StudioManager()` directly so it stores state in an isolated temp directory.
+
+---
+
+### TEST-11 🟡 MEDIUM: `test_secure_sandbox.py` Always Fails — `SecureSandbox` Class Does Not Exist
+
+**File:** `tests/test_secure_sandbox.py:17-19`
+**Symptom:** The test imports `SecureSandbox` in a `try/except ImportError` block and sets it to `None` if the import fails. Both test functions then call `pytest.fail(...)` immediately when `SecureSandbox is None`. Since the class has not been implemented in `studio/utils/sandbox.py`, these tests always hard-fail and pollute the test report.
+
+**Root cause:** Tests were written TDD-style as a spec for `SecureSandbox`, but the class was never implemented.
+
+**Options:**
+- (a) Implement `SecureSandbox(DockerSandbox)` with `read_only=True`, `network_disabled=True`, `mem_limit="256m"`, `auto_remove=True`, and `tmpfs={"/workspace": ""}` constraints in `studio/utils/sandbox.py`.
+- (b) Skip the tests with `pytest.mark.skip(reason="SecureSandbox not yet implemented")` until the implementation lands.
+Option (a) is the correct fix — the test spec is valid and captures a real security requirement for the QA sandbox.
+
+---
+
 ## Recommended Fix Priority
 
 | Sprint | Issues | Goal |
 |---|---|---|
-| **Sprint 1 — Unbreak Tests** | TEST-01, TEST-02, TEST-03, TEST-04, TEST-05 | Make the test suite safe to run without destroying local work |
+| **Sprint 1 — Unbreak Tests** | TEST-01, TEST-02, TEST-10, TEST-03, TEST-04, TEST-05 | Make the test suite safe to run without destroying local work |
 | **Sprint 2 — Autopilot Loop** | PROD-03, PROD-04, PROD-05, PROD-14 | Enable unattended multi-ticket runs that don't hang |
 | **Sprint 3 — Isolation & Safety** | PROD-06, PROD-11, PROD-12, PROD-13 | Make git operations and QA sandboxed and reliable |
 | **Sprint 4 — Intelligence** | PROD-01, PROD-02, PROD-07, PROD-08, PROD-10 | Give Jules real context; make entropy guardrail functional |
-| **Sprint 5 — Polish** | TEST-06..09, PROD-16..22 | Reduce cost, eliminate code smells, improve observability |
+| **Sprint 5 — Polish** | TEST-06..09, TEST-11, PROD-16..22 | Reduce cost, eliminate code smells, improve observability |
