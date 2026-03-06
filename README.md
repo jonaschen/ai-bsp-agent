@@ -9,27 +9,24 @@
 
 ## Project Overview
 
-This repository hosts the **Recursive Cognitive Software Factory** (also known as "The Studio"), a specialized multi-agent system designed to autonomously build, verify, and maintain high-quality software products.
+This repository hosts the **Android BSP Diagnostic Expert** (also known as "The Studio"), a specialized multi-agent system designed to autonomously build, verify, and maintain high-quality software products.
 
 The primary product being built is the **Android BSP Consultant**, an AI agent capable of analyzing Android Kernel logs, performing root cause analysis (RCA), and suggesting fixes for complex embedded systems issues (e.g., Suspend-to-Disk failures).
 
 ### 市場定位 | Market Positioning
-The **Recursive Cognitive Software Factory** occupies a unique niche between general-purpose autonomous coding agents (like Devin) and domain-specific expert systems. It serves as a **Specialized AI Systems Research Prototype** for:
-*   **Autonomous Software Delivery:** Moving beyond code generation to the autonomous management of the entire software lifecycle (Planning, Execution, Governance, Evolution).
+The **Android BSP Diagnostic Expert** occupies a unique niche by utilizing the Anthropic Tool-Use / Agent Skill paradigm. It serves as a **Specialized AI Systems Research Prototype** for:
 *   **Domain-Specific Expertise:** Focusing on the high-stakes, log-intensive environment of Android Board Support Package (BSP) development.
-*   **Self-Evolving Systems:** Implementing OPRO (Optimization by PROmpting) to allow the factory to improve its own internal logic based on performance data.
+*   **Deterministic Reasoning:** Replacing error-prone AI code generation with deterministic, human-authored Python tools that provide ground truth for the reasoning LLM.
 
 ### 為何重要 | Why This Matters
-*   **AI Safety & Governance:** By implementing strict **Cognitive Guardrails** (Semantic Entropy) and an **Architect Agent** (Governance), we explore how to build autonomous systems that remain within safe operating boundaries.
-*   **Automation at Scale:** Traditional software engineering is bottlenecked by human review. The Studio demonstrates a path toward scaling engineering capacity through hierarchical, multi-agent collaboration.
+*   **Accuracy over Autonomy:** By enforcing strict tool use, we prevent LLM hallucinations regarding hardware state and register calculations.
+*   **Automation at Scale:** The Studio demonstrates a path toward scaling engineering capacity through expert agent collaboration.
 *   **Autonomous Software Delivery:** The project researches the feasibility of a "Lights-Out" software factory, where the system is the primary engineer and the human acts as a high-level supervisor/approver.
 
 ### 當前功能快照 | Current Capability Snapshot
-*   **Hierarchical Orchestration:** Uses LangGraph to manage complex state transitions across multiple agent roles.
-*   **Autonomous TDD Loop:** Implementation of a strict Red-Green-Refactor cycle with automated testing (`pytest`) and code review.
-*   **Self-Optimization (OPRO):** Ability to analyze failure patterns and surgically update agent prompts in `prompts.json` to improve future performance.
-*   **Context Slicing & Guardrails:** Prevents context collapse and hallucinations via dynamic file filtering and Semantic Entropy monitoring (Circuit Breaker).
-*   **Multi-Specialist BSP RCA:** Specialized agents for Kernel Pathological analysis and Hardware Datasheet correlation.
+*   **Skill-Based Architecture:** Uses a reasoning LLM paired with deterministic Python tools (Skills).
+*   **Multi-Specialist BSP RCA:** Specialized analysis for NULL pointer dereferences and watchdog hard lockups during suspend.
+*   **Deterministic Execution:** Strict separation of reasoning (LLM) and data extraction (Python Tools).
 
 ### 侷限性 | Limitations
 *   **Cold Start Latency:** Initial system initialization and state graph setup can be time-intensive.
@@ -44,76 +41,38 @@ The **Recursive Cognitive Software Factory** occupies a unique niche between gen
 
 ---
 
-### Core Philosophy: Factory vs. Product
-*   **The Studio (`studio/`):** The "Factory" infrastructure. It contains the Orchestrator, Agents (Architect, Product Owner, Engineer, Scrum Master, Optimizer), and the Governance rules. This is the "meta-level" system that builds the software.
-*   **The Product (`product/`):** The output of the Studio. This includes the actual source code, prompts, and configurations for the Android BSP Consultant agent.
-
 ## Architecture
 
-The system operates as a **Hierarchical State Machine** orchestrated by LangGraph, with strict **Context Slicing** and **Cognitive Guardrails**.
+The system operates as a **Skill-Based Expert Agent** using the Anthropic Tool-Use paradigm. It consists of three main layers:
 
-### The Agent Team
-1.  **Orchestrator (The Executive):**
-    *   Operates the High-Level Lifecycle (Plan -> Execute -> Review) via LangGraph.
-    *   Enforces **Context Slicing** to isolate agents from irrelevant data.
-    *   Monitors **Semantic Entropy** to prevent "hallucinations" or cognitive tunneling.
-    *   Routes intents via **Intent Router** (Coding vs. Interactive Guide).
-2.  **Product Owner (Strategy):**
-    *   Translates `PRODUCT_BLUEPRINT.md` into a dependency-aware Directed Acyclic Graph (DAG) of tickets.
-    *   Maintains the Product Backlog.
-3.  **Engineer (Execution):**
-    *   Jules Proxy: Manages asynchronous execution of coding tasks via remote workers using `JulesGitHubClient`.
-    *   Implements the "Micro-Loop": Dispatch -> Watch -> Monitor (Entropy) -> Verify -> Feedback.
-    *   Operates within a isolated **Docker Sandbox**.
-4.  **Architect (Governance):**
-    *   Reviews full source code against `AGENTS.md` (The Constitution) using `studio/agents/architect.py`.
-    *   Enforces SOLID principles and security standards.
-5.  **QA Verifier (Verification):**
-    *   Implemented as a node within the Engineer Subgraph (`studio/subgraphs/engineer.py`).
-    *   Runs deterministic tests (`pytest`) in a `DockerSandbox`.
-    *   *(Note: `studio/qa_agent.py` exists as a standalone utility).*
-6.  **Scrum Master (Review):**
-    *   Analyzes sprint logs to identify process bottlenecks.
-    *   Triggers the **Optimizer** for OPRO.
-7.  **Optimizer (Evolution):**
-    *   Implements **OPRO (Optimization by PROmpting)**.
-    *   Surgically patches agent prompts in `prompts.json` to fix recurring behavioral failures.
-
-### Key Features
-*   **Optimization by PROmpting (OPRO):** The system self-corrects its own instructions (`prompts.json`) based on retrospective analysis, allowing it to "learn" from mistakes.
-*   **Interactive Debugging (SOP Guide):** A logical subgraph (within the Orchestrator) for handling "No-Log" scenarios where the user needs guidance to extract data before analysis can begin.
-*   **Semantic Entropy Guardrail:** Uses `VertexFlashJudge` to measure the uncertainty of agent outputs. If entropy (SE) exceeds 7.0, the "Circuit Breaker" triggers to prevent compounding errors and "Cognitive Tunneling".
-*   **Context Slicing:** Dynamically filters the file system and logs presented to each agent (Event Horizon), ensuring they only see what is relevant to their current task to prevent context collapse.
-*   **Evolution Safety Levels (ESL):**
-    *   **ESL-1 (Product):** Automatic evolution of the product (prompts/code) via the Optimizer.
-    *   **ESL-2 (Studio):** Manual review required for changes to the Studio's core logic or `AGENTS.md`.
-*   **Docker Sandbox:** All code execution and verification happen in isolated Docker containers to ensure safety and reproducibility.
+### The Agent Team / Layers
+1.  **The Brain (The Reasoning Engine):**
+    *   A streamlined LangGraph or direct LLM loop.
+    *   Understands the user's intent, selects appropriate Tools, and formats the final RCA report.
+    *   **Constraint:** The Brain never performs complex calculations directly; it delegates to Tools.
+2.  **The Skill Registry (The Tools):**
+    *   Pure Python functions located in the `skills/` directory.
+    *   Deterministic, human-written scripts that extract the truth (e.g., parsing logs, checking thresholds).
+    *   Every tool has a strict Pydantic schema for inputs and outputs.
+3.  **The Knowledge Base:**
+    *   Markdown files (e.g., `SKILL.md`) containing deep architectural knowledge.
+    *   Uses progressive disclosure to feed the LLM context only when needed.
 
 ## Repository Structure
+
 
 ```
 .
 ├── AGENTS.md               # The Constitution: Rules and Governance for all agents.
-├── PRODUCT_BLUEPRINT.md    # The Product Spec: What the Studio is building.
+├── PRODUCT_BLUEPRINT.md    # The Product Spec: What the Agent is built to diagnose.
 ├── README.md               # This file.
-├── product/                # The Output: The Android BSP Consultant Agent code/prompts.
-│   ├── bsp_agent/          # Core logic of the product (Supervisor, Core state).
-│   ├── prompts/            # Product prompts (optimized by Scrum Master).
-│   ├── schemas.py          # Agent Persona Contracts & Case File definitions.
+├── product/                # Core logic of the product.
+│   ├── bsp_agent/          # Supervisor and Agent definitions.
+│   ├── schemas/            # Agent Persona Contracts & Case File definitions.
 │   └── __init__.py         # Package initialization.
-├── studio/                 # The Factory: The AI Software Studio.
-│   ├── agents/             # Agent implementations (Architect, PO, Scrum Master, Optimizer).
-│   ├── subgraphs/          # Subgraph definitions (Engineer).
-│   ├── memory.py           # Pydantic models and State definitions.
-│   ├── orchestrator.py     # Main runtime logic and StateGraph definition.
-│   ├── manager.py          # State persistence and management.
-│   ├── review_agent.py     # Review utility (Alternative/Legacy).
-│   ├── qa_agent.py         # QA utility (Standalone).
-│   ├── optimizer.py        # Legacy Optimizer script.
-│   ├── rules.md            # Long-term Memory: Best practices & patterns.
-│   └── utils/              # Utilities (Entropy Math, Sandbox, Patching, Prompts).
+├── skills/                 # The Skill Registry: Deterministic Python tools.
+├── studio/                 # Utility scripts and test frameworks (legacy).
 └── tests/                  # Test suite and Simulations.
-    └── phase2_simulation.py # End-to-end simulation of the Studio workflow.
 ```
 
 ## Getting Started
