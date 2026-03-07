@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 class LogPayload(BaseModel):
     """Container for different types of logs."""
     dmesg_content: str = Field(..., description="Raw content of dmesg log", examples=["[ 0.000000] Linux version 6.1.0...", "[ 123.456] Unable to handle kernel NULL pointer dereference"])
+    meminfo_content: str = Field("", description="Raw content of /proc/meminfo", examples=["MemTotal:        2097152 kB\nSUnreclaim:       307200 kB\nSwapFree:        1500000 kB"])
     logcat_content: str = Field("", description="Raw content of logcat log", examples=["01-01 12:00:00.000  1000  1000 I ActivityManager: Start proc...", "01-01 12:00:05.123  1000  1000 E AndroidRuntime: FATAL EXCEPTION"])
 
 class SOPStep(BaseModel):

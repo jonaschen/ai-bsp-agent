@@ -37,9 +37,11 @@ def my_bsp_skill(input: MySkillInput) -> MySkillOutput:
 
 ## Current Skills
 
-| Module | Function | Domain |
-|--------|----------|--------|
-| `bsp_diagnostics/std_hibernation.py` | `analyze_std_hibernation_error` | STD / Suspend-to-Disk |
+| Module | Function | Supervisor Route | Domain |
+|--------|----------|-----------------|--------|
+| `bsp_diagnostics/std_hibernation.py` | `analyze_std_hibernation_error` | `hardware_advisor` | STD / Suspend-to-Disk |
+| `bsp_diagnostics/aarch64_exceptions.py` | `decode_esr_el1` | `kernel_pathologist` | AArch64 Exceptions |
+| `bsp_diagnostics/aarch64_exceptions.py` | `check_cache_coherency_panic` | `kernel_pathologist` | AArch64 Cache Coherency |
 
 ## Domains
 
