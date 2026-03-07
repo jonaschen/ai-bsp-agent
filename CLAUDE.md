@@ -4,11 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Prime Directive
 
-**Follow `AGENTS.md` at all times.** It is the supreme governance document ("The Constitution"). Key rules:
+**Follow `AGENTS.md` at all times.** It is the supreme governance document ("The Constitution" — currently v6.1). Key rules:
 - **TDD is Law**: Write a failing test first (Red), then minimal implementation (Green), then one refactor attempt. If refactor breaks tests, revert to Green and tag `#TODO: Tech Debt`.
 - **No Self-Modification**: The Agent cannot modify `AGENTS.md`, its own source code, or its Tools.
 - **Skill Purity**: Every skill in `skills/` must be a pure function — no side effects, no LLM calls, no global state.
 - **Frozen Dirs**: `studio/subgraphs/engineer.py` and `studio/utils/sandbox.py` are deprecated. Do not modify them.
+
+### Diagnostic Workflow (AGENTS.md §3 — mandatory sequence)
+
+Every diagnostic session must follow this 3-phase cognitive sequence:
+
+1. **Triage (Breadth-First):** Identify the failing boundary first — Early Boot, Kernel, or Android Init. Invoke `log_segmenter` to isolate the exact failure window before routing.
+2. **Specialized Routing (Depth-First):** Route to the domain expert persona (`early_boot_advisor`, `kernel_pathologist`, `hardware_advisor`, or `android_init_advisor`) based on triage result.
+3. **Multi-Tool Synergy:** Complex crashes require multiple tools. The Brain must invoke all relevant tools for the failure (e.g., for a watchdog timeout with a concurrent exception, call both `analyze_watchdog_timeout` AND `decode_esr_el1`). **Conflicting outputs from different tools must be explicitly highlighted in the final `ConsultantResponse`.**
 
 ## Commands
 
@@ -107,11 +115,15 @@ All pieces of the v6 architecture are in place and tested.
 
 New supervisor route: `early_boot_advisor`. Trigger: no kernel timestamp pattern in log; TF-A/LK boot markers present.
 
+**`log_segmenter` is required in this phase.** AGENTS.md §3.1 mandates it as the first triage skill invoked in every session — it identifies the failing boundary (Early Boot / Kernel / Android Init) before any domain-specific skill is called.
+
 | Deliverable | Detail |
 |---|---|
+| `skills/bsp_diagnostics/log_segmenter.py` | `segment_boot_log(raw_log)` — identifies failing stage boundary; returns detected stage, first error line, and confidence. Used as Phase 1 Triage entry point for all diagnostic sessions. |
 | `skills/bsp_diagnostics/early_boot.py` | `parse_early_boot_uart_log`, `analyze_lk_panic` |
+| `tests/product_tests/test_log_segmenter_skill.py` | ~14 tests |
 | `tests/product_tests/test_early_boot_skill.py` | ~18 tests |
-| Supervisor update | Add `early_boot_advisor` to triage prompt + `ROUTE_TOOLS` |
+| Supervisor update | Add `early_boot_advisor` to triage prompt + `ROUTE_TOOLS`; `log_segmenter` registered under all routes (universal triage tool) |
 | `docs/early-boot-stages.md` | TF-A BL1/BL2 error codes, LK assert format |
 
 ### Phase 5 — Kernel Exception & Oops Skills (PLANNED)
@@ -122,8 +134,9 @@ Extends `kernel_pathologist` route. No new supervisor route needed.
 |---|---|
 | `skills/bsp_diagnostics/kernel_oops.py` | `extract_kernel_oops_log` — stateless hex call trace extractor |
 | Update `skills/bsp_diagnostics/aarch64_exceptions.py` | Add `decode_aarch64_exception(esr_val, far_val)` — extends `decode_esr_el1` with FAR field; EL inferred from EC bits, no `el_level` input |
-| Tests | ~24 new tests |
+| Tests | ~24 new skill tests |
 | Update `docs/aarch64-exceptions.md` | FAR field layout and fault address interpretation |
+| **Multi-tool synergy integration test** | New scenario in `tests/product_tests/test_integration.py`: a log containing both a watchdog lockup and a concurrent ESR_EL1 exception. Verifies that the Brain invokes both `analyze_watchdog_timeout` AND `decode_esr_el1` in the same session, and that the `ConsultantResponse` surfaces both findings. Mandated by AGENTS.md §3.3. |
 
 ### Phase 6 — Android Init Skills (PLANNED)
 
