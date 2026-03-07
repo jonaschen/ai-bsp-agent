@@ -37,7 +37,7 @@ Three layers:
 
 ### Layer 1: The Brain (Reasoning Engine)
 - `product/bsp_agent/agent.py` — `BSPDiagnosticAgent`: runs the Anthropic tool-use loop. Accepts a `CaseFile`, calls the Supervisor, selects route-appropriate tools, returns a `ConsultantResponse`.
-- `product/bsp_agent/agents/supervisor.py` — `SupervisorAgent` (Claude Haiku): triages dmesg and routes to `kernel_pathologist`, `hardware_advisor`, or `clarify_needed`. Performs event-horizon chunking for large logs.
+- `product/bsp_agent/agents/supervisor.py` — `SupervisorAgent` (Claude Haiku): triages dmesg and routes to one of the registered route tokens. Performs event-horizon chunking for large logs. Current routes: `kernel_pathologist`, `hardware_advisor`, `clarify_needed`. Planned additions: `early_boot_advisor` (Phase 4), `android_init_advisor` (Phase 6), `source_analyst` (Phase 8).
 - `product/bsp_agent/core/state.py` — `AgentState` TypedDict passed to the supervisor.
 - The Brain must **never** do math, parse hex offsets, or calculate memory sizes directly — always delegate to Skills.
 
@@ -54,6 +54,9 @@ Pure Python functions in `skills/bsp_diagnostics/`. Each skill:
 | `skills/bsp_diagnostics/std_hibernation.py` | `analyze_std_hibernation_error(dmesg_log, meminfo_log)` | `hardware_advisor` | STD / Suspend-to-Disk |
 | `skills/bsp_diagnostics/aarch64_exceptions.py` | `decode_esr_el1(hex_value)` | `kernel_pathologist` | AArch64 Exceptions |
 | `skills/bsp_diagnostics/aarch64_exceptions.py` | `check_cache_coherency_panic(panic_log)` | `kernel_pathologist` | AArch64 Cache Coherency |
+| `skills/bsp_diagnostics/vendor_boot.py` | `check_vendor_boot_ufs_driver(dmesg_log)` | `hardware_advisor` | UFS Driver / STD Restore |
+| `skills/bsp_diagnostics/watchdog.py` | `analyze_watchdog_timeout(dmesg_log)` | `kernel_pathologist` | Watchdog / Soft+Hard Lockup |
+| `skills/bsp_diagnostics/pmic.py` | `check_pmic_rail_voltage(dmesg_log, logcat_log)` | `hardware_advisor` | PMIC Rail Voltages |
 
 ### Layer 3: The Knowledge Base
 - `skills/SKILL.md` — Skill Registry index and authoring contract.
@@ -100,9 +103,92 @@ All pieces of the v6 architecture are in place and tested.
 | 11 | Real-world log validation | FUTURE | Run against actual BSP logs; tune thresholds; document edge cases |
 | **Total product tests** | **231 passing** | |
 
+### Phase 4 — Early Boot Skills (NEXT)
+
+New supervisor route: `early_boot_advisor`. Trigger: no kernel timestamp pattern in log; TF-A/LK boot markers present.
+
+| Deliverable | Detail |
+|---|---|
+| `skills/bsp_diagnostics/early_boot.py` | `parse_early_boot_uart_log`, `analyze_lk_panic` |
+| `tests/product_tests/test_early_boot_skill.py` | ~18 tests |
+| Supervisor update | Add `early_boot_advisor` to triage prompt + `ROUTE_TOOLS` |
+| `docs/early-boot-stages.md` | TF-A BL1/BL2 error codes, LK assert format |
+
+### Phase 5 — Kernel Exception & Oops Skills (PLANNED)
+
+Extends `kernel_pathologist` route. No new supervisor route needed.
+
+| Deliverable | Detail |
+|---|---|
+| `skills/bsp_diagnostics/kernel_oops.py` | `extract_kernel_oops_log` — stateless hex call trace extractor |
+| Update `skills/bsp_diagnostics/aarch64_exceptions.py` | Add `decode_aarch64_exception(esr_val, far_val)` — extends `decode_esr_el1` with FAR field; EL inferred from EC bits, no `el_level` input |
+| Tests | ~24 new tests |
+| Update `docs/aarch64-exceptions.md` | FAR field layout and fault address interpretation |
+
+### Phase 6 — Android Init Skills (PLANNED)
+
+New supervisor route: `android_init_advisor`. Trigger: SELinux AVC lines, init.rc service failures, `[FAILED]` markers.
+
+| Deliverable | Detail |
+|---|---|
+| `skills/bsp_diagnostics/android_init.py` | `analyze_selinux_denial`, `check_android_init_rc` |
+| `tests/product_tests/test_android_init_skill.py` | ~20 tests |
+| Supervisor update | Add `android_init_advisor` to triage prompt + `ROUTE_TOOLS` |
+| `docs/android-init.md` | SELinux type enforcement, init.rc service lifecycle |
+
+### Phase 7 — Subsystem Diagnostics (PLANNED)
+
+Log-only variants. `fstab_path` input becomes `fstab_content: str` — no filesystem access required.
+
+| Deliverable | Detail |
+|---|---|
+| `skills/bsp_diagnostics/subsystems.py` | `check_clock_dependencies`, `diagnose_vfs_mount_failure`, `analyze_firmware_load_error`, `analyze_early_oom_killer` |
+| `tests/product_tests/test_subsystems_skill.py` | ~24 tests |
+| `docs/subsystem-boot.md` | CCF probe defer patterns, VFS mount error codes, firmware search paths |
+
+### Phase 8 — Stateful Workspace Skills (PLANNED — infrastructure decision required)
+
+New supervisor route: `source_analyst`. Trigger: regression/commit/DTS-change keywords.
+
+**Before coding:** Agree on workspace access model (see `ANDROID_LINUX_BSP_BOOTING_SKILL_SETS.md` §6 Phase 8).
+Recommended start: Option A — file path inputs; `resolve_oops_symbols` calls `addr2line` via subprocess.
+
+| Deliverable | Detail |
+|---|---|
+| `skills/bsp_diagnostics/workspace.py` | `resolve_oops_symbols`, `compare_device_tree_nodes`, `diff_kernel_configs`, `validate_gpio_pinctrl_conflict` |
+| `tests/product_tests/test_workspace_skill.py` | ~20 tests — mock subprocess for `addr2line` |
+| Supervisor update | Add `source_analyst` route |
+| `docs/workspace-analysis.md` | DTS node naming conventions, CONFIG flag impact reference |
+
+**Note:** `resolve_oops_symbols` depends on hex trace output from Phase 5 `extract_kernel_oops_log`.
+
+### Phase 9a — SoC Errata Lookup (PLANNED)
+
+| Deliverable | Detail |
+|---|---|
+| `skills/knowledge/errata.py` | `check_soc_errata_tracker` — static dict keyed by `(ip_block, soc_revision)`; covers Qualcomm SM8x50, MTK MT6xxx, Samsung Exynos |
+| `tests/product_tests/test_errata_skill.py` | ~12 tests |
+
+### Phase 9b — ARM TRM RAG (DEFERRED)
+
+Requires vector DB + embedding pipeline. Start only after Phase 9a is validated in real use and RAG infrastructure design is complete.
+
+### Phase 10 — Governed Actions (DEFERRED)
+
+`generate_patch_and_build` with HITL blocking approval gate. Start only after Phases 4–7 are validated on real BSP logs — diagnostic accuracy must be high before actions are enabled.
+
+---
+
 ## Adding a New Skill
 
 1. Create `skills/bsp_diagnostics/<skill_name>.py` with `Input`/`Output` Pydantic models and the pure function.
 2. Write isolated pytest in `tests/product_tests/test_<skill_name>.py` — no LLM.
 3. Register in `skills/registry.py` as an Anthropic-compatible tool.
 4. Add a row to the skill table in `skills/SKILL.md` and in this file.
+
+## Adding a New Supervisor Route
+
+1. Add the new route token string to the supervisor triage prompt in `product/bsp_agent/agents/supervisor.py`.
+2. Add the route and its trigger keywords to the supervisor's routing decision logic.
+3. Add an entry in `ROUTE_TOOLS` in `skills/registry.py` mapping the route token to the set of tool names.
+4. Update integration tests in `tests/product_tests/test_integration.py` with a fixture scenario for the new route.
