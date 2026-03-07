@@ -199,13 +199,13 @@ All pieces of the v6 architecture are in place and tested (107 product tests pas
 | Skill: `decode_esr_el1` | `skills/bsp_diagnostics/aarch64_exceptions.py` — 14 tests |
 | Skill: `check_cache_coherency_panic` | `skills/bsp_diagnostics/aarch64_exceptions.py` — 17 tests |
 
-### Phase 2 — Runnable & Validated
+### Phase 2 — Runnable & Validated ✓ DONE
 
-| # | Item | Priority | Description |
-|---|---|---|---|
-| 5 | CLI entry point | High | `python cli.py --dmesg <path> --meminfo <path>` — makes the agent usable by engineers without writing Python |
-| 6 | End-to-end integration test | High | Feeds golden-set fixture logs through Supervisor → Agent with mocked LLM; validates full pipeline produces a valid `ConsultantResponse` for each domain |
-| 7 | Knowledge base docs | Medium | `docs/memory-reclamation.md`, `docs/aarch64-exceptions.md` — domain context for the system prompt via progressive disclosure |
+| # | Item | Deliverable |
+|---|---|---|
+| 5 | CLI entry point | `cli.py` — `python cli.py --dmesg <path> [--meminfo <path>] [--output <path>]` |
+| 6 | End-to-end integration test | `tests/product_tests/test_integration.py` — 25 tests across 3 fixture scenarios (panic, watchdog, healthy boot) |
+| 7 | Knowledge base docs | `docs/memory-reclamation.md`, `docs/aarch64-exceptions.md` — YAML-frontmatter scoped domain reference |
 
 ### Phase 3 — Expanded Domain Coverage
 

@@ -86,17 +86,15 @@ All pieces of the v6 architecture are in place and tested.
 | `LogPayload.meminfo_content` fix | DONE | Correct schema; `logcat` and `/proc/meminfo` no longer conflated |
 | Skill: `decode_esr_el1` | DONE | `skills/bsp_diagnostics/aarch64_exceptions.py` — 14 tests |
 | Skill: `check_cache_coherency_panic` | DONE | `skills/bsp_diagnostics/aarch64_exceptions.py` — 17 tests |
-| **Total product tests** | **107 passing** | |
+| Skill: `check_cache_coherency_panic` | DONE | `skills/bsp_diagnostics/aarch64_exceptions.py` — 17 tests |
+| CLI entry point | DONE | `cli.py` — `python cli.py --dmesg <path> [--meminfo <path>] [--output <path>]` |
+| End-to-end integration test | DONE | `tests/product_tests/test_integration.py` — 25 tests, 3 fixture scenarios |
+| Knowledge base docs | DONE | `docs/memory-reclamation.md`, `docs/aarch64-exceptions.md` |
+| **Total product tests** | **132 passing** | |
 
-### Phase 2 — Runnable & Validated (NEXT)
+### Phase 3 — Expanded Domain Coverage (NEXT)
 
-| # | Item | Priority | Notes |
-|---|---|---|---|
-| 5 | CLI entry point (`cli.py`) | High | `python cli.py --dmesg path --meminfo path` — makes the agent runnable without writing Python |
-| 6 | End-to-end integration test | High | Feeds golden-set fixture logs through Supervisor → Agent (mocked LLM) — validates the full pipeline |
-| 7 | Knowledge base docs (`docs/`) | Medium | `docs/memory-reclamation.md`, `docs/aarch64-exceptions.md` — domain context for the system prompt |
-
-### Phase 3 — Expanded Domain Coverage (FUTURE)
+### Phase 3 — Expanded Domain Coverage (FUTURE)  <!-- was labelled NEXT above; keeping original table below -->
 
 | # | Item | Route | Notes |
 |---|---|---|---|
