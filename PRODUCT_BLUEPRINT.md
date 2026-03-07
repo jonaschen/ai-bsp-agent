@@ -1,190 +1,142 @@
-# PRODUCT_BLUEPRINT.md: The Android BSP Consultant (v5.1 - Patched)
+# PRODUCT_BLUEPRINT.md: The Android BSP Consultant (v6.0)
 
-> **META-INSTRUCTION FOR STUDIO:**
-> This document is the **Source of Truth** for the Product Owner Agent.
-> You must build a system that satisfies the **User Persona**, **Capabilities**, and **Golden Set Tests** defined below.
+> **Authority:** This document is the **Product Vision** for the Android BSP Diagnostic Expert Agent (v6).
+> It describes the system as built, validated, and currently deployed.
+> See `AGENTS.md` for the authoritative architecture constitution, and `DESIGN.md` for the detailed software design.
 
 ---
 
 ## 1. Product Vision: "The Force Multiplier"
-We are building a **Specialized AI Consultancy Squad** for Android BSP Engineers.
-* **Problem:** Alert Fatigue and high MTTR in debugging Suspend-to-Disk (S2D) and Kernel Panics.
-* **Solution:** A "Read-Only" Consultant that analyzes logs, correlates them with datasheets, and produces a **Standard Operating Procedure (SOP)** for the human to execute.
-* **Constraint:** The Agent **DOES NOT** have hands. It cannot reset hardware or write to the kernel tree. It only offers high-confidence advice.
+
+We are building a **Skill-Based Diagnostic Expert Agent** for Android BSP Engineers.
+
+* **Problem:** Alert Fatigue and high MTTR in debugging Suspend-to-Disk (STD) failures and Kernel Panics.
+* **Solution:** A "Read-Only" Consultant that analyzes kernel logs (`dmesg`, `/proc/meminfo`), calls deterministic Python Skills to extract facts, and produces a **Standard Operating Procedure (SOP)** for the human to execute.
+* **Constraint:** The Agent **DOES NOT** have hands. It cannot reset hardware or write to the kernel tree. It only offers high-confidence, evidence-backed advice.
 
 ---
 
-## 2. The Consultant Squad (The Product Roster)
+## 2. System Architecture (Three-Layer Expert)
 
-The Studio must instantiate the following Multi-Agent System:
-
-### Agent A: The Supervisor (Interface Layer)
-* **Role:** Triage & User Interaction.
-* **Input:** User Chat + Case Files (Logs).
-* **Responsibility:**
-    * **Validation (Fix #2):** Check if input is valid (e.g., is it a log?). If invalid, return `STATUS: CLARIFY_NEEDED`.
-    * **Chunking (Fix #3):** If Log Size > 50MB, extract the "Event Horizon" (last 5000 lines OR timestamp of failure ± 10s) before passing to specialists.
-    * Route the case to the Specialist (Pathologist or Hardware Advisor).
-    * Compile the final **RCA Report**.
-
-### Agent B: The Kernel Pathologist (Log Specialist)
-* **Role:** The Software Detective.
-* **Capabilities:**
-    * **Log Parsing:** `dmesg`, `logcat`, `kernel_trace`.
-    * **Context:** Uses **Vertex AI Context Caching** to load the specific Android Kernel Version source tree.
-    * **Tool (Fix #7):** MUST implement `verify_file_exists(path)` and call it before recommending any file modification.
-    * **Output:** Stack Trace Analysis & Suspect Code Module.
-
-### Agent C: The Hardware Advisor (Spec Specialist)
-* **Role:** The EE Consultant.
-* **Capabilities:**
-    * **RAG Retrieval:** Searches indexed Datasheets (PMIC, DRAM, SoC Specs).
-    * **Task:** "Check the voltage requirements for component X."
-    * **Output:** Safe Operating Area (SOA) validation & Measurement Instructions.
-
----
-
-## 2.5 The Build Roadmap: Phased Delivery with Explicit Dependencies
-
-To enforce **Test-Driven Development** and prevent infrastructure-before-specification mistakes, the Studio MUST build in the following order:
-
-### Phase 0: Foundation (Specification & Validation)
-
-**TKT-001: Define Agent Personas & Input/Output Contracts**
-* **Objective:** Formalize the interfaces between Supervisor, Pathologist, and Hardware Advisor.
-* **Deliverables:**
-  - Supervisor input schema (user query + log file format)
-  - Pathologist output schema (suspected module, confidence score, evidence)
-  - Hardware Advisor input schema (component name, query type)
-  - Hardware Advisor output schema (voltage specs, timing specs, SOA)
-* **Acceptance Criteria:**
-  - All three agents have formal Pydantic models in `product/schemas.py`
-  - Each model is documented with examples
-  - JSON serialization tests pass for all schemas
-* **Blocked By:** None
-* **Blocks:** TKT-002
-
-**TKT-002: Define Data Contracts & Metadata Schema (Datasheet Repository)**
-* **Objective:** Specify the structure, metadata, and retrieval patterns for the datasheet repository.
-* **Deliverables:**
-  - Datasheet metadata schema (component_type, part_number, voltage_range, timing_specs, etc.)
-  - Sample datasheet JSON structures (minimum 3 different types: PMIC, DRAM, SoC)
-  - Vector embedding strategy (what fields get embedded for RAG?)
-  - Example retrieval queries the Hardware Advisor will make
-* **Acceptance Criteria:**
-  - Schema is defined in `product/schemas/datasheet.py`
-  - 5 representative sample datasheets exist in `fixtures/datasheets/`
-  - Retrieval query patterns documented with examples
-* **Blocked By:** TKT-001
-* **Blocks:** TKT-003, TKT-004
-
-**TKT-003: Create RCA Workflow Test Fixtures (Golden Set)**
-* **Objective:** Build the test cases required by PRODUCT_BLUEPRINT Section 4.
-* **Deliverables:**
-  - `fixtures/panic_log_01.txt` - Null pointer dereference scenario
-  - `fixtures/suspend_hang_02.txt` - Watchdog timeout scenario
-  - `fixtures/healthy_boot_03.txt` - Clean boot (no anomaly scenario)
-  - `fixtures/expected_output_*.json` - Expected RCA reports for each test case
-* **Acceptance Criteria:**
-  - All 3 log fixtures exist and are valid (can be parsed by real dmesg parsers)
-  - Expected outputs follow the SOP schema from Section 3
-  - Ensure at least one log fixture contains approximately 1500 lines of standard system noise preceding the actual crash event. This will serve as the benchmark to test the Supervisor's keyword filtering and log segmentation logic."
-* **Blocked By:** TKT-002
-* **Blocks:** TKT-005 (Agent Implementation)
-
-### Phase 1: Agent Implementation (Code)
-
-**TKT-005: Implement Supervisor Agent**
-* **Objective:** Build the triage and routing agent.
-* **Acceptance Criteria:**
-  - Passes on TKT-003 fixtures
-  - Correctly routes to Pathologist vs. Hardware Advisor
-  - The Supervisor Agent MUST implement a pre-processing pipeline for log files. It must not send raw logs directly to the LLM.
-* **Requirement:** Implement a slicing and keyword-analysis algorithm (e.g., searching for Call trace:, Kernel panic, watchdog:, BUG:) that takes a ~1500-line raw log and extracts a concentrated segment of < 500 lines. Only this filtered segment is passed to the Kernel Pathologist."
-* **Blocked By:** TKT-003
-* **Blocks:** TKT-008 (End-to-End Tests)
-
-**TKT-006: Implement Kernel Pathologist Agent**
-* **Objective:** Build the software analysis specialist.
-* **Acceptance Criteria:**
-  - Correctly identifies null pointer dereference in Test Case 1
-  - Correctly diagnoses watchdog timeout in Test Case 2
-  - Returns high confidence on Test Case 3 (no anomaly)
-* **Blocked By:** TKT-003
-* **Blocks:** TKT-008
-
-**TKT-007: Implement Hardware Advisor Agent (with Vector Store)**
-* **Objective:** Build the hardware specialist with datasheet retrieval.
-* **Acceptance Criteria:**
-  - Successfully retrieves datasheets from vector store using semantic similarity
-  - Returns SOA validation for queried components
-  - Integrates with vector store backend from TKT-004
-* **Blocked By:** TKT-002, TKT-003, TKT-004
-* **Blocks:** TKT-008
-
-### Phase 2: Infrastructure
-
-**TKT-004: Implement Vector Store Manager**
-* **Objective:** Build the datasheet indexing and retrieval system.
-* **Technology Choice:** Vertex Vector Search (per AGENTS.md Section 5 Technology Stack Mandate)
-* **Deliverables:**
-  - Vector store initialization code
-  - Datasheet ingestion pipeline
-  - Semantic retrieval methods
-  - Integration with Hardware Advisor agent
-* **Data Model:** Uses schema from TKT-002
-* **Test Data:** Uses fixtures from TKT-002
-* **Acceptance Criteria:**
-  - Successfully indexes sample datasheets from `fixtures/datasheets/`
-  - Retrieval returns semantically similar components
-  - Latency < 500ms for single query
-  - Supports concurrent Hardware Advisor queries
-* **Blocked By:** TKT-002, TKT-003
-* **Blocks:** TKT-007
-
-### Phase 3: Integration & Validation
-
-**TKT-008: End-to-End RCA Workflow Tests**
-* **Objective:** Validate the entire system against golden set.
-* **Acceptance Criteria:**
-  - All 3 golden set test cases pass with semantic similarity > 85%
-  - Confidence scores align with expected keypoints
-  - SOP steps are actionable and correctly formatted
-* **Blocked By:** TKT-005, TKT-006, TKT-007
-
-### Dependency Graph
+The v6 architecture replaces the legacy multi-agent code-generation factory with a leaner, more accurate **Skill-Based Expert** system. See `PIVOT_PLAN.md` for the rationale.
 
 ```
-TKT-001 (Agent Personas)
-  └─→ TKT-002 (Data Contracts)
-       ├─→ TKT-003 (Test Fixtures)
-       │    ├─→ TKT-005 (Supervisor)
-       │    ├─→ TKT-006 (Pathologist)
-       │    └─→ TKT-007 (Hardware Advisor) ←─┐
-       │                                      │
-       └─→ TKT-004 (Vector Store) ───────────┘
-            └─→ TKT-008 (E2E Tests) ←─ TKT-005, TKT-006, TKT-007
+┌───────────────────────────────────────────────────────────┐
+│  Layer 1 — The Brain (Reasoning Engine)                   │
+│  BSPDiagnosticAgent  ←→  SupervisorAgent (Claude Haiku)   │
+│  (Claude Sonnet)                                          │
+└────────────────────────┬──────────────────────────────────┘
+                         │ dispatches
+┌────────────────────────▼──────────────────────────────────┐
+│  Layer 2 — The Skill Registry (Deterministic Tools)       │
+│  skills/registry.py  →  skills/bsp_diagnostics/*.py       │
+└────────────────────────┬──────────────────────────────────┘
+                         │ references
+┌────────────────────────▼──────────────────────────────────┐
+│  Layer 3 — The Knowledge Base (Markdown Docs)             │
+│  skills/SKILL.md  |  docs/  |  AGENTS.md                  │
+└───────────────────────────────────────────────────────────┘
 ```
+
+### Layer 1: The Brain
+
+**`BSPDiagnosticAgent`** (`product/bsp_agent/agent.py`)
+* Orchestrates the full diagnostic session.
+* Accepts a `CaseFile` (containing a `LogPayload`), calls the Supervisor to triage and chunk the log, then runs the Anthropic tool-use loop with route-appropriate Skills.
+* Returns a validated `ConsultantResponse`.
+* Model: `claude-sonnet-4-6` (configurable). Never does math, parses hex, or calculates memory sizes — always delegates to Skills.
+
+**`SupervisorAgent`** (`product/bsp_agent/agents/supervisor.py`)
+* Fast triage router powered by `claude-haiku-4-5-20251001` (low-cost, single-token response).
+* Validates that the input is a kernel log (regex timestamp check). Returns `clarify_needed` immediately if not.
+* **Event-Horizon Chunking:** If log exceeds 50 MB, extracts ±10 s around the detected failure timestamp (falls back to last 5 000 lines).
+* Routes to one of three destinations:
+  * `kernel_pathologist` — kernel panics, null-pointer dereferences, oops
+  * `hardware_advisor` — STD / Suspend-to-Disk failures, watchdog timeouts, power management
+  * `clarify_needed` — invalid or ambiguous input
+
+### Layer 2: The Skill Registry
+
+Pure Python functions in `skills/bsp_diagnostics/`. Registered in `skills/registry.py`.
+
+| Skill file | Function | Route | Domain |
+|---|---|---|---|
+| `std_hibernation.py` | `analyze_std_hibernation_error(dmesg_log, meminfo_log)` | `hardware_advisor` | STD / Suspend-to-Disk |
+| `aarch64_exceptions.py` | `decode_esr_el1(hex_value)` | `kernel_pathologist` | AArch64 Exceptions |
+| `aarch64_exceptions.py` | `check_cache_coherency_panic(panic_log)` | `kernel_pathologist` | AArch64 Cache Coherency |
+
+**Skill contract:** Every Skill is a pure function — no side effects, no LLM calls, no global state. Every Skill has strict Pydantic `Input`/`Output` schemas and an isolated `pytest` in `tests/product_tests/` that does NOT invoke the LLM.
+
+`skills/registry.py` exports:
+* `TOOL_DEFINITIONS` — Anthropic-compatible tool dicts auto-generated from each Skill's Pydantic `Input` model.
+* `ROUTE_TOOLS` — Maps supervisor routes to the relevant tool name set (reduces noise and token cost).
+* `dispatch_tool(name, input_dict)` — Routes by name to the correct Skill function.
+
+### Layer 3: The Knowledge Base
+
+* `skills/SKILL.md` — Skill Registry index and authoring contract.
+* `AGENTS.md` — Architecture constitution (authoritative; do not modify).
+* `docs/memory-reclamation.md` — Deep-dive: `/proc/meminfo`, SUnreclaim thresholds, STD image sizing.
+* `docs/aarch64-exceptions.md` — Deep-dive: ESR_EL1 bit fields, cache coherency indicators, TrustZone context.
 
 ---
 
-## 3. The Interactive Debugging Workflow (SOP)
+## 2.5 Development Roadmap
 
-The Product output is NOT just a text answer. It MUST adhere to this **Strict JSON Schema (Fix #6):**
+### Phase 1 — Core Infrastructure ✓ DONE
+
+All pieces of the v6 architecture are in place and tested.
+
+| Item | Deliverable |
+|---|---|
+| Skill: `analyze_std_hibernation_error` | `skills/bsp_diagnostics/std_hibernation.py` — 14 tests |
+| Skill Registry | `skills/registry.py` — `TOOL_DEFINITIONS`, `ROUTE_TOOLS`, `dispatch_tool()` — 11 tests |
+| BSPDiagnosticAgent | `product/bsp_agent/agent.py` — tool-use loop, Supervisor integration, route-based tool selection |
+| SupervisorAgent | `product/bsp_agent/agents/supervisor.py` — migrated to `claude-haiku-4-5-20251001` — 11 tests |
+| Product Schemas | `product/schemas/__init__.py` — `CaseFile`, `LogPayload`, `ConsultantResponse`, `SOPStep`, all agent I/O contracts |
+| Skill: `decode_esr_el1` | `skills/bsp_diagnostics/aarch64_exceptions.py` — 14 tests |
+| Skill: `check_cache_coherency_panic` | `skills/bsp_diagnostics/aarch64_exceptions.py` — 17 tests |
+
+### Phase 2 — Runnable & Validated ✓ DONE
+
+| Item | Deliverable |
+|---|---|
+| CLI entry point | `cli.py` — `python cli.py --dmesg <path> [--meminfo <path>] [--output <path>]` |
+| End-to-end integration test | `tests/product_tests/test_integration.py` — 25 tests across 3 fixture scenarios |
+| Golden-set fixtures | `fixtures/panic_log_01.txt`, `fixtures/suspend_hang_02.txt`, `fixtures/healthy_boot_03.txt` + `expected_output_*.json` |
+| Knowledge base docs | `docs/memory-reclamation.md`, `docs/aarch64-exceptions.md` |
+| **Total product tests** | **132 passing** |
+
+### Phase 3 — Expanded Domain Coverage (NEXT)
+
+| # | Item | Route | Description |
+|---|---|---|---|
+| 8 | Skill: `check_vendor_boot_ufs_driver` | `hardware_advisor` | Detect UFS driver load failures during STD restore phase |
+| 9 | Skill: `analyze_watchdog_timeout` | `kernel_pathologist` | Parse softlockup / hardlockup events; extract CPU, PID, and call trace |
+| 10 | Skill: `check_pmic_rail_voltage` | `hardware_advisor` | Extract and validate PMIC rail voltages from logcat/dmesg against safe ranges |
+| 11 | Real-world log validation | — | Run against actual BSP logs; tune thresholds; document edge cases |
+
+---
+
+## 3. The Diagnostic Workflow & Output Schema
+
+The product output is NOT just a text answer. Every diagnostic session produces a `ConsultantResponse` — a validated Pydantic model serialised to JSON.
+
+**`ConsultantResponse` schema** (`product/schemas/__init__.py`):
 
 ```json
 {
   "diagnosis_id": "RCA-BSP-001",
   "confidence_score": 0.0 to 1.0,
-  "status": "CRITICAL" | "WARNING" | "INFO",
-  "root_cause_summary": "Brief description",
+  "status": "CRITICAL | WARNING | INFO | CLARIFY_NEEDED",
+  "root_cause_summary": "Brief description of the root cause",
   "evidence": [
-    "Timestamp 1450.02: i2c_transfer_timeout"
+    "[ 1450.02] i2c_transfer_timeout"
   ],
   "sop_steps": [
     {
       "step_id": 1,
-      "action_type": "MEASUREMENT" | "CODE_PATCH",
+      "action_type": "MEASUREMENT | CODE_PATCH",
       "instruction": "Probe Test Point TP34 (I2C_SDA)",
       "expected_value": "Held High (1.8V)",
       "file_path": "N/A"
@@ -193,54 +145,116 @@ The Product output is NOT just a text answer. It MUST adhere to this **Strict JS
 }
 ```
 
+**`status` values:**
+* `CRITICAL` — High-confidence failure identified; immediate action required.
+* `WARNING` — Potential issue detected; action recommended.
+* `INFO` — No anomaly; system appears healthy.
+* `CLARIFY_NEEDED` — Input was invalid or ambiguous; more information required from the user.
 
-## 4. Evaluation Criteria: The "Golden Set" (TDD)
-Instruction to QA Agent: To verify the Product, you must run the following scenarios. Use LLM-as-a-Judge (Semantic Similarity) to compare the Product's output against the "Expected Output."
+**CLI usage:**
+```bash
+python cli.py --dmesg fixtures/panic_log_01.txt [--meminfo /proc/meminfo] [--output report.json]
+```
+
+---
+
+## 4. Evaluation Criteria: The Golden Set (TDD)
+
+The three canonical test scenarios exercise each major diagnostic path. Fixture files live in `fixtures/`. Expected outputs live in `fixtures/expected_output_*.json`. Integration tests run in `tests/product_tests/test_integration.py`.
 
 ### Test Case 1: The "Null Pointer" (Software Panic)
-* **Input:** fixtures/panic_log_01.txt (Contains a NULL pointer dereference in mdss_dsi.c).
 
-* **Expected Output (Semantic Keypoints):**
+* **Input:** `fixtures/panic_log_01.txt` — NULL pointer dereference in `mdss_dsi.c`.
+* **Supervisor route:** `kernel_pathologist`
+* **Expected output (`fixtures/expected_output_panic_log_01.json`):**
 
-    * **Diagnosis:** "Null Pointer Dereference."
-
-    * **Location:** drivers/gpu/drm/msm/mdss.c.
-
-    * **Recommendation:** "Add check for clk_ptr before access."
-
-    * **Confidence:** > 85%.
+```json
+{
+  "diagnosis_id": "RCA-BSP-001",
+  "confidence_score": 0.95,
+  "status": "CRITICAL",
+  "root_cause_summary": "Null Pointer Dereference in mdss_dsi driver.",
+  "evidence": [
+    "[ 102.553882] BUG: kernel NULL pointer dereference, address: 0000000000000008",
+    "pc : mdss_dsi_probe+0x34/0x110"
+  ],
+  "sop_steps": [
+    {
+      "step_id": 1,
+      "action_type": "CODE_PATCH",
+      "instruction": "Add NULL check for clock pointer in mdss_dsi_probe before access.",
+      "expected_value": "Kernel boots without panic.",
+      "file_path": "drivers/gpu/drm/msm/mdss_dsi.c"
+    }
+  ]
+}
+```
 
 ### Test Case 2: The "Sleep Zombie" (Hardware Hang)
-* **Input:** fixtures/suspend_hang_02.txt (System freezes during S2D, valid dmesg ends abruptly).
 
-* **Expected Output (Semantic Keypoints):**
+* **Input:** `fixtures/suspend_hang_02.txt` — System freezes during STD; dmesg ends with watchdog hard lockup.
+* **Supervisor route:** `hardware_advisor`
+* **Expected output (`fixtures/expected_output_suspend_hang_02.json`):**
 
-    * **Diagnosis:** "Watchdog Timeout / Hard Lockup."
+```json
+{
+  "diagnosis_id": "RCA-BSP-002",
+  "confidence_score": 0.85,
+  "status": "CRITICAL",
+  "root_cause_summary": "Watchdog Timeout / Hard Lockup during suspend.",
+  "evidence": [
+    "watchdog: Watchdog detected hard lockup on CPU 0",
+    "Kernel panic - not syncing: watchdog: Watchdog detected hard lockup on CPU 0"
+  ],
+  "sop_steps": [
+    {
+      "step_id": 1,
+      "action_type": "MEASUREMENT",
+      "instruction": "Connect JTAG and check Program Counter (PC) to identify the hang location.",
+      "expected_value": "PC points to a specific loop or blocked function.",
+      "file_path": "N/A"
+    }
+  ]
+}
+```
 
-    * **Suspect:** "PMIC or DRAM Self-Refresh failure."
+### Test Case 3: The "False Alarm" (Healthy Boot)
 
-    * **Action:** "Connect JTAG and check Program Counter (PC)."
+* **Input:** `fixtures/healthy_boot_03.txt` — A standard, error-free Android boot log.
+* **Supervisor route:** `kernel_pathologist` or `hardware_advisor` (no failure present)
+* **Expected output (`fixtures/expected_output_healthy_boot_03.json`):**
 
-### Test Case 3: The "False Alarm" (Fix #5)
-* **Input:** fixtures/healthy_boot_03.txt (A standard, error-free Android boot log).
+```json
+{
+  "diagnosis_id": "RCA-BSP-003",
+  "confidence_score": 0.98,
+  "status": "INFO",
+  "root_cause_summary": "No Anomaly Detected. Clean boot sequence completed.",
+  "evidence": [
+    "systemd[1]: Reached target Multi-User System.",
+    "systemd[1]: Startup finished in 2.104s."
+  ],
+  "sop_steps": [
+    {
+      "step_id": 1,
+      "action_type": "MEASUREMENT",
+      "instruction": "None required.",
+      "expected_value": "System remains stable.",
+      "file_path": "N/A"
+    }
+  ]
+}
+```
 
-* **Expected Output (Semantic Keypoints):**
+---
 
-    * **Diagnosis:** "No Anomaly Detected."
+## 5. Technical Constraints
 
-    * **Status:** "INFO".
-
-    * **Action:** "None required."
-
-    * **Confidence:** > 90%.
-
-## 5. Technical Constraints (For the Architect)
-* **Context Window:** Must support up to 1M tokens (for full dmesg).
-
-* **Retrieval:** Must implement a Vector Store for Datasheets.
-
+* **LLM Provider:** Anthropic API (`claude-sonnet-4-6` for diagnosis, `claude-haiku-4-5-20251001` for triage).
+* **Context Window:** Up to 200 K tokens per request; large logs are chunked by the Supervisor's Event-Horizon algorithm before LLM dispatch.
+* **Skill Purity:** All diagnostic logic lives in deterministic Python functions — no LLM calls inside Skills.
+* **No Vector Store (Phase 3):** Datasheet RAG is deferred to Phase 3. Current Hardware Advisor Skills parse structured log fields directly.
 * **Security:**
-
-    * **Read-Only:** Agents cannot execute shell commands on the user's host.
-
-    * **Privacy:** Logs are processed in a transient container.
+  * **Read-Only:** Agents cannot execute shell commands on the user's host.
+  * **Privacy:** Logs are processed in-process; no log content is written to disk or external storage by the Agent.
+* **Testing:** Every Skill has isolated `pytest` coverage that does NOT invoke the LLM. Integration tests mock the Anthropic API.
