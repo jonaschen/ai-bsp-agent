@@ -72,15 +72,38 @@ Pure Python functions in `skills/bsp_diagnostics/`. Each skill:
 - `studio/utils/sandbox.py` — legacy Docker QA sandbox.
 - `issues.md` — legacy factory issue tracker (irrelevant to v6).
 
-## Development Milestones
+## Development Roadmap
 
-- **Milestone 1** (DONE): First skill — `analyze_std_hibernation_error` + 14 isolated tests.
-- **Milestone 2** (DONE): `skills/registry.py` — Anthropic-compatible tool definitions auto-generated from Pydantic schemas; `dispatch_tool()` + `ROUTE_TOOLS`; 11 tests.
-- **Milestone 3** (DONE): `product/bsp_agent/agent.py` — `BSPDiagnosticAgent` Anthropic tool-use loop; Supervisor integration; route-based tool selection; markdown stripping; CLARIFY_NEEDED fallback.
-- **Milestone 4** (DONE): `SupervisorAgent` migrated from Vertex AI to Claude (`claude-haiku-4-5-20251001`). `anthropic` added to `requirements.txt`.
-- **Fix #1** (DONE): `LogPayload.meminfo_content` added; `_build_user_message` fixed; logcat/meminfo no longer conflated.
-- **Fix #2** (DONE): `SupervisorAgent` wired into `BSPDiagnosticAgent.run()`; route-based tool filtering via `ROUTE_TOOLS`.
-- **Skills #3+#4** (DONE): `decode_esr_el1` + `check_cache_coherency_panic` in `skills/bsp_diagnostics/aarch64_exceptions.py`; 31 isolated tests. Total product tests: 107.
+### Phase 1 — Core Infrastructure (DONE) ✓
+All pieces of the v6 architecture are in place and tested.
+
+| Item | Status | Deliverable |
+|---|---|---|
+| Skill: `analyze_std_hibernation_error` | DONE | `skills/bsp_diagnostics/std_hibernation.py` — 14 tests |
+| Skill Registry | DONE | `skills/registry.py` — `TOOL_DEFINITIONS`, `ROUTE_TOOLS`, `dispatch_tool()` — 11 tests |
+| BSPDiagnosticAgent | DONE | `product/bsp_agent/agent.py` — Anthropic tool-use loop, Supervisor integration, route-based tool selection |
+| SupervisorAgent → Claude | DONE | Migrated from Vertex AI to `claude-haiku-4-5-20251001` — 11 tests |
+| `LogPayload.meminfo_content` fix | DONE | Correct schema; `logcat` and `/proc/meminfo` no longer conflated |
+| Skill: `decode_esr_el1` | DONE | `skills/bsp_diagnostics/aarch64_exceptions.py` — 14 tests |
+| Skill: `check_cache_coherency_panic` | DONE | `skills/bsp_diagnostics/aarch64_exceptions.py` — 17 tests |
+| **Total product tests** | **107 passing** | |
+
+### Phase 2 — Runnable & Validated (NEXT)
+
+| # | Item | Priority | Notes |
+|---|---|---|---|
+| 5 | CLI entry point (`cli.py`) | High | `python cli.py --dmesg path --meminfo path` — makes the agent runnable without writing Python |
+| 6 | End-to-end integration test | High | Feeds golden-set fixture logs through Supervisor → Agent (mocked LLM) — validates the full pipeline |
+| 7 | Knowledge base docs (`docs/`) | Medium | `docs/memory-reclamation.md`, `docs/aarch64-exceptions.md` — domain context for the system prompt |
+
+### Phase 3 — Expanded Domain Coverage (FUTURE)
+
+| # | Item | Route | Notes |
+|---|---|---|---|
+| 8 | Skill: `check_vendor_boot_ufs_driver` | `hardware_advisor` | Detect UFS driver load failures during STD restore phase |
+| 9 | Skill: `analyze_watchdog_timeout` | `kernel_pathologist` | Parse softlockup / hardlockup events from dmesg |
+| 10 | Skill: `check_pmic_rail_voltage` | `hardware_advisor` | Extract and validate PMIC rail voltages from logcat/dmesg |
+| 11 | Real-world log validation | — | Run against actual BSP logs; tune thresholds; document edge cases |
 
 ## Adding a New Skill
 

@@ -1,17 +1,20 @@
 # Software Design Document — Android BSP Diagnostic Expert (v6)
 
 ## Overview
+
 The system has pivoted from a "Recursive Cognitive Software Factory" to a **Skill-Based Expert Agent** using the Anthropic Tool-Use paradigm. It is designed to automate complex embedded systems diagnostics (Android BSP issues) with high reliability and low error amplification. It employs a **Three-Layer Architecture** where a central reasoning engine delegates fact-finding to deterministic tools.
 
 The system emphasizes:
--   **Accuracy over Autonomy**: Never guessing hardware state; always using a Tool to extract the truth.
--   **Deterministic Execution**: Strict separation of reasoning (LLM) and data extraction (Python Tools).
--   **Skill Registry**: A collection of isolated, deterministic Python functions with strict Pydantic schemas.
--   **Progressive Disclosure**: Using Markdown files to provide the LLM context only when needed.
+- **Accuracy over Autonomy**: Never guessing hardware state; always using a Tool to extract the truth.
+- **Deterministic Execution**: Strict separation of reasoning (LLM) and data extraction (Python Tools).
+- **Skill Registry**: A collection of isolated, deterministic Python functions with strict Pydantic schemas.
+- **Route-Aware Tool Selection**: The Supervisor's routing decision limits which tools the Brain is offered, reducing noise and token cost.
+
+---
 
 ## System Architecture
 
-The core of the system is the reasoning engine (The Brain), which interacts with a set of deterministic tools (The Skill Registry) and a knowledge base.
+Three distinct layers: **The Brain** (LLM reasoning), **The Skill Registry** (deterministic tools), and **The Knowledge Base** (Markdown domain docs).
 
 ### Class Diagram
 
@@ -21,9 +24,9 @@ classDiagram
         +model: str
         +max_tool_rounds: int
         +run(case: CaseFile) ConsultantResponse
-        -_build_user_message()
-        -_execute_tool_calls()
-        -_parse_final_response()
+        -_build_user_message(case, route) str
+        -_execute_tool_calls(content_blocks) list
+        -_parse_final_response(response, case) ConsultantResponse
     }
 
     class SupervisorAgent {
@@ -36,11 +39,17 @@ classDiagram
 
     class SkillRegistry {
         +TOOL_DEFINITIONS: list[dict]
+        +ROUTE_TOOLS: dict[str, set[str]]
         +dispatch_tool(tool_name, tool_input) dict
     }
 
     class STDHibernationSkill {
         +analyze_std_hibernation_error(dmesg_log, meminfo_log) STDHibernationOutput
+    }
+
+    class AArch64ExceptionsSkill {
+        +decode_esr_el1(hex_value) ESREL1Output
+        +check_cache_coherency_panic(panic_log) CacheCoherencyOutput
     }
 
     class CaseFile {
@@ -50,10 +59,16 @@ classDiagram
         +log_payload: LogPayload
     }
 
+    class LogPayload {
+        +dmesg_content: str
+        +meminfo_content: str
+        +logcat_content: str
+    }
+
     class ConsultantResponse {
         +diagnosis_id: str
         +confidence_score: float
-        +status: str
+        +status: Literal[CRITICAL, WARNING, INFO, CLARIFY_NEEDED]
         +root_cause_summary: str
         +evidence: list[str]
         +sop_steps: list[SOPStep]
@@ -65,82 +80,150 @@ classDiagram
         +diagnosis_report: ConsultantResponse
     }
 
+    BSPDiagnosticAgent --> SupervisorAgent : triages via
     BSPDiagnosticAgent --> SkillRegistry : dispatches tools via
     BSPDiagnosticAgent --> CaseFile : receives
     BSPDiagnosticAgent --> ConsultantResponse : produces
     SupervisorAgent --> AgentState : reads/routes
+    CaseFile *-- LogPayload : contains
     SkillRegistry --> STDHibernationSkill : delegates to
+    SkillRegistry --> AArch64ExceptionsSkill : delegates to
 ```
 
-### Tool-Use Sequence Diagram
+### End-to-End Sequence Diagram
 
 ```mermaid
 sequenceDiagram
     participant User
     participant BSPDiagnosticAgent
-    participant Claude
+    participant SupervisorAgent
+    participant ClaudeHaiku
+    participant ClaudeSonnet
     participant SkillRegistry
-    participant STDHibernationSkill
+    participant Skill
 
     User->>BSPDiagnosticAgent: run(CaseFile)
-    BSPDiagnosticAgent->>Claude: messages.create(tools=TOOL_DEFINITIONS)
-    Claude-->>BSPDiagnosticAgent: stop_reason=tool_use [analyze_std_hibernation_error]
-    BSPDiagnosticAgent->>SkillRegistry: dispatch_tool("analyze_std_hibernation_error", input)
-    SkillRegistry->>STDHibernationSkill: analyze_std_hibernation_error(dmesg_log, meminfo_log)
-    STDHibernationSkill-->>SkillRegistry: STDHibernationOutput
-    SkillRegistry-->>BSPDiagnosticAgent: dict (JSON-serializable)
-    BSPDiagnosticAgent->>Claude: messages.create(tool_result)
-    Claude-->>BSPDiagnosticAgent: stop_reason=end_turn [ConsultantResponse JSON]
-    BSPDiagnosticAgent-->>User: ConsultantResponse
+
+    BSPDiagnosticAgent->>SupervisorAgent: chunk_log(dmesg_content)
+    SupervisorAgent-->>BSPDiagnosticAgent: chunked_log
+
+    BSPDiagnosticAgent->>SupervisorAgent: route(AgentState)
+    SupervisorAgent->>ClaudeHaiku: messages.create (triage)
+    ClaudeHaiku-->>SupervisorAgent: "hardware_advisor" | "kernel_pathologist" | "clarify_needed"
+    SupervisorAgent-->>BSPDiagnosticAgent: route
+
+    alt route == clarify_needed
+        BSPDiagnosticAgent-->>User: ConsultantResponse(CLARIFY_NEEDED)
+    else route == hardware_advisor | kernel_pathologist
+        BSPDiagnosticAgent->>ClaudeSonnet: messages.create(tools=route_tools, user_message)
+        ClaudeSonnet-->>BSPDiagnosticAgent: stop_reason=tool_use [tool_name, input]
+
+        BSPDiagnosticAgent->>SkillRegistry: dispatch_tool(tool_name, input)
+        SkillRegistry->>Skill: skill_function(...)
+        Skill-->>SkillRegistry: SkillOutput (Pydantic)
+        SkillRegistry-->>BSPDiagnosticAgent: dict (JSON-serializable)
+
+        BSPDiagnosticAgent->>ClaudeSonnet: messages.create(tool_result)
+        ClaudeSonnet-->>BSPDiagnosticAgent: stop_reason=end_turn [ConsultantResponse JSON]
+        BSPDiagnosticAgent-->>User: ConsultantResponse
+    end
 ```
 
-### Key Components
+---
 
-1.  **`BSPDiagnosticAgent`** (`product/bsp_agent/agent.py`):
-    -   **Role**: Runs the Anthropic Claude tool-use loop; invokes Skills and returns a validated `ConsultantResponse`.
-    -   **Model**: `claude-sonnet-4-6` (configurable).
-    -   **Constraint**: Never performs math, parses hex offsets, or calculates memory sizes directly — always delegates to Skills.
+## Key Components
 
-2.  **`SupervisorAgent`** (`product/bsp_agent/agents/supervisor.py`):
-    -   **Role**: Triage router that classifies incoming kernel logs and routes to `kernel_pathologist`, `hardware_advisor`, or `clarify_needed`.
-    -   **Model**: `claude-haiku-4-5-20251001` (fast, low-cost triage).
-    -   **Log chunking**: Extracts the Event Horizon (±10 s around detected failure) when logs exceed 50 MB.
+### 1. `BSPDiagnosticAgent` (`product/bsp_agent/agent.py`)
+- **Role**: Orchestrates the full diagnostic session. Calls the Supervisor, selects route-appropriate tools, runs the Anthropic tool-use loop, and returns a validated `ConsultantResponse`.
+- **Model**: `claude-sonnet-4-6` (configurable).
+- **Constraint**: Never performs math, parses hex offsets, or calculates memory sizes — always delegates to Skills.
+- **CLARIFY_NEEDED fallback**: Returned if Supervisor cannot triage, if Claude returns unparseable JSON, or if `max_tool_rounds` is exceeded.
 
-3.  **Skill Registry** (`skills/registry.py`):
-    -   **Role**: Holds `TOOL_DEFINITIONS` (Anthropic-compatible) auto-generated from Pydantic schemas, and the `dispatch_tool()` router.
-    -   **Contract**: Every registered skill must have a Pydantic `Input`/`Output` model.
+### 2. `SupervisorAgent` (`product/bsp_agent/agents/supervisor.py`)
+- **Role**: Fast triage router. Reads dmesg, validates that it is a kernel log, and routes to one of three destinations.
+- **Model**: `claude-haiku-4-5-20251001` (low-cost, max_tokens=16 — returns a single routing token).
+- **Routes**: `kernel_pathologist` (panics, null-pointers, oops), `hardware_advisor` (STD, watchdog, power management), `clarify_needed` (invalid or insufficient log).
+- **Log chunking**: Extracts the Event Horizon (±10 s around detected failure timestamp) when logs exceed 50 MB. Falls back to last 5 000 lines.
+- **Short-circuit**: If `validate_input()` fails (no kernel timestamp pattern), returns `clarify_needed` without calling the LLM.
 
-4.  **Skills** (`skills/bsp_diagnostics/`):
-    -   Pure Python functions — no side effects, no LLM calls, no global state.
-    -   Each skill has a corresponding isolated `pytest` in `tests/product_tests/`.
+### 3. Skill Registry (`skills/registry.py`)
+- **`TOOL_DEFINITIONS`**: List of Anthropic-compatible tool dicts, auto-generated from each skill's Pydantic `Input` model via `model_json_schema()`.
+- **`ROUTE_TOOLS`**: Maps supervisor routes to the set of tool names for that domain. The Brain uses this to offer only relevant tools to Claude per session, reducing noise and token cost.
+- **`dispatch_tool(name, input_dict)`**: Routes by name to the correct skill function, returns a JSON-serialisable `dict`.
 
-5.  **Product Schemas** (`product/schemas/__init__.py`):
-    -   `CaseFile`, `LogPayload` — core input unit.
-    -   `ConsultantResponse`, `SOPStep` — structured diagnostic output.
-    -   `TriageReport`, `RCAReport` — intermediate diagnostic models.
-    -   `SupervisorInput`, `PathologistOutput`, `HardwareAdvisorInput/Output` — agent I/O contracts.
+### 4. Skills (`skills/bsp_diagnostics/`)
+- Pure Python functions — no side effects, no LLM calls, no global state.
+- Every skill has strict Pydantic `Input` / `Output` schemas.
+- Every skill has a corresponding isolated `pytest` in `tests/product_tests/` — no LLM invoked.
 
-6.  **`AgentState`** (`product/bsp_agent/core/state.py`):
-    -   LangGraph-compatible `TypedDict` holding `messages`, `current_log_chunk`, and `diagnosis_report`.
+### 5. Product Schemas (`product/schemas/__init__.py`)
+- `CaseFile` / `LogPayload` (`dmesg_content`, `meminfo_content`, `logcat_content`) — core input.
+- `ConsultantResponse` / `SOPStep` — structured diagnostic output.
+- `TriageReport`, `RCAReport` — intermediate diagnostic models.
+- Agent I/O contracts: `SupervisorInput`, `PathologistOutput`, `HardwareAdvisorInput/Output`.
 
-## Diagnostic Domains
+---
 
-The Agent is currently specialized in the following Android/Linux BSP domains:
+## Diagnostic Domains & Skill Inventory
 
-### 1. Suspend-to-Disk (STD) & Power Management
-* **Focus:** Analyzing failures during the `freeze`, `thaw`, `poweroff`, and `restore` phases.
-* **Key Metrics:** `SUnreclaim` memory, Swap partition sizing, vendor_boot driver loading (UFS), and `dev_pm_ops` callback timing.
-* **Implemented Skill:** `analyze_std_hibernation_error` — detects `Error -12 creating hibernation image`, evaluates `SUnreclaim / MemTotal` ratio (threshold: 10%), and checks `SwapFree`.
+### Domain 1: Suspend-to-Disk (STD) & Power Management
+**Supervisor route:** `hardware_advisor`
 
-### 2. AArch64 Architecture & Exceptions *(planned)*
-* **Focus:** Kernel Panics immediately following system resume or boot, such as NULL pointer dereferences and watchdog hard lockups.
-* **Key Metrics:** Cache coherency (PoC) synchronization, CPU context restoration (X19-X29, PSTATE), and TrustZone (EL3) state coordination.
+| Skill | Function | Logic |
+|---|---|---|
+| `std_hibernation.py` | `analyze_std_hibernation_error` | Detects `Error -12 creating hibernation image`; evaluates `SUnreclaim / MemTotal` (>10% threshold) and `SwapFree == 0` |
+
+### Domain 2: AArch64 Architecture & Exceptions
+**Supervisor route:** `kernel_pathologist`
+
+| Skill | Function | Logic |
+|---|---|---|
+| `aarch64_exceptions.py` | `decode_esr_el1` | Decodes ESR_EL1 bits [31:26] (EC), [25] (IL), [24:0] (ISS/DFSC/IFSC) against ARM DDI0487 tables |
+| `aarch64_exceptions.py` | `check_cache_coherency_panic` | Regex scan for SError indicators, ARM64 SError messages, ESR_EL1 with EC=0x2F; confidence scales with indicator count |
+
+---
+
+## Development Roadmap
+
+### Phase 1 — Core Infrastructure ✓ DONE
+
+All pieces of the v6 architecture are in place and tested (107 product tests passing).
+
+| Item | Deliverable |
+|---|---|
+| Skill: `analyze_std_hibernation_error` | `skills/bsp_diagnostics/std_hibernation.py` — 14 tests |
+| Skill Registry | `skills/registry.py` — `TOOL_DEFINITIONS`, `ROUTE_TOOLS`, `dispatch_tool()` — 11 tests |
+| BSPDiagnosticAgent | `product/bsp_agent/agent.py` — tool-use loop, Supervisor integration, route-based tool selection |
+| SupervisorAgent → Claude | Migrated from Vertex AI to `claude-haiku-4-5-20251001` — 11 tests |
+| `LogPayload.meminfo_content` | Correct schema; `/proc/meminfo` and `logcat` no longer conflated |
+| Skill: `decode_esr_el1` | `skills/bsp_diagnostics/aarch64_exceptions.py` — 14 tests |
+| Skill: `check_cache_coherency_panic` | `skills/bsp_diagnostics/aarch64_exceptions.py` — 17 tests |
+
+### Phase 2 — Runnable & Validated
+
+| # | Item | Priority | Description |
+|---|---|---|---|
+| 5 | CLI entry point | High | `python cli.py --dmesg <path> --meminfo <path>` — makes the agent usable by engineers without writing Python |
+| 6 | End-to-end integration test | High | Feeds golden-set fixture logs through Supervisor → Agent with mocked LLM; validates full pipeline produces a valid `ConsultantResponse` for each domain |
+| 7 | Knowledge base docs | Medium | `docs/memory-reclamation.md`, `docs/aarch64-exceptions.md` — domain context for the system prompt via progressive disclosure |
+
+### Phase 3 — Expanded Domain Coverage
+
+| # | Item | Route | Description |
+|---|---|---|---|
+| 8 | Skill: `check_vendor_boot_ufs_driver` | `hardware_advisor` | Detect UFS driver load failures during STD restore phase |
+| 9 | Skill: `analyze_watchdog_timeout` | `kernel_pathologist` | Parse softlockup / hardlockup events; extract CPU, PID, and call trace from dmesg |
+| 10 | Skill: `check_pmic_rail_voltage` | `hardware_advisor` | Extract and validate PMIC rail voltages from logcat/dmesg against known safe ranges |
+| 11 | Real-world log validation | — | Run against actual BSP logs; tune skill thresholds; document known edge cases and false positives |
+
+---
 
 ## Development Protocol
 
 See `AGENTS.md` §4 for the authoritative protocol. Summary:
 
-1.  **Tool Creation:** Humans write pure Python tools in `skills/bsp_diagnostics/`.
-2.  **Tool Testing:** Humans write isolated `pytest` cases in `tests/product_tests/` — no LLM invocation.
-3.  **Knowledge Updates:** Humans update `skills/SKILL.md` and `docs/` Markdown files.
-4.  **No Self-Modification:** The Agent cannot modify `AGENTS.md`, its own Python source code, or its Tools.
+1. **Tool Creation:** Humans write pure Python tools in `skills/bsp_diagnostics/`.
+2. **Tool Testing:** Humans write isolated `pytest` cases in `tests/product_tests/` — no LLM invocation in tests.
+3. **Registry Update:** Add tool to `TOOL_DEFINITIONS` and `ROUTE_TOOLS` in `skills/registry.py`; update `skills/SKILL.md`.
+4. **Knowledge Updates:** Humans update `docs/` Markdown files for new hardware/kernel versions.
+5. **No Self-Modification:** The Agent cannot modify `AGENTS.md`, its own Python source code, or its Tools.
