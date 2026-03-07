@@ -62,8 +62,11 @@ Pure Python functions in `skills/bsp_diagnostics/`. Registered in `skills/regist
 | Skill file | Function | Route | Domain |
 |---|---|---|---|
 | `std_hibernation.py` | `analyze_std_hibernation_error(dmesg_log, meminfo_log)` | `hardware_advisor` | STD / Suspend-to-Disk |
+| `vendor_boot.py` | `check_vendor_boot_ufs_driver(dmesg_log)` | `hardware_advisor` | UFS Driver / STD Restore |
+| `pmic.py` | `check_pmic_rail_voltage(dmesg_log, logcat_log)` | `hardware_advisor` | PMIC Rail Voltages |
 | `aarch64_exceptions.py` | `decode_esr_el1(hex_value)` | `kernel_pathologist` | AArch64 Exceptions |
 | `aarch64_exceptions.py` | `check_cache_coherency_panic(panic_log)` | `kernel_pathologist` | AArch64 Cache Coherency |
+| `watchdog.py` | `analyze_watchdog_timeout(dmesg_log)` | `kernel_pathologist` | Watchdog / Soft+Hard Lockup |
 
 **Skill contract:** Every Skill is a pure function — no side effects, no LLM calls, no global state. Every Skill has strict Pydantic `Input`/`Output` schemas and an isolated `pytest` in `tests/product_tests/` that does NOT invoke the LLM.
 
@@ -105,16 +108,16 @@ All pieces of the v6 architecture are in place and tested.
 | End-to-end integration test | `tests/product_tests/test_integration.py` — 25 tests across 3 fixture scenarios |
 | Golden-set fixtures | `fixtures/panic_log_01.txt`, `fixtures/suspend_hang_02.txt`, `fixtures/healthy_boot_03.txt` + `expected_output_*.json` |
 | Knowledge base docs | `docs/memory-reclamation.md`, `docs/aarch64-exceptions.md` |
-| **Total product tests** | **132 passing** |
 
-### Phase 3 — Expanded Domain Coverage (NEXT)
+### Phase 3 — Expanded Domain Coverage ✓ DONE
 
-| # | Item | Route | Description |
+| # | Item | Route | Deliverable |
 |---|---|---|---|
-| 8 | Skill: `check_vendor_boot_ufs_driver` | `hardware_advisor` | Detect UFS driver load failures during STD restore phase |
-| 9 | Skill: `analyze_watchdog_timeout` | `kernel_pathologist` | Parse softlockup / hardlockup events; extract CPU, PID, and call trace |
-| 10 | Skill: `check_pmic_rail_voltage` | `hardware_advisor` | Extract and validate PMIC rail voltages from logcat/dmesg against safe ranges |
-| 11 | Real-world log validation | — | Run against actual BSP logs; tune thresholds; document edge cases |
+| 8 | Skill: `check_vendor_boot_ufs_driver` | `hardware_advisor` | `skills/bsp_diagnostics/vendor_boot.py` — 16 tests; phase-classified (probe/link_startup/resume) |
+| 9 | Skill: `analyze_watchdog_timeout` | `kernel_pathologist` | `skills/bsp_diagnostics/watchdog.py` — 19 tests; soft/hard lockup, RCU stall, call trace extraction |
+| 10 | Skill: `check_pmic_rail_voltage` | `hardware_advisor` | `skills/bsp_diagnostics/pmic.py` — 19 tests; OCP + undervoltage detection, rpm-smd/qpnp/generic formats |
+| 11 | Real-world log validation | — | FUTURE — run against actual BSP logs; tune thresholds; document edge cases |
+| | **Total product tests** | | **231 passing** |
 
 ---
 
@@ -253,7 +256,7 @@ The three canonical test scenarios exercise each major diagnostic path. Fixture 
 * **LLM Provider:** Anthropic API (`claude-sonnet-4-6` for diagnosis, `claude-haiku-4-5-20251001` for triage).
 * **Context Window:** Up to 200 K tokens per request; large logs are chunked by the Supervisor's Event-Horizon algorithm before LLM dispatch.
 * **Skill Purity:** All diagnostic logic lives in deterministic Python functions — no LLM calls inside Skills.
-* **No Vector Store (Phase 3):** Datasheet RAG is deferred to Phase 3. Current Hardware Advisor Skills parse structured log fields directly.
+* **No Vector Store (Phase 4):** Datasheet RAG is deferred to Phase 4. Current Hardware Advisor Skills parse structured log fields directly.
 * **Security:**
   * **Read-Only:** Agents cannot execute shell commands on the user's host.
   * **Privacy:** Logs are processed in-process; no log content is written to disk or external storage by the Agent.
