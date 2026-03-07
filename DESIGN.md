@@ -172,6 +172,8 @@ sequenceDiagram
 | Skill | Function | Logic |
 |---|---|---|
 | `std_hibernation.py` | `analyze_std_hibernation_error` | Detects `Error -12 creating hibernation image`; evaluates `SUnreclaim / MemTotal` (>10% threshold) and `SwapFree == 0` |
+| `vendor_boot.py` | `check_vendor_boot_ufs_driver` | Scans dmesg for ufshcd/ufs_qcom errors; classifies failure phase as probe, link_startup, or resume; raises confidence when STD restore context is detected |
+| `pmic.py` | `check_pmic_rail_voltage` | Parses rpm-smd-regulator, qpnp-regulator, and generic regulator lines; detects OCP events and undervoltage conditions; supports dmesg + logcat |
 
 ### Domain 2: AArch64 Architecture & Exceptions
 **Supervisor route:** `kernel_pathologist`
@@ -180,6 +182,7 @@ sequenceDiagram
 |---|---|---|
 | `aarch64_exceptions.py` | `decode_esr_el1` | Decodes ESR_EL1 bits [31:26] (EC), [25] (IL), [24:0] (ISS/DFSC/IFSC) against ARM DDI0487 tables |
 | `aarch64_exceptions.py` | `check_cache_coherency_panic` | Regex scan for SError indicators, ARM64 SError messages, ESR_EL1 with EC=0x2F; confidence scales with indicator count |
+| `watchdog.py` | `analyze_watchdog_timeout` | Detects soft lockup, hard lockup (NMI watchdog), and RCU stall events; extracts CPU, PID, process name, stuck duration, and call trace (handles kernel timestamp prefix) |
 
 ---
 
@@ -207,13 +210,13 @@ All pieces of the v6 architecture are in place and tested (107 product tests pas
 | 6 | End-to-end integration test | `tests/product_tests/test_integration.py` — 25 tests across 3 fixture scenarios (panic, watchdog, healthy boot) |
 | 7 | Knowledge base docs | `docs/memory-reclamation.md`, `docs/aarch64-exceptions.md` — YAML-frontmatter scoped domain reference |
 
-### Phase 3 — Expanded Domain Coverage
+### Phase 3 — Expanded Domain Coverage ✓ DONE
 
 | # | Item | Route | Description |
 |---|---|---|---|
-| 8 | Skill: `check_vendor_boot_ufs_driver` | `hardware_advisor` | Detect UFS driver load failures during STD restore phase |
-| 9 | Skill: `analyze_watchdog_timeout` | `kernel_pathologist` | Parse softlockup / hardlockup events; extract CPU, PID, and call trace from dmesg |
-| 10 | Skill: `check_pmic_rail_voltage` | `hardware_advisor` | Extract and validate PMIC rail voltages from logcat/dmesg against known safe ranges |
+| 8 | Skill: `check_vendor_boot_ufs_driver` | `hardware_advisor` | Detect UFS driver load failures during STD restore phase — phase-classified (probe / link_startup / resume) — 16 tests |
+| 9 | Skill: `analyze_watchdog_timeout` | `kernel_pathologist` | Parse softlockup / hardlockup / RCU stall events; extract CPU, PID, process name, stuck duration, call trace — 19 tests |
+| 10 | Skill: `check_pmic_rail_voltage` | `hardware_advisor` | Extract PMIC rail voltages (rpm-smd, qpnp, generic) from logcat/dmesg; detect OCP and undervoltage events — 19 tests |
 | 11 | Real-world log validation | — | Run against actual BSP logs; tune skill thresholds; document known edge cases and false positives |
 
 ---

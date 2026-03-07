@@ -15,9 +15,21 @@ from skills.bsp_diagnostics.aarch64_exceptions import (
     check_cache_coherency_panic,
     decode_esr_el1,
 )
+from skills.bsp_diagnostics.pmic import (
+    PMICVoltageInput,
+    check_pmic_rail_voltage,
+)
 from skills.bsp_diagnostics.std_hibernation import (
     STDHibernationInput,
     analyze_std_hibernation_error,
+)
+from skills.bsp_diagnostics.vendor_boot import (
+    VendorBootUFSInput,
+    check_vendor_boot_ufs_driver,
+)
+from skills.bsp_diagnostics.watchdog import (
+    WatchdogInput,
+    analyze_watchdog_timeout,
 )
 
 
@@ -65,13 +77,54 @@ TOOL_DEFINITIONS: list[dict] = [
         ),
         "input_schema": _pydantic_to_input_schema(CacheCoherencyInput),
     },
+    {
+        "name": "check_vendor_boot_ufs_driver",
+        "description": (
+            "Detect UFS (Universal Flash Storage) driver load failures during the "
+            "STD (Suspend-to-Disk) restore phase. Scans dmesg for ufshcd / ufs_qcom "
+            "error messages and classifies the failure phase as probe, link_startup, "
+            "or resume. Use when the device fails to complete STD restore and the "
+            "symptom is a missing block device or an I/O error on the UFS storage."
+        ),
+        "input_schema": _pydantic_to_input_schema(VendorBootUFSInput),
+    },
+    {
+        "name": "analyze_watchdog_timeout",
+        "description": (
+            "Parse soft lockup and hard lockup (NMI watchdog) events from a kernel "
+            "dmesg log. Extracts CPU number, PID, process name, stuck duration, and "
+            "call trace from the first lockup event found. Also detects RCU stall "
+            "events. Use when dmesg contains 'BUG: soft lockup', 'BUG: hard lockup', "
+            "or 'rcu_sched detected stall' messages."
+        ),
+        "input_schema": _pydantic_to_input_schema(WatchdogInput),
+    },
+    {
+        "name": "check_pmic_rail_voltage",
+        "description": (
+            "Extract PMIC (Power Management IC) rail voltages from dmesg and logcat "
+            "logs. Identifies rails with over-current protection (OCP) events or "
+            "undervoltage conditions that may explain system instability, peripheral "
+            "resets, or unexpected reboots. Supports Qualcomm rpm-smd-regulator, "
+            "qpnp-regulator, and generic regulator framework log formats."
+        ),
+        "input_schema": _pydantic_to_input_schema(PMICVoltageInput),
+    },
 ]
 
 # Maps supervisor routing decisions to the set of tool names for that domain.
 # The Brain uses this to offer only relevant tools to Claude per diagnostic session.
 ROUTE_TOOLS: dict[str, set[str]] = {
-    "hardware_advisor": {"analyze_std_hibernation_error"},
-    "kernel_pathologist": {"decode_esr_el1", "check_cache_coherency_panic"},
+    "hardware_advisor": {
+        "analyze_std_hibernation_error",
+        "check_vendor_boot_ufs_driver",
+        "check_pmic_rail_voltage",
+    },
+    "kernel_pathologist": {
+        "decode_esr_el1",
+        "check_cache_coherency_panic",
+        "analyze_watchdog_timeout",
+    },
 }
 
 _DISPATCH_TABLE: dict[str, Any] = {
@@ -84,6 +137,16 @@ _DISPATCH_TABLE: dict[str, Any] = {
     ).model_dump(),
     "check_cache_coherency_panic": lambda inp: check_cache_coherency_panic(
         panic_log=inp["panic_log"],
+    ).model_dump(),
+    "check_vendor_boot_ufs_driver": lambda inp: check_vendor_boot_ufs_driver(
+        dmesg_log=inp["dmesg_log"],
+    ).model_dump(),
+    "analyze_watchdog_timeout": lambda inp: analyze_watchdog_timeout(
+        dmesg_log=inp["dmesg_log"],
+    ).model_dump(),
+    "check_pmic_rail_voltage": lambda inp: check_pmic_rail_voltage(
+        dmesg_log=inp["dmesg_log"],
+        logcat_log=inp.get("logcat_log", ""),
     ).model_dump(),
 }
 

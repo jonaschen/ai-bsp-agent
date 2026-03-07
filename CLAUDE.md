@@ -86,22 +86,19 @@ All pieces of the v6 architecture are in place and tested.
 | `LogPayload.meminfo_content` fix | DONE | Correct schema; `logcat` and `/proc/meminfo` no longer conflated |
 | Skill: `decode_esr_el1` | DONE | `skills/bsp_diagnostics/aarch64_exceptions.py` — 14 tests |
 | Skill: `check_cache_coherency_panic` | DONE | `skills/bsp_diagnostics/aarch64_exceptions.py` — 17 tests |
-| Skill: `check_cache_coherency_panic` | DONE | `skills/bsp_diagnostics/aarch64_exceptions.py` — 17 tests |
 | CLI entry point | DONE | `cli.py` — `python cli.py --dmesg <path> [--meminfo <path>] [--output <path>]` |
 | End-to-end integration test | DONE | `tests/product_tests/test_integration.py` — 25 tests, 3 fixture scenarios |
 | Knowledge base docs | DONE | `docs/memory-reclamation.md`, `docs/aarch64-exceptions.md` |
-| **Total product tests** | **132 passing** | |
 
-### Phase 3 — Expanded Domain Coverage (NEXT)
+### Phase 3 — Expanded Domain Coverage (DONE) ✓
 
-### Phase 3 — Expanded Domain Coverage (FUTURE)  <!-- was labelled NEXT above; keeping original table below -->
-
-| # | Item | Route | Notes |
+| # | Item | Status | Deliverable |
 |---|---|---|---|
-| 8 | Skill: `check_vendor_boot_ufs_driver` | `hardware_advisor` | Detect UFS driver load failures during STD restore phase |
-| 9 | Skill: `analyze_watchdog_timeout` | `kernel_pathologist` | Parse softlockup / hardlockup events from dmesg |
-| 10 | Skill: `check_pmic_rail_voltage` | `hardware_advisor` | Extract and validate PMIC rail voltages from logcat/dmesg |
-| 11 | Real-world log validation | — | Run against actual BSP logs; tune thresholds; document edge cases |
+| 8 | Skill: `check_vendor_boot_ufs_driver` | DONE | `skills/bsp_diagnostics/vendor_boot.py` — 16 tests; phase-classified (probe/link_startup/resume) |
+| 9 | Skill: `analyze_watchdog_timeout` | DONE | `skills/bsp_diagnostics/watchdog.py` — 19 tests; soft/hard lockup, RCU stall, call trace extraction |
+| 10 | Skill: `check_pmic_rail_voltage` | DONE | `skills/bsp_diagnostics/pmic.py` — 19 tests; OCP + undervoltage detection, rpm-smd/qpnp/generic formats |
+| 11 | Real-world log validation | FUTURE | Run against actual BSP logs; tune thresholds; document edge cases |
+| **Total product tests** | **231 passing** | |
 
 ## Adding a New Skill
 
