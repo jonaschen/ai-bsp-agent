@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Version:** v6.1 (Phase 4 — Early Boot Domain)
+> **Version:** v6.2 (Phase 5 — Kernel Oops & FAR Decoding)
 > **Status:** Research Prototype / Serious AI Systems Engineering
 
 ## Project Overview
@@ -73,7 +73,9 @@ Markdown files in `docs/` with YAML frontmatter scoping each document to a super
 
 | Skill | File | What it detects |
 |---|---|---|
+| `extract_kernel_oops_log` | `kernel_oops.py` | Detects `null_pointer` / `paging_request` / `kernel_bug` / `generic_oops`; extracts process, PID, CPU, ESR_EL1 hex, FAR_EL1 hex, pc/lr symbols, call trace (≤32 entries) |
 | `decode_esr_el1` | `aarch64_exceptions.py` | Decodes AArch64 ESR_EL1 (EC, IL, ISS, DFSC/IFSC) against ARM DDI0487 tables |
+| `decode_aarch64_exception` | `aarch64_exceptions.py` | Decodes ESR_EL1 + FAR_EL1 together; infers exception level (EL0/EL1) from EC; classifies FAR as kernel vs. user-space address |
 | `check_cache_coherency_panic` | `aarch64_exceptions.py` | SError / PoC cache coherency failures; ESR_EL1 EC=0x2F |
 | `analyze_watchdog_timeout` | `watchdog.py` | Soft lockup, hard lockup (NMI watchdog), RCU stall; extracts CPU, PID, process name, call trace |
 
@@ -106,14 +108,15 @@ Markdown files in `docs/` with YAML frontmatter scoping each document to a super
 │   └── bsp_diagnostics/
 │       ├── log_segmenter.py         # segment_boot_log (universal triage — all routes)
 │       ├── early_boot.py            # parse_early_boot_uart_log, analyze_lk_panic
+│       ├── kernel_oops.py           # extract_kernel_oops_log
 │       ├── std_hibernation.py       # analyze_std_hibernation_error
-│       ├── aarch64_exceptions.py    # decode_esr_el1, check_cache_coherency_panic
+│       ├── aarch64_exceptions.py    # decode_esr_el1, decode_aarch64_exception, check_cache_coherency_panic
 │       ├── vendor_boot.py           # check_vendor_boot_ufs_driver
 │       ├── watchdog.py              # analyze_watchdog_timeout
 │       └── pmic.py                  # check_pmic_rail_voltage
 ├── tests/
-│   └── product_tests/               # Isolated pytest suite (no LLM calls) — 298 tests.
-│       ├── test_integration.py      # End-to-end pipeline (mocked Anthropic client).
+│   └── product_tests/               # Isolated pytest suite (no LLM calls) — 347 tests.
+│       ├── test_integration.py      # End-to-end pipeline (mocked Anthropic client) — 4 scenarios.
 │       └── fixtures/                # Golden-set log files and expected output JSON.
 └── studio/                          # Legacy factory code (deprecated — do not modify).
 ```
@@ -232,6 +235,8 @@ For each run, evaluate:
 | `segment_boot_log` | Mixed UART+kernel logs; logs with non-standard kernel timestamp formats |
 | `parse_early_boot_uart_log` | Vendor-specific TF-A error strings not matching standard patterns |
 | `analyze_lk_panic` | LK assert formats differ across Qualcomm SoC generations |
+| `extract_kernel_oops_log` | Vendor kernels may omit `FAR_EL1` or use non-standard Oops headers |
+| `decode_aarch64_exception` | FAR classification uses bit-63 heuristic — VA_BITS < 48 configs may differ |
 | `analyze_watchdog_timeout` | Vendor kernels use non-standard formats (e.g., Qualcomm: `[0: kworker:1234] BUG: soft lockup`) |
 | `check_pmic_rail_voltage` | Vendor-specific voltage log formats not yet covered |
 | `check_vendor_boot_ufs_driver` | MTK (`ufs-mediatek`) and Exynos (`ufshcd-exynos`) driver prefixes not fully covered |

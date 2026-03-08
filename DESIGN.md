@@ -57,8 +57,13 @@ classDiagram
         +analyze_std_hibernation_error(dmesg_log, meminfo_log) STDHibernationOutput
     }
 
+    class KernelOopsSkill {
+        +extract_kernel_oops_log(dmesg_log) KernelOopsOutput
+    }
+
     class AArch64ExceptionsSkill {
         +decode_esr_el1(hex_value) ESREL1Output
+        +decode_aarch64_exception(esr_val, far_val) AArch64ExceptionOutput
         +check_cache_coherency_panic(panic_log) CacheCoherencyOutput
     }
 
@@ -98,6 +103,7 @@ classDiagram
     CaseFile *-- LogPayload : contains
     SkillRegistry --> LogSegmenterSkill : delegates to
     SkillRegistry --> EarlyBootSkill : delegates to
+    SkillRegistry --> KernelOopsSkill : delegates to
     SkillRegistry --> STDHibernationSkill : delegates to
     SkillRegistry --> AArch64ExceptionsSkill : delegates to
 ```
@@ -215,7 +221,9 @@ sequenceDiagram
 
 | Skill | Function | Logic |
 |---|---|---|
+| `kernel_oops.py` | `extract_kernel_oops_log` | Detects `null_pointer` / `paging_request` / `kernel_bug` / `generic_oops`; extracts process, PID, CPU, ESR_EL1 hex, FAR_EL1 hex, pc/lr symbols, call trace (<=32 entries); timestamp-aware regex |
 | `aarch64_exceptions.py` | `decode_esr_el1` | Decodes ESR_EL1 bits [31:26] (EC), [25] (IL), [24:0] (ISS/DFSC/IFSC) against ARM DDI0487 tables |
+| `aarch64_exceptions.py` | `decode_aarch64_exception` | Decodes ESR_EL1 + FAR_EL1 together; infers exception level (EL0/EL1) from EC bits; classifies FAR as kernel vs. user-space address via bit-63 heuristic |
 | `aarch64_exceptions.py` | `check_cache_coherency_panic` | Regex scan for SError indicators, ARM64 SError messages, ESR_EL1 with EC=0x2F; confidence scales with indicator count |
 | `watchdog.py` | `analyze_watchdog_timeout` | Detects soft lockup, hard lockup (NMI watchdog), and RCU stall events; extracts CPU, PID, process name, stuck duration, and call trace (handles kernel timestamp prefix) |
 
@@ -265,15 +273,24 @@ All pieces of the v6 architecture are in place and tested (107 product tests pas
 | 14 | Supervisor: `early_boot_advisor` route | — | `_is_early_boot_log()` short-circuit before LLM call; routes TF-A/LK/U-Boot UART logs without Claude Haiku invocation |
 | 15 | Registry: universal tool support | — | `_UNIVERSAL_TOOLS` set merged into every route; `segment_boot_log` available regardless of routing decision |
 
-### Phase 5+ — Planned
+### Phase 5 — Kernel Oops & FAR Decoding ✓ DONE
+
+**347 product tests passing.**
+
+| # | Item | Route | Description |
+|---|---|---|---|
+| 16 | Skill: `extract_kernel_oops_log` | `kernel_pathologist` | Parse kernel Oops/BUG reports; null_pointer / paging_request / kernel_bug / generic_oops; ESR_EL1, FAR_EL1, pc/lr, call trace — 22 tests |
+| 17 | Skill: `decode_aarch64_exception` | `kernel_pathologist` | Decode ESR_EL1 + FAR_EL1 pair; EL inference from EC; kernel/user FAR classification — 14 new tests |
+| 18 | Multi-tool synergy integration test | — | Watchdog + SError fixture; Brain invokes `analyze_watchdog_timeout` + `decode_esr_el1` in one session — 6 tests |
+| 19 | Knowledge base: FAR_EL1 documentation | — | Added full FAR_EL1 section to `docs/aarch64-exceptions.md` (EL table, VA split, common patterns, decode_aarch64_exception usage) |
+
+### Phase 6+ — Planned
 
 | # | Item | Route | Notes |
 |---|---|---|---|
-| 16 | Real-world log validation | — | Run against actual BSP logs; tune thresholds; document edge cases |
-| 17 | Skill: `extract_kernel_oops_log` | `kernel_pathologist` | Extract and structure kernel Oops reports |
-| 18 | Multi-tool synergy integration test | — | Watchdog + concurrent ESR_EL1 fixture; validate Brain invokes both tools |
-| 19 | Skill: `analyze_selinux_denial` | `android_init_advisor` | Parse SELinux denial messages |
-| 20 | Skill: `check_android_init_rc` | `android_init_advisor` | Detect init.rc service failures |
+| 20 | Real-world log validation | — | Run against actual BSP logs; tune thresholds; document edge cases |
+| 21 | Skill: `analyze_selinux_denial` | `android_init_advisor` | Parse SELinux denial messages |
+| 22 | Skill: `check_android_init_rc` | `android_init_advisor` | Detect init.rc service failures |
 
 ---
 

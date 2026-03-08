@@ -1,7 +1,7 @@
 ---
 scope: kernel_pathologist
-trigger: kernel panic, ESR_EL1, SError, Data Abort, Instruction Abort, cache coherency, oops
-skill: decode_esr_el1, check_cache_coherency_panic
+trigger: kernel panic, ESR_EL1, FAR_EL1, SError, Data Abort, Instruction Abort, cache coherency, oops
+skill: decode_esr_el1, decode_aarch64_exception, extract_kernel_oops_log, check_cache_coherency_panic
 ---
 
 # AArch64 Exception Architecture & Kernel Panic Diagnosis
@@ -52,6 +52,64 @@ Reading ESR_EL1 is the first step in every kernel panic diagnosis. It tells you
 | 0x26 | SP alignment fault | Stack pointer misaligned |
 | 0x2F | **SError Interrupt** | Hardware error — cache coherency, ECC, or bus fault |
 | 0x3C | BRK instruction | Software breakpoint |
+
+---
+
+## FAR_EL1 — Fault Address Register
+
+`FAR_EL1` holds the **virtual address that triggered the fault**. It is valid for:
+- Data Aborts (EC = 0x24, 0x25)
+- Instruction Aborts (EC = 0x20, 0x21)
+- PC/SP alignment faults (EC = 0x22, 0x26)
+
+It is **not** valid for SError (EC = 0x2F) — FAR is UNKNOWN in that case.
+
+### Exception Level from EC
+
+The EC bits encode which privilege level the fault came from:
+
+| EC | Exception | Fault Origin |
+|---|---|---|
+| 0x20 | Instruction Abort from lower EL | EL0 (user space) |
+| 0x21 | Instruction Abort from current EL | EL1 (kernel) |
+| 0x24 | Data Abort from lower EL | EL0 (user space) |
+| 0x25 | Data Abort from current EL | EL1 (kernel) |
+
+### Kernel vs. User Address (AArch64 VA split)
+
+Linux AArch64 uses a split virtual address space. The heuristic for classifying FAR:
+
+```
+FAR bit 63 = 1  →  kernel address  (0xffff000000000000 – 0xffffffffffffffff)
+FAR bit 63 = 0  →  user address    (0x0000000000000000 – 0x0000ffffffffffff)
+```
+
+### Common FAR Patterns
+
+| FAR value | Meaning |
+|---|---|
+| `0x0000000000000000` | NULL pointer dereference |
+| `0x0000000000000001`–`0x0000000000000fff` | Near-NULL (struct member offset from NULL) |
+| `0xdead000000000000`–`0xdead000000000fff` | Use-after-free (kernel poison pattern) |
+| `0xffff...` | Valid kernel VA — check for wild write or UAF |
+| Large user VA | User-space pointer passed unchecked to kernel |
+
+### Using `decode_aarch64_exception`
+
+When both `ESR_EL1` and `FAR_EL1` are available in the panic log, pass both to
+`decode_aarch64_exception` instead of `decode_esr_el1`. It returns:
+- All ESR fields (EC, IL, ISS, DFSC/IFSC)
+- `exception_level`: `"EL0"` or `"EL1"` inferred from EC
+- `far_is_kernel_address`: `True` if FAR bit 63 is set
+- `fault_address_summary`: one-line human-readable description
+
+```
+ESR_EL1 = 0x96000005  →  Data Abort (current EL=EL1), DFSC=0x05 Translation L1
+FAR_EL1 = 0x0000000000000018
+
+→  fault_address_summary:
+   "Data Abort (current EL) in EL1 at user-space address near-NULL (0x0000000000000018)"
+```
 
 ---
 
@@ -161,12 +219,13 @@ Call trace:
  ...
 ```
 
-**Diagnosis steps:**
-1. Read `ESR_EL1` → use `decode_esr_el1` skill to classify
-2. If `EC = 0x2F` → use `check_cache_coherency_panic` skill
-3. Read `pc` → identify the faulting function and line
-4. For Data Abort: read `Data abort info` → WnR (read/write) and DFSC (fault type)
-5. Cross-reference with driver source at the `pc` offset
+**Diagnosis steps (multi-tool synergy — AGENTS.md §3.3):**
+1. Use `extract_kernel_oops_log` to detect the Oops, extract `esr_el1_hex`, `far_hex`, `pc_symbol`, and `call_trace` in one pass.
+2. If both `ESR_EL1` and `FAR_EL1` are present → use `decode_aarch64_exception(esr_val, far_val)` for full register pair decoding.
+3. If only `ESR_EL1` is present → use `decode_esr_el1(hex_value)`.
+4. If `EC = 0x2F` (SError) → also invoke `check_cache_coherency_panic` (AGENTS.md §3.3 Multi-Tool Synergy).
+5. Read `pc_symbol` → identify the faulting function and line.
+6. For Data Abort: WnR bit (ISS[6]) distinguishes read vs. write fault; DFSC gives the fault level.
 
 ---
 
