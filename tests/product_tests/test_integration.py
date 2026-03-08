@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -216,6 +216,106 @@ class TestHealthyBootPipeline:
 
 
 # ---------------------------------------------------------------------------
+# Scenario 4 — Multi-tool synergy: watchdog + SError ESR_EL1 (AGENTS.md §3.3)
+# ---------------------------------------------------------------------------
+
+def _tool_use_response(tool_name: str, tool_input: dict, tool_id: str) -> MagicMock:
+    """Mock Sonnet tool_use response for a single tool call."""
+    block = SimpleNamespace(type="tool_use", name=tool_name, input=tool_input, id=tool_id)
+    resp = MagicMock()
+    resp.stop_reason = "tool_use"
+    resp.content = [block]
+    return resp
+
+
+class TestMultiToolSynergy:
+    """
+    Validates AGENTS.md §3.3 Multi-Tool Synergy:
+    A log containing both a soft lockup and a concurrent ESR_EL1 exception
+    must cause the Brain to invoke both analyze_watchdog_timeout AND
+    decode_esr_el1 in the same session.
+    """
+
+    @pytest.fixture
+    def expected(self):
+        return _load_expected("expected_output_watchdog_esr_synergy_04.json")
+
+    @pytest.fixture
+    def synergy_client(self, expected):
+        """
+        Mock sequence:
+          call 0 → supervisor triage → "kernel_pathologist"
+          call 1 → agent tool_use  → analyze_watchdog_timeout
+          call 2 → agent tool_use  → decode_esr_el1
+          call 3 → agent end_turn  → ConsultantResponse JSON
+        """
+        dmesg = (FIXTURES / "watchdog_esr_synergy_04.txt").read_text()
+        client = MagicMock()
+        client.messages.create.side_effect = [
+            _triage_response("kernel_pathologist"),
+            _tool_use_response(
+                "analyze_watchdog_timeout",
+                {"dmesg_log": dmesg},
+                "tool_001",
+            ),
+            _tool_use_response(
+                "decode_esr_el1",
+                {"hex_value": "0xBE000000"},
+                "tool_002",
+            ),
+            _agent_response(expected),
+        ]
+        return client
+
+    @pytest.fixture
+    def agent(self, synergy_client):
+        return BSPDiagnosticAgent(client=synergy_client)
+
+    @pytest.fixture
+    def result(self, agent):
+        case = _make_case("watchdog_esr_synergy_04.txt", case_id="INT-SYNERGY-01")
+        return agent.run(case)
+
+    def test_returns_consultant_response(self, result):
+        assert isinstance(result, ConsultantResponse)
+
+    def test_status_is_critical(self, result):
+        assert result.status == "CRITICAL"
+
+    def test_four_llm_calls_made(self, agent):
+        """Supervisor + tool_use(watchdog) + tool_use(esr) + end_turn = 4 calls."""
+        case = _make_case("watchdog_esr_synergy_04.txt", case_id="INT-SYNERGY-02")
+        agent.run(case)
+        assert agent._client.messages.create.call_count == 4
+
+    def test_both_tools_dispatched(self, agent):
+        """Verify dispatch_tool is called for both analyze_watchdog_timeout and decode_esr_el1."""
+        case = _make_case("watchdog_esr_synergy_04.txt", case_id="INT-SYNERGY-03")
+        with patch("product.bsp_agent.agent.dispatch_tool", wraps=__import__(
+            "skills.registry", fromlist=["dispatch_tool"]
+        ).dispatch_tool) as mock_dispatch:
+            agent.run(case)
+            called_tools = {call.args[0] for call in mock_dispatch.call_args_list}
+            assert "analyze_watchdog_timeout" in called_tools
+            assert "decode_esr_el1" in called_tools
+
+    def test_kernel_pathologist_tools_offered(self, agent):
+        case = _make_case("watchdog_esr_synergy_04.txt", case_id="INT-SYNERGY-04")
+        agent.run(case)
+        # Second call is to the agent (first tool_use round)
+        second_call = agent._client.messages.create.call_args_list[1]
+        tool_names = {t["name"] for t in second_call.kwargs["tools"]}
+        assert "analyze_watchdog_timeout" in tool_names
+        assert "decode_esr_el1" in tool_names
+
+    def test_synergy_fixture_schema_valid(self):
+        data = _load_expected("expected_output_watchdog_esr_synergy_04.json")
+        response = ConsultantResponse(**data)
+        assert response.confidence_score >= 0.9
+        assert response.status == "CRITICAL"
+
+
+# ---------------------------------------------------------------------------
 # Cross-scenario — schema conformance for all fixture expected outputs
 # ---------------------------------------------------------------------------
 
@@ -224,6 +324,7 @@ class TestFixtureSchemaConformance:
         "expected_output_panic_log_01.json",
         "expected_output_suspend_hang_02.json",
         "expected_output_healthy_boot_03.json",
+        "expected_output_watchdog_esr_synergy_04.json",
     ])
     def test_expected_output_parses_as_consultant_response(self, json_file):
         data = _load_expected(json_file)
@@ -235,6 +336,7 @@ class TestFixtureSchemaConformance:
         "panic_log_01.txt",
         "suspend_hang_02.txt",
         "healthy_boot_03.txt",
+        "watchdog_esr_synergy_04.txt",
     ])
     def test_fixture_log_builds_valid_case_file(self, log_file):
         case = _make_case(log_file, case_id="SCHEMA-TEST")
