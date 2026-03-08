@@ -45,7 +45,7 @@ Three layers:
 
 ### Layer 1: The Brain (Reasoning Engine)
 - `product/bsp_agent/agent.py` — `BSPDiagnosticAgent`: runs the Anthropic tool-use loop. Accepts a `CaseFile`, calls the Supervisor, selects route-appropriate tools, returns a `ConsultantResponse`.
-- `product/bsp_agent/agents/supervisor.py` — `SupervisorAgent` (Claude Haiku): triages dmesg and routes to one of the registered route tokens. Performs event-horizon chunking for large logs. Current routes: `kernel_pathologist`, `hardware_advisor`, `clarify_needed`. Planned additions: `early_boot_advisor` (Phase 4), `android_init_advisor` (Phase 6), `source_analyst` (Phase 8).
+- `product/bsp_agent/agents/supervisor.py` — `SupervisorAgent`: triages and routes logs. Early boot logs (TF-A/LK/U-Boot markers, no kernel timestamp) are handled by pure regex without LLM. Kernel/hardware logs go to Claude Haiku (max_tokens=16). Current routes: `kernel_pathologist`, `hardware_advisor`, `early_boot_advisor`, `clarify_needed`. Planned: `android_init_advisor` (Phase 6), `source_analyst` (Phase 8).
 - `product/bsp_agent/core/state.py` — `AgentState` TypedDict passed to the supervisor.
 - The Brain must **never** do math, parse hex offsets, or calculate memory sizes directly — always delegate to Skills.
 
@@ -59,9 +59,14 @@ Pure Python functions in `skills/bsp_diagnostics/`. Each skill:
 
 | Skill file | Function | Route | Domain |
 |---|---|---|---|
-| `skills/bsp_diagnostics/std_hibernation.py` | `analyze_std_hibernation_error(dmesg_log, meminfo_log)` | `hardware_advisor` | STD / Suspend-to-Disk |
-| `skills/bsp_diagnostics/aarch64_exceptions.py` | `decode_esr_el1(hex_value)` | `kernel_pathologist` | AArch64 Exceptions |
+| `skills/bsp_diagnostics/log_segmenter.py` | `segment_boot_log(raw_log)` | **universal** | Boot Stage Triage |
+| `skills/bsp_diagnostics/early_boot.py` | `parse_early_boot_uart_log(raw_uart_log)` | `early_boot_advisor` | TF-A / BootROM UART |
+| `skills/bsp_diagnostics/early_boot.py` | `analyze_lk_panic(uart_log_snippet)` | `early_boot_advisor` | LK / U-Boot Panic |
+| `skills/bsp_diagnostics/kernel_oops.py` | `extract_kernel_oops_log(dmesg_log)` | `kernel_pathologist` | Kernel Oops / BUG Parser |
+| `skills/bsp_diagnostics/aarch64_exceptions.py` | `decode_esr_el1(hex_value)` | `kernel_pathologist` | AArch64 ESR_EL1 Decode |
+| `skills/bsp_diagnostics/aarch64_exceptions.py` | `decode_aarch64_exception(esr_val, far_val)` | `kernel_pathologist` | ESR_EL1 + FAR_EL1 Decode |
 | `skills/bsp_diagnostics/aarch64_exceptions.py` | `check_cache_coherency_panic(panic_log)` | `kernel_pathologist` | AArch64 Cache Coherency |
+| `skills/bsp_diagnostics/std_hibernation.py` | `analyze_std_hibernation_error(dmesg_log, meminfo_log)` | `hardware_advisor` | STD / Suspend-to-Disk |
 | `skills/bsp_diagnostics/vendor_boot.py` | `check_vendor_boot_ufs_driver(dmesg_log)` | `hardware_advisor` | UFS Driver / STD Restore |
 | `skills/bsp_diagnostics/watchdog.py` | `analyze_watchdog_timeout(dmesg_log)` | `kernel_pathologist` | Watchdog / Soft+Hard Lockup |
 | `skills/bsp_diagnostics/pmic.py` | `check_pmic_rail_voltage(dmesg_log, logcat_log)` | `hardware_advisor` | PMIC Rail Voltages |
@@ -111,32 +116,27 @@ All pieces of the v6 architecture are in place and tested.
 | 11 | Real-world log validation | FUTURE | Run against actual BSP logs; tune thresholds; document edge cases |
 | **Total product tests** | **231 passing** | |
 
-### Phase 4 — Early Boot Skills (NEXT)
+### Phase 4 — Early Boot Skills (DONE) ✓
 
-New supervisor route: `early_boot_advisor`. Trigger: no kernel timestamp pattern in log; TF-A/LK boot markers present.
-
-**`log_segmenter` is required in this phase.** AGENTS.md §3.1 mandates it as the first triage skill invoked in every session — it identifies the failing boundary (Early Boot / Kernel / Android Init) before any domain-specific skill is called.
+New supervisor route: `early_boot_advisor`. 298 tests passing.
 
 | Deliverable | Detail |
 |---|---|
-| `skills/bsp_diagnostics/log_segmenter.py` | `segment_boot_log(raw_log)` — identifies failing stage boundary; returns detected stage, first error line, and confidence. Used as Phase 1 Triage entry point for all diagnostic sessions. |
-| `skills/bsp_diagnostics/early_boot.py` | `parse_early_boot_uart_log`, `analyze_lk_panic` |
-| `tests/product_tests/test_log_segmenter_skill.py` | ~14 tests |
-| `tests/product_tests/test_early_boot_skill.py` | ~18 tests |
-| Supervisor update | Add `early_boot_advisor` to triage prompt + `ROUTE_TOOLS`; `log_segmenter` registered under all routes (universal triage tool) |
-| `docs/early-boot-stages.md` | TF-A BL1/BL2 error codes, LK assert format |
+| `skills/bsp_diagnostics/log_segmenter.py` | `segment_boot_log(raw_log)` — universal triage; 32 tests |
+| `skills/bsp_diagnostics/early_boot.py` | `parse_early_boot_uart_log`, `analyze_lk_panic` — 41 tests |
+| `tests/product_tests/test_log_segmenter_skill.py` | 32 tests |
+| `tests/product_tests/test_early_boot_skill.py` | 41 tests |
+| Supervisor update | `early_boot_advisor` route; `_is_early_boot_log()` short-circuit; `_UNIVERSAL_TOOLS` in registry |
 
-### Phase 5 — Kernel Exception & Oops Skills (PLANNED)
+### Phase 5 — Kernel Exception & Oops Skills (DONE) ✓
 
-Extends `kernel_pathologist` route. No new supervisor route needed.
+Extends `kernel_pathologist` route. No new supervisor route needed. **347 tests passing.**
 
 | Deliverable | Detail |
 |---|---|
-| `skills/bsp_diagnostics/kernel_oops.py` | `extract_kernel_oops_log` — stateless hex call trace extractor |
-| Update `skills/bsp_diagnostics/aarch64_exceptions.py` | Add `decode_aarch64_exception(esr_val, far_val)` — extends `decode_esr_el1` with FAR field; EL inferred from EC bits, no `el_level` input |
-| Tests | ~24 new skill tests |
-| Update `docs/aarch64-exceptions.md` | FAR field layout and fault address interpretation |
-| **Multi-tool synergy integration test** | New scenario in `tests/product_tests/test_integration.py`: a log containing both a watchdog lockup and a concurrent ESR_EL1 exception. Verifies that the Brain invokes both `analyze_watchdog_timeout` AND `decode_esr_el1` in the same session, and that the `ConsultantResponse` surfaces both findings. Mandated by AGENTS.md §3.3. |
+| `skills/bsp_diagnostics/kernel_oops.py` | `extract_kernel_oops_log` — Oops/BUG detection, ESR/FAR/pc/lr/call-trace extraction; 22 tests |
+| Update `skills/bsp_diagnostics/aarch64_exceptions.py` | Added `decode_aarch64_exception(esr_val, far_val)` — ESR + FAR pair decoding, EL inference, kernel/user FAR classification; 14 new tests |
+| Multi-tool synergy integration test | `TestMultiToolSynergy` in `test_integration.py` — `watchdog_esr_synergy_04.txt` fixture; verifies Brain invokes both `analyze_watchdog_timeout` AND `decode_esr_el1` in one session (AGENTS.md §3.3) |
 
 ### Phase 6 — Android Init Skills (PLANNED)
 
