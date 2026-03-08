@@ -1,0 +1,28 @@
+{
+  "diagnosis_id": "RCA-SYNERGY-001",
+  "confidence_score": 0.92,
+  "status": "CRITICAL",
+  "root_cause_summary": "Soft lockup on CPU#2 combined with a concurrent SError Interrupt (ESR_EL1=0xBE000000, EC=0x2F) indicates a hardware-level asynchronous error causing both the CPU stall and the kernel panic.",
+  "evidence": [
+    "BUG: soft lockup - CPU#2 stuck for 22s! [kworker/2:1:456]",
+    "SError Interrupt on CPU 2",
+    "ESR_EL1 = 0xBE000000 (EC=0x2F SError Interrupt)",
+    "Kernel panic - not syncing: Asynchronous SError Interrupt"
+  ],
+  "sop_steps": [
+    {
+      "step_id": 1,
+      "action_type": "MEASUREMENT",
+      "instruction": "Run check_cache_coherency_panic on the full dmesg to confirm SError origin. Verify dcache flush sequence during CPU suspend/resume.",
+      "expected_value": "Identify whether cache coherency failure preceded the soft lockup.",
+      "file_path": "arch/arm64/kernel/suspend.c"
+    },
+    {
+      "step_id": 2,
+      "action_type": "MEASUREMENT",
+      "instruction": "Scope PMIC rails (VDDCPU, VDDMX) during the boot/stress period. ESR EC=0x2F SError can be triggered by DRAM ECC errors under insufficient power.",
+      "expected_value": "All rails within ±5% of nominal voltage during load.",
+      "file_path": "N/A"
+    }
+  ]
+}

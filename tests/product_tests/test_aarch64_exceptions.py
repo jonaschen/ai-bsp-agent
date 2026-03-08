@@ -8,15 +8,25 @@ ESR_EL1 test values (manually verified against ARM DDI0487):
   0x86000005 — EC=0x21 (Instruction Abort, current EL), IL=1, IFSC=0x05 (Translation L1)
   0xBE000000 — EC=0x2F (SError Interrupt), IL=1, ISS=0
   0x00000000 — EC=0x00 (Unknown reason)
+
+decode_aarch64_exception FAR test values:
+  esr=0x96000005, far=0x0000000000000010  — Data Abort EL1, user-space FAR (near-NULL)
+  esr=0x96000005, far=0xffff800012345678  — Data Abort EL1, kernel-space FAR
+  esr=0x90000005, far=0x0000ffff87654321  — Data Abort EL0, user-space FAR
+  esr=0x86000005, far=0xffff000012ab3400  — Instruction Abort EL1, kernel FAR
+  esr=0x80000007, far=0x00007fff00000000  — Instruction Abort EL0, user FAR
 """
 import pytest
 
 from skills.bsp_diagnostics.aarch64_exceptions import (
+    AArch64ExceptionInput,
+    AArch64ExceptionOutput,
     CacheCoherencyInput,
     CacheCoherencyOutput,
     ESRELInput,
     ESREL1Output,
     check_cache_coherency_panic,
+    decode_aarch64_exception,
     decode_esr_el1,
 )
 
@@ -232,3 +242,84 @@ class TestCacheCoherencySchema:
         inp = CacheCoherencyInput(panic_log=SERROR_PANIC_LOG)
         result = check_cache_coherency_panic(inp.panic_log)
         assert isinstance(result, CacheCoherencyOutput)
+
+
+# ---------------------------------------------------------------------------
+# decode_aarch64_exception tests
+# ---------------------------------------------------------------------------
+
+class TestDecodeAArch64Exception:
+    # --- Exception level inference ---
+    def test_data_abort_current_el_is_el1(self):
+        # EC=0x25 = Data Abort from current EL → EL1
+        out = decode_aarch64_exception("0x96000005", "0x0000000000000010")
+        assert out.exception_level == "EL1"
+
+    def test_data_abort_lower_el_is_el0(self):
+        # EC=0x24 = Data Abort from lower EL → EL0
+        # 0x90000005: EC = 0x90000005 >> 26 = 0x24
+        out = decode_aarch64_exception("0x90000005", "0x0000ffff87654321")
+        assert out.exception_level == "EL0"
+
+    def test_instruction_abort_current_el_is_el1(self):
+        # EC=0x21 = Instruction Abort from current EL → EL1
+        out = decode_aarch64_exception("0x86000005", "0xffff000012ab3400")
+        assert out.exception_level == "EL1"
+
+    def test_instruction_abort_lower_el_is_el0(self):
+        # EC=0x20 = Instruction Abort from lower EL → EL0
+        # 0x80000007: EC = 0x80000007 >> 26 = 0x20
+        out = decode_aarch64_exception("0x80000007", "0x00007fff00000000")
+        assert out.exception_level == "EL0"
+
+    def test_serror_exception_level_unknown(self):
+        # EC=0x2F = SError — not tied to a specific EL in the same way
+        out = decode_aarch64_exception("0xBE000000", "0x0")
+        assert out.exception_level == "unknown"
+
+    # --- FAR kernel/user classification ---
+    def test_kernel_far_address_detected(self):
+        out = decode_aarch64_exception("0x96000005", "0xffff800012345678")
+        assert out.far_is_kernel_address is True
+
+    def test_user_far_address_detected(self):
+        out = decode_aarch64_exception("0x96000005", "0x0000000000000010")
+        assert out.far_is_kernel_address is False
+
+    def test_near_null_far_is_user(self):
+        out = decode_aarch64_exception("0x96000005", "0x0")
+        assert out.far_is_kernel_address is False
+
+    # --- FAR value parsing ---
+    def test_far_value_parsed_correctly(self):
+        out = decode_aarch64_exception("0x96000005", "0x0000000000000010")
+        assert out.far_value == 0x10
+
+    def test_far_value_kernel_address(self):
+        out = decode_aarch64_exception("0x96000005", "0xffff800012345678")
+        assert out.far_value == 0xffff800012345678
+
+    # --- ESR fields still correct ---
+    def test_esr_fields_preserved(self):
+        out = decode_aarch64_exception("0x96000005", "0x0")
+        assert out.ec == 0x25
+        assert out.is_data_abort is True
+        assert out.is_instruction_abort is False
+
+    # --- Output schema ---
+    def test_returns_correct_type(self):
+        out = decode_aarch64_exception("0x96000005", "0x0000000000000010")
+        assert isinstance(out, AArch64ExceptionOutput)
+
+    def test_confidence_in_range(self):
+        for esr, far in [
+            ("0x96000005", "0x10"),
+            ("0x86000005", "0xffff000012345678"),
+            ("0xBE000000", "0x0"),
+        ]:
+            out = decode_aarch64_exception(esr, far)
+            assert 0.0 <= out.confidence <= 1.0
+
+    def test_fault_address_summary_non_empty(self):
+        out = decode_aarch64_exception("0x96000005", "0x0000000000000010")
+        assert out.fault_address_summary and len(out.fault_address_summary) > 0

@@ -1,8 +1,10 @@
 """
 AArch64 Exception Diagnostic Skills.
 
-Provides two deterministic tools for the Kernel Pathologist domain:
+Provides three deterministic tools for the Kernel Pathologist domain:
   - decode_esr_el1: decode AArch64 ESR_EL1 exception syndrome register
+  - decode_aarch64_exception: decode ESR_EL1 together with FAR_EL1 (fault address);
+    infers exception level (EL0/EL1) from EC bits and classifies kernel vs. user FAR
   - check_cache_coherency_panic: detect PoC cache coherency failures in panic logs
 
 Domain: Android BSP / AArch64 Architecture & Exceptions
@@ -198,6 +200,157 @@ def decode_esr_el1(hex_value: str) -> ESREL1Output:
         is_instruction_abort=is_instruction_abort,
         is_serror=is_serror,
         recommended_action=recommended_action,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Skill 3b: decode_aarch64_exception (ESR_EL1 + FAR_EL1)
+# ---------------------------------------------------------------------------
+
+# EC values that originate from the current EL (EL1 in typical Linux kernel context)
+_EL1_EC_SET = {0x21, 0x25}   # Instruction Abort / Data Abort from current EL
+# EC values that originate from a lower EL (EL0 — user space)
+_EL0_EC_SET = {0x20, 0x24}   # Instruction Abort / Data Abort from lower EL
+
+# AArch64 Linux kernel VA split: bit 63 set → kernel address
+_KERNEL_VA_THRESHOLD = 1 << 63
+
+
+class AArch64ExceptionInput(BaseModel):
+    esr_val: str = Field(
+        ...,
+        description="ESR_EL1 register value as hex string (e.g. '0x96000005' or '96000005')",
+    )
+    far_val: str = Field(
+        ...,
+        description=(
+            "FAR_EL1 (Fault Address Register) value as hex string "
+            "(e.g. '0x0000000000000010' or '0xffff800012345678')"
+        ),
+    )
+
+
+class AArch64ExceptionOutput(BaseModel):
+    # ESR fields
+    raw_esr_hex: str = Field(..., description="Original ESR hex string as supplied")
+    esr_raw_value: int = Field(..., description="Parsed integer value of ESR_EL1")
+    ec: int = Field(..., description="Exception Class field (bits [31:26])")
+    ec_description: str = Field(..., description="Human-readable EC description")
+    il: int = Field(..., description="Instruction Length bit (bit [25])")
+    iss: int = Field(..., description="Instruction Specific Syndrome (bits [24:0])")
+    iss_detail: Optional[str] = Field(None, description="Decoded ISS fields")
+    is_data_abort: bool
+    is_instruction_abort: bool
+    is_serror: bool
+    # FAR + EL fields
+    raw_far_hex: str = Field(..., description="Original FAR hex string as supplied")
+    far_value: int = Field(..., description="Parsed integer value of FAR_EL1")
+    exception_level: str = Field(
+        ..., description="Exception level inferred from EC: 'EL0', 'EL1', or 'unknown'"
+    )
+    far_is_kernel_address: bool = Field(
+        ..., description="True if FAR bit 63 is set (kernel virtual address space)"
+    )
+    fault_address_summary: str = Field(
+        ..., description="Human-readable summary of the fault address and access type"
+    )
+    recommended_action: str = Field(..., description="Recommended next debugging step")
+    confidence: float = Field(..., ge=0.0, le=1.0)
+
+
+def decode_aarch64_exception(esr_val: str, far_val: str) -> AArch64ExceptionOutput:
+    """
+    Decode an AArch64 ESR_EL1 + FAR_EL1 register pair.
+
+    Extends decode_esr_el1 with Fault Address Register (FAR) interpretation:
+    - Infers exception level (EL0 / EL1) from EC bits:
+        EC=0x24/0x20 (from lower EL) → EL0 (user space fault)
+        EC=0x25/0x21 (from current EL) → EL1 (kernel fault)
+    - Classifies FAR as kernel or user-space address (bit 63 heuristic).
+    - Provides a human-readable fault_address_summary.
+
+    Use when the kernel Oops log contains both ESR_EL1 and FAR_EL1 values.
+    The esr_el1_hex field from extract_kernel_oops_log can be passed directly.
+
+    Args:
+        esr_val: ESR_EL1 as a hex string.
+        far_val: FAR_EL1 as a hex string.
+
+    Returns:
+        AArch64ExceptionOutput with all decoded fields.
+    """
+    # --- Decode ESR (reuse existing logic) ---
+    esr_decoded = decode_esr_el1(esr_val)
+
+    # --- Parse FAR ---
+    far_raw = far_val.strip()
+    far_int = int(far_raw, 16)
+    far_is_kernel = far_int >= _KERNEL_VA_THRESHOLD
+
+    # --- Infer exception level from EC ---
+    ec = esr_decoded.ec
+    if ec in _EL1_EC_SET:
+        exception_level = "EL1"
+    elif ec in _EL0_EC_SET:
+        exception_level = "EL0"
+    else:
+        exception_level = "unknown"
+
+    # --- Build fault address summary ---
+    space = "kernel" if far_is_kernel else "user"
+    if far_int == 0:
+        addr_desc = "NULL (0x0)"
+    elif far_int < 0x1000 and not far_is_kernel:
+        addr_desc = f"near-NULL (0x{far_int:016x})"
+    else:
+        addr_desc = f"0x{far_int:016x}"
+
+    el_str = f" in {exception_level}" if exception_level != "unknown" else ""
+    fault_address_summary = (
+        f"{esr_decoded.ec_description}{el_str} at {space}-space address {addr_desc}"
+    )
+
+    # --- Recommended action ---
+    if far_int == 0 or (far_int < 0x1000 and not far_is_kernel):
+        recommended_action = (
+            f"NULL or near-NULL pointer dereference at 0x{far_int:x}. "
+            "Add NULL checks around the faulting PC. "
+            "Verify driver probe order and all prerequisite initialisations."
+        )
+    elif far_is_kernel:
+        recommended_action = (
+            f"Kernel-space fault at 0x{far_int:016x}. "
+            "Check for use-after-free or out-of-bounds access. "
+            "Run KASAN if available."
+        )
+    else:
+        recommended_action = (
+            f"User-space fault at 0x{far_int:016x}. "
+            "Verify mmap permissions and that the user process has not been killed. "
+            "Check for a missing copy_to/from_user boundary check."
+        )
+
+    # Confidence: highest when we have a recognised abort + meaningful FAR
+    confidence = 0.88 if ec in (_EL1_EC_SET | _EL0_EC_SET) else 0.70
+
+    return AArch64ExceptionOutput(
+        raw_esr_hex=esr_decoded.raw_hex,
+        esr_raw_value=esr_decoded.raw_value,
+        ec=esr_decoded.ec,
+        ec_description=esr_decoded.ec_description,
+        il=esr_decoded.il,
+        iss=esr_decoded.iss,
+        iss_detail=esr_decoded.iss_detail,
+        is_data_abort=esr_decoded.is_data_abort,
+        is_instruction_abort=esr_decoded.is_instruction_abort,
+        is_serror=esr_decoded.is_serror,
+        raw_far_hex=far_raw,
+        far_value=far_int,
+        exception_level=exception_level,
+        far_is_kernel_address=far_is_kernel,
+        fault_address_summary=fault_address_summary,
+        recommended_action=recommended_action,
+        confidence=confidence,
     )
 
 

@@ -10,10 +10,16 @@ request, and calls `dispatch_tool()` to execute a skill after Claude selects one
 from typing import Any
 
 from skills.bsp_diagnostics.aarch64_exceptions import (
+    AArch64ExceptionInput,
     CacheCoherencyInput,
     ESRELInput,
     check_cache_coherency_panic,
+    decode_aarch64_exception,
     decode_esr_el1,
+)
+from skills.bsp_diagnostics.kernel_oops import (
+    KernelOopsInput,
+    extract_kernel_oops_log,
 )
 from skills.bsp_diagnostics.early_boot import (
     EarlyBootUARTInput,
@@ -101,6 +107,31 @@ TOOL_DEFINITIONS: list[dict] = [
         "input_schema": _pydantic_to_input_schema(STDHibernationInput),
     },
     {
+        "name": "extract_kernel_oops_log",
+        "description": (
+            "Parse a kernel Oops or BUG report from a dmesg log. "
+            "Detects 'Unable to handle kernel NULL pointer dereference', "
+            "'Unable to handle kernel paging request', 'kernel BUG at', and "
+            "'Internal error: Oops' messages. Extracts faulting process name, PID, "
+            "CPU number, ESR_EL1 hex (pass to decode_esr_el1 or decode_aarch64_exception), "
+            "FAR_EL1, pc/lr symbols, and call trace (up to 32 entries). "
+            "Use as the first step whenever a kernel Oops is suspected."
+        ),
+        "input_schema": _pydantic_to_input_schema(KernelOopsInput),
+    },
+    {
+        "name": "decode_aarch64_exception",
+        "description": (
+            "Decode an AArch64 ESR_EL1 + FAR_EL1 register pair together. "
+            "Extends decode_esr_el1 with Fault Address Register interpretation: "
+            "infers exception level (EL0 from lower EL / EL1 from current EL) from EC bits, "
+            "classifies FAR as kernel-space (bit 63 set) or user-space, and provides a "
+            "human-readable fault_address_summary. "
+            "Use when the kernel Oops log contains both ESR_EL1 and FAR_EL1 values."
+        ),
+        "input_schema": _pydantic_to_input_schema(AArch64ExceptionInput),
+    },
+    {
         "name": "decode_esr_el1",
         "description": (
             "Decode an AArch64 ESR_EL1 (Exception Syndrome Register) hex value. "
@@ -168,7 +199,9 @@ ROUTE_TOOLS: dict[str, set[str]] = {
         "check_pmic_rail_voltage",
     },
     "kernel_pathologist": _UNIVERSAL_TOOLS | {
+        "extract_kernel_oops_log",
         "decode_esr_el1",
+        "decode_aarch64_exception",
         "check_cache_coherency_panic",
         "analyze_watchdog_timeout",
     },
@@ -179,6 +212,13 @@ ROUTE_TOOLS: dict[str, set[str]] = {
 }
 
 _DISPATCH_TABLE: dict[str, Any] = {
+    "extract_kernel_oops_log": lambda inp: extract_kernel_oops_log(
+        dmesg_log=inp["dmesg_log"],
+    ).model_dump(),
+    "decode_aarch64_exception": lambda inp: decode_aarch64_exception(
+        esr_val=inp["esr_val"],
+        far_val=inp["far_val"],
+    ).model_dump(),
     "segment_boot_log": lambda inp: segment_boot_log(
         raw_log=inp["raw_log"],
     ).model_dump(),
