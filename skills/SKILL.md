@@ -39,6 +39,9 @@ def my_bsp_skill(input: MySkillInput) -> MySkillOutput:
 
 | Module | Function | Supervisor Route | Domain |
 |--------|----------|-----------------|--------|
+| `bsp_diagnostics/log_segmenter.py` | `segment_boot_log` | **universal** (all routes) | Boot Stage Triage |
+| `bsp_diagnostics/early_boot.py` | `parse_early_boot_uart_log` | `early_boot_advisor` | TF-A / BootROM UART |
+| `bsp_diagnostics/early_boot.py` | `analyze_lk_panic` | `early_boot_advisor` | LK / U-Boot Panic |
 | `bsp_diagnostics/std_hibernation.py` | `analyze_std_hibernation_error` | `hardware_advisor` | STD / Suspend-to-Disk |
 | `bsp_diagnostics/aarch64_exceptions.py` | `decode_esr_el1` | `kernel_pathologist` | AArch64 Exceptions |
 | `bsp_diagnostics/aarch64_exceptions.py` | `check_cache_coherency_panic` | `kernel_pathologist` | AArch64 Cache Coherency |

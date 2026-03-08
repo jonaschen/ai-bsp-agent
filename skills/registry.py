@@ -15,6 +15,16 @@ from skills.bsp_diagnostics.aarch64_exceptions import (
     check_cache_coherency_panic,
     decode_esr_el1,
 )
+from skills.bsp_diagnostics.early_boot import (
+    EarlyBootUARTInput,
+    LKPanicInput,
+    analyze_lk_panic,
+    parse_early_boot_uart_log,
+)
+from skills.bsp_diagnostics.log_segmenter import (
+    BootLogSegmenterInput,
+    segment_boot_log,
+)
 from skills.bsp_diagnostics.pmic import (
     PMICVoltageInput,
     check_pmic_rail_voltage,
@@ -44,6 +54,41 @@ def _pydantic_to_input_schema(model_cls) -> dict:
 
 
 TOOL_DEFINITIONS: list[dict] = [
+    {
+        "name": "segment_boot_log",
+        "description": (
+            "Universal triage entry point (AGENTS.md §3.1). Identify the failing boot "
+            "stage boundary from a raw log — pre-kernel UART output (TF-A/LK/U-Boot), "
+            "kernel dmesg, or Android init/logcat. Returns the detected stage "
+            "('early_boot', 'kernel_init', 'android_init', or 'unknown'), a recommended "
+            "supervisor route, the first error line, and a confidence score. "
+            "ALWAYS invoke this tool first before any domain-specific skill."
+        ),
+        "input_schema": _pydantic_to_input_schema(BootLogSegmenterInput),
+    },
+    {
+        "name": "parse_early_boot_uart_log",
+        "description": (
+            "Detect and classify failures in TF-A / BootROM / BootROM UART output. "
+            "Identifies the bootloader stage (BL1, BL2, BL31, U-Boot) where the failure "
+            "occurred and classifies the error as: auth_failure (Secure Boot signature "
+            "mismatch), image_load_failure (missing FIP/partition), ddr_init_failure "
+            "(LPDDR training error), pmic_failure (rail not ready), or generic_error. "
+            "Use when segment_boot_log returns detected_stage='early_boot'."
+        ),
+        "input_schema": _pydantic_to_input_schema(EarlyBootUARTInput),
+    },
+    {
+        "name": "analyze_lk_panic",
+        "description": (
+            "Parse LK (Little Kernel) and U-Boot panic / assert messages. "
+            "Extracts the assert source file and line number, the failing function, "
+            "register dump (r0-r15 / x0-x30 / sp / elr), and classifies the panic as: "
+            "assert, ddr_failure, image_load, pmic_failure, or generic. "
+            "Use for Qualcomm LK or U-Boot stage failures identified by segment_boot_log."
+        ),
+        "input_schema": _pydantic_to_input_schema(LKPanicInput),
+    },
     {
         "name": "analyze_std_hibernation_error",
         "description": (
@@ -114,20 +159,35 @@ TOOL_DEFINITIONS: list[dict] = [
 
 # Maps supervisor routing decisions to the set of tool names for that domain.
 # The Brain uses this to offer only relevant tools to Claude per diagnostic session.
+_UNIVERSAL_TOOLS: set[str] = {"segment_boot_log"}
+
 ROUTE_TOOLS: dict[str, set[str]] = {
-    "hardware_advisor": {
+    "hardware_advisor": _UNIVERSAL_TOOLS | {
         "analyze_std_hibernation_error",
         "check_vendor_boot_ufs_driver",
         "check_pmic_rail_voltage",
     },
-    "kernel_pathologist": {
+    "kernel_pathologist": _UNIVERSAL_TOOLS | {
         "decode_esr_el1",
         "check_cache_coherency_panic",
         "analyze_watchdog_timeout",
     },
+    "early_boot_advisor": _UNIVERSAL_TOOLS | {
+        "parse_early_boot_uart_log",
+        "analyze_lk_panic",
+    },
 }
 
 _DISPATCH_TABLE: dict[str, Any] = {
+    "segment_boot_log": lambda inp: segment_boot_log(
+        raw_log=inp["raw_log"],
+    ).model_dump(),
+    "parse_early_boot_uart_log": lambda inp: parse_early_boot_uart_log(
+        raw_uart_log=inp["raw_uart_log"],
+    ).model_dump(),
+    "analyze_lk_panic": lambda inp: analyze_lk_panic(
+        uart_log_snippet=inp["uart_log_snippet"],
+    ).model_dump(),
     "analyze_std_hibernation_error": lambda inp: analyze_std_hibernation_error(
         dmesg_log=inp["dmesg_log"],
         meminfo_log=inp["meminfo_log"],

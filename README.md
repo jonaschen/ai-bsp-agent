@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Version:** v6.0 (Skill-Based Expert)
+> **Version:** v6.1 (Phase 4 — Early Boot Domain)
 > **Status:** Research Prototype / Serious AI Systems Engineering
 
 ## Project Overview
@@ -30,7 +30,7 @@ The system operates as a **Skill-Based Expert Agent** using the Anthropic Tool-U
 ### Layer 1: The Brain (Reasoning Engine)
 
 - **`BSPDiagnosticAgent`** (`product/bsp_agent/agent.py`): Runs the Claude Sonnet tool-use loop; invokes Skills via `dispatch_tool()` and validates the final `ConsultantResponse`.
-- **`SupervisorAgent`** (`product/bsp_agent/agents/supervisor.py`): Claude Haiku triage router — classifies incoming logs as `kernel_pathologist`, `hardware_advisor`, or `clarify_needed` in a single token (max_tokens=16).
+- **`SupervisorAgent`** (`product/bsp_agent/agents/supervisor.py`): Triage router — classifies incoming logs and routes to one of four specialist domains. Early boot logs (TF-A/LK/U-Boot markers, no kernel timestamp) are detected by pure regex and bypass the LLM entirely. Kernel and Android logs are sent to Claude Haiku (max_tokens=16) for a single routing token.
 - **Constraint:** The Brain never performs math, parses hex offsets, or calculates memory sizes — it always delegates to Skills.
 
 ### Layer 2: The Skill Registry (Deterministic Tools)
@@ -47,6 +47,19 @@ Markdown files in `docs/` with YAML frontmatter scoping each document to a super
 ---
 
 ## Diagnostic Skills
+
+### Universal triage (all routes)
+
+| Skill | File | What it detects |
+|---|---|---|
+| `segment_boot_log` | `log_segmenter.py` | Identifies failing stage boundary: `early_boot` / `kernel_init` / `android_init` / `unknown`; returns suggested route and first error line. Always invoked first (AGENTS.md §3.1) |
+
+### `early_boot_advisor` route
+
+| Skill | File | What it detects |
+|---|---|---|
+| `parse_early_boot_uart_log` | `early_boot.py` | TF-A auth failures, image load failures, DDR init failures, PMIC power-sequencing failures; identifies BL stage (BL1/BL2/BL31/U-Boot) and last successful handoff step |
+| `analyze_lk_panic` | `early_boot.py` | LK `ASSERT FAILED` with source file/line extraction, U-Boot image magic errors, LK DDR/PMIC panics, ARM32/AArch64 register dump extraction |
 
 ### `hardware_advisor` route
 
@@ -91,13 +104,15 @@ Markdown files in `docs/` with YAML frontmatter scoping each document to a super
 │   ├── SKILL.md                     # Skill index and authoring contract.
 │   ├── registry.py                  # Anthropic tool definitions + dispatch_tool() router.
 │   └── bsp_diagnostics/
+│       ├── log_segmenter.py         # segment_boot_log (universal triage — all routes)
+│       ├── early_boot.py            # parse_early_boot_uart_log, analyze_lk_panic
 │       ├── std_hibernation.py       # analyze_std_hibernation_error
 │       ├── aarch64_exceptions.py    # decode_esr_el1, check_cache_coherency_panic
 │       ├── vendor_boot.py           # check_vendor_boot_ufs_driver
 │       ├── watchdog.py              # analyze_watchdog_timeout
 │       └── pmic.py                  # check_pmic_rail_voltage
 ├── tests/
-│   └── product_tests/               # Isolated pytest suite (no LLM calls) — 231 tests.
+│   └── product_tests/               # Isolated pytest suite (no LLM calls) — 298 tests.
 │       ├── test_integration.py      # End-to-end pipeline (mocked Anthropic client).
 │       └── fixtures/                # Golden-set log files and expected output JSON.
 └── studio/                          # Legacy factory code (deprecated — do not modify).
@@ -147,6 +162,11 @@ python cli.py --dmesg logs/panic.txt --device Pixel_Watch_Proto --output result.
 # Custom query
 python cli.py --dmesg logs/dmesg.txt \
               --query "Device failed to resume from STD" \
+              --output result.json
+
+# Early boot UART log (TF-A / U-Boot / LK)
+python cli.py --dmesg logs/uart_bl2_fail.txt \
+              --query "Board fails to boot past BL2" \
               --output result.json
 ```
 
@@ -203,11 +223,15 @@ For each run, evaluate:
 **Supervisor routing errors** (most damaging — wrong toolset offered):
 - A UFS resume failure with a co-occurring kernel oops may be misrouted to `kernel_pathologist`
 - A watchdog lockup during suspend may be misrouted to `hardware_advisor` if the panic message is ambiguous
+- Mixed logs (early UART output followed by kernel dmesg) may confuse stage detection in `segment_boot_log`
 
 **Skill false negatives** (most likely per skill):
 
 | Skill | Likely gap |
 |---|---|
+| `segment_boot_log` | Mixed UART+kernel logs; logs with non-standard kernel timestamp formats |
+| `parse_early_boot_uart_log` | Vendor-specific TF-A error strings not matching standard patterns |
+| `analyze_lk_panic` | LK assert formats differ across Qualcomm SoC generations |
 | `analyze_watchdog_timeout` | Vendor kernels use non-standard formats (e.g., Qualcomm: `[0: kworker:1234] BUG: soft lockup`) |
 | `check_pmic_rail_voltage` | Vendor-specific voltage log formats not yet covered |
 | `check_vendor_boot_ufs_driver` | MTK (`ufs-mediatek`) and Exynos (`ufshcd-exynos`) driver prefixes not fully covered |

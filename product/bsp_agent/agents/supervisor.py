@@ -5,6 +5,19 @@ import anthropic
 
 from product.bsp_agent.core.state import AgentState
 
+_EARLY_BOOT_MARKERS_RE = re.compile(
+    r"NOTICE:\s+BL[1-9]:|"
+    r"U-Boot\s+\d{4}\.\d{2}|"
+    r"Booting Trusted Firmware|"
+    r"TF-A\s+v\d|"
+    r"\[0+\]\s+(?:LK|target_init|platform_init)|"
+    r"LK version:|"
+    r"XBL CORE\s+Version|"
+    r"SBL1\s+build|"
+    r"UEFI firmware|EDK II",
+    re.IGNORECASE,
+)
+
 _TRIAGE_SYSTEM = (
     "You are a BSP Supervisor Agent. Triage Android kernel logs and decide "
     "which specialist to route to. Reply with EXACTLY one of these tokens: "
@@ -59,9 +72,18 @@ class SupervisorAgent:
 
         return "\n".join(lines[-5000:]) if len(lines) > 5000 else text
 
+    def _is_early_boot_log(self, text: str) -> bool:
+        """Return True if text contains pre-kernel UART markers and no kernel timestamps."""
+        has_kernel_ts = bool(re.search(r"\[\s*\d+\.\d+\]", text))
+        return bool(_EARLY_BOOT_MARKERS_RE.search(text)) and not has_kernel_ts
+
     def route(self, state: AgentState) -> str:
         """Route the case to the appropriate specialist."""
         log_content = state.get("current_log_chunk", "")
+
+        # Early boot logs have no kernel timestamps — bypass LLM triage
+        if self._is_early_boot_log(log_content):
+            return "early_boot_advisor"
 
         if not self.validate_input(log_content):
             return "clarify_needed"

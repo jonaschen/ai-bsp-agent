@@ -34,6 +34,7 @@ classDiagram
         +chunk_threshold: int
         +validate_input(text: str) bool
         +chunk_log(text: str) str
+        +_is_early_boot_log(text: str) bool
         +route(state: AgentState) str
     }
 
@@ -41,6 +42,15 @@ classDiagram
         +TOOL_DEFINITIONS: list[dict]
         +ROUTE_TOOLS: dict[str, set[str]]
         +dispatch_tool(tool_name, tool_input) dict
+    }
+
+    class LogSegmenterSkill {
+        +segment_boot_log(raw_log) BootLogSegmenterOutput
+    }
+
+    class EarlyBootSkill {
+        +parse_early_boot_uart_log(raw_uart_log) EarlyBootUARTOutput
+        +analyze_lk_panic(uart_log_snippet) LKPanicOutput
     }
 
     class STDHibernationSkill {
@@ -86,6 +96,8 @@ classDiagram
     BSPDiagnosticAgent --> ConsultantResponse : produces
     SupervisorAgent --> AgentState : reads/routes
     CaseFile *-- LogPayload : contains
+    SkillRegistry --> LogSegmenterSkill : delegates to
+    SkillRegistry --> EarlyBootSkill : delegates to
     SkillRegistry --> STDHibernationSkill : delegates to
     SkillRegistry --> AArch64ExceptionsSkill : delegates to
 ```
@@ -108,14 +120,21 @@ sequenceDiagram
     SupervisorAgent-->>BSPDiagnosticAgent: chunked_log
 
     BSPDiagnosticAgent->>SupervisorAgent: route(AgentState)
-    SupervisorAgent->>ClaudeHaiku: messages.create (triage)
-    ClaudeHaiku-->>SupervisorAgent: "hardware_advisor" | "kernel_pathologist" | "clarify_needed"
-    SupervisorAgent-->>BSPDiagnosticAgent: route
+
+    alt early boot markers detected (no kernel timestamp)
+        Note over SupervisorAgent: _is_early_boot_log() — pure regex, no LLM call
+        SupervisorAgent-->>BSPDiagnosticAgent: "early_boot_advisor"
+    else kernel timestamp present
+        SupervisorAgent->>ClaudeHaiku: messages.create (triage)
+        ClaudeHaiku-->>SupervisorAgent: "hardware_advisor" | "kernel_pathologist" | "clarify_needed"
+        SupervisorAgent-->>BSPDiagnosticAgent: route
+    end
 
     alt route == clarify_needed
         BSPDiagnosticAgent-->>User: ConsultantResponse(CLARIFY_NEEDED)
-    else route == hardware_advisor | kernel_pathologist
+    else route == hardware_advisor | kernel_pathologist | early_boot_advisor
         BSPDiagnosticAgent->>ClaudeSonnet: messages.create(tools=route_tools, user_message)
+        Note over ClaudeSonnet: route_tools always includes segment_boot_log (universal triage)
         ClaudeSonnet-->>BSPDiagnosticAgent: stop_reason=tool_use [tool_name, input]
 
         BSPDiagnosticAgent->>SkillRegistry: dispatch_tool(tool_name, input)
@@ -140,15 +159,16 @@ sequenceDiagram
 - **CLARIFY_NEEDED fallback**: Returned if Supervisor cannot triage, if Claude returns unparseable JSON, or if `max_tool_rounds` is exceeded.
 
 ### 2. `SupervisorAgent` (`product/bsp_agent/agents/supervisor.py`)
-- **Role**: Fast triage router. Reads dmesg, validates that it is a kernel log, and routes to one of three destinations.
-- **Model**: `claude-haiku-4-5-20251001` (low-cost, max_tokens=16 — returns a single routing token).
-- **Routes**: `kernel_pathologist` (panics, null-pointers, oops), `hardware_advisor` (STD, watchdog, power management), `clarify_needed` (invalid or insufficient log).
+- **Role**: Fast triage router. Reads the log, detects the boot domain, and routes to one of four specialist destinations.
+- **Routes**: `early_boot_advisor` (TF-A/LK/U-Boot UART logs), `kernel_pathologist` (panics, null-pointers, oops), `hardware_advisor` (STD, watchdog, power management), `clarify_needed` (invalid or insufficient log).
+- **Early boot short-circuit**: `_is_early_boot_log()` runs first — if TF-A/LK/U-Boot markers are present and there is no kernel timestamp, routes to `early_boot_advisor` via pure regex, with zero LLM calls.
+- **Kernel/hardware routing**: `validate_input()` checks for kernel timestamp pattern; if present, delegates to Claude Haiku (max_tokens=16) for a single routing token.
 - **Log chunking**: Extracts the Event Horizon (±10 s around detected failure timestamp) when logs exceed 50 MB. Falls back to last 5 000 lines.
-- **Short-circuit**: If `validate_input()` fails (no kernel timestamp pattern), returns `clarify_needed` without calling the LLM.
+- **Short-circuit**: If `validate_input()` fails (no kernel timestamp, no early boot markers), returns `clarify_needed` without calling the LLM.
 
 ### 3. Skill Registry (`skills/registry.py`)
 - **`TOOL_DEFINITIONS`**: List of Anthropic-compatible tool dicts, auto-generated from each skill's Pydantic `Input` model via `model_json_schema()`.
-- **`ROUTE_TOOLS`**: Maps supervisor routes to the set of tool names for that domain. The Brain uses this to offer only relevant tools to Claude per session, reducing noise and token cost.
+- **`ROUTE_TOOLS`**: Maps supervisor routes to the set of tool names for that domain. The Brain uses this to offer only relevant tools to Claude per session, reducing noise and token cost. `segment_boot_log` is added to every route via `_UNIVERSAL_TOOLS` set union.
 - **`dispatch_tool(name, input_dict)`**: Routes by name to the correct skill function, returns a JSON-serialisable `dict`.
 
 ### 4. Skills (`skills/bsp_diagnostics/`)
@@ -165,6 +185,21 @@ sequenceDiagram
 ---
 
 ## Diagnostic Domains & Skill Inventory
+
+### Universal Triage Tool (all routes)
+**Registered under:** every route via `_UNIVERSAL_TOOLS`
+
+| Skill | Function | Logic |
+|---|---|---|
+| `log_segmenter.py` | `segment_boot_log` | Checks for `_EARLY_BOOT_MARKERS` (TF-A/LK/U-Boot/UEFI/XBL) vs kernel timestamp pattern vs Android init markers. Priority: `early_boot` > `android_init` > `kernel_init` > `unknown`. Returns `suggested_route`, `first_error_line`, `confidence` |
+
+### Domain 0: Early Boot (Pre-Kernel)
+**Supervisor route:** `early_boot_advisor` (bypasses LLM — pure regex detection)
+
+| Skill | Function | Logic |
+|---|---|---|
+| `early_boot.py` | `parse_early_boot_uart_log` | Stage detection via `_BL_STAGE_PATTERNS` (BL1→BL33→U-Boot→XBL→UEFI); error classification: auth_failure > image_load_failure > ddr_init_failure > pmic_failure > generic_error; extracts last successful handoff step |
+| `early_boot.py` | `analyze_lk_panic` | Detects `ASSERT FAILED at [file:line]`; classifies: assert > ddr_failure > image_load > pmic_failure > generic; extracts ARM32/AArch64 register dump; capped at 20 lines |
 
 ### Domain 1: Suspend-to-Disk (STD) & Power Management
 **Supervisor route:** `hardware_advisor`
@@ -217,7 +252,28 @@ All pieces of the v6 architecture are in place and tested (107 product tests pas
 | 8 | Skill: `check_vendor_boot_ufs_driver` | `hardware_advisor` | Detect UFS driver load failures during STD restore phase — phase-classified (probe / link_startup / resume) — 16 tests |
 | 9 | Skill: `analyze_watchdog_timeout` | `kernel_pathologist` | Parse softlockup / hardlockup / RCU stall events; extract CPU, PID, process name, stuck duration, call trace — 19 tests |
 | 10 | Skill: `check_pmic_rail_voltage` | `hardware_advisor` | Extract PMIC rail voltages (rpm-smd, qpnp, generic) from logcat/dmesg; detect OCP and undervoltage events — 19 tests |
-| 11 | Real-world log validation | — | Run against actual BSP logs; tune skill thresholds; document known edge cases and false positives |
+
+### Phase 4 — Early Boot Domain ✓ DONE
+
+**298 product tests passing.**
+
+| # | Item | Route | Description |
+|---|---|---|---|
+| 11 | Skill: `segment_boot_log` | universal | Universal triage entry point (AGENTS.md §3.1); detects early_boot / kernel_init / android_init / unknown from raw log text — 32 tests |
+| 12 | Skill: `parse_early_boot_uart_log` | `early_boot_advisor` | TF-A / BootROM UART log parser; classifies auth/image/DDR/PMIC failures; BL stage detection; last handoff step — 21 tests |
+| 13 | Skill: `analyze_lk_panic` | `early_boot_advisor` | LK assert / U-Boot panic parser; file:line extraction; ARM32 + AArch64 register dump — 20 tests |
+| 14 | Supervisor: `early_boot_advisor` route | — | `_is_early_boot_log()` short-circuit before LLM call; routes TF-A/LK/U-Boot UART logs without Claude Haiku invocation |
+| 15 | Registry: universal tool support | — | `_UNIVERSAL_TOOLS` set merged into every route; `segment_boot_log` available regardless of routing decision |
+
+### Phase 5+ — Planned
+
+| # | Item | Route | Notes |
+|---|---|---|---|
+| 16 | Real-world log validation | — | Run against actual BSP logs; tune thresholds; document edge cases |
+| 17 | Skill: `extract_kernel_oops_log` | `kernel_pathologist` | Extract and structure kernel Oops reports |
+| 18 | Multi-tool synergy integration test | — | Watchdog + concurrent ESR_EL1 fixture; validate Brain invokes both tools |
+| 19 | Skill: `analyze_selinux_denial` | `android_init_advisor` | Parse SELinux denial messages |
+| 20 | Skill: `check_android_init_rc` | `android_init_advisor` | Detect init.rc service failures |
 
 ---
 
