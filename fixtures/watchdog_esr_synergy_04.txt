@@ -1,0 +1,19 @@
+[  120.001234] BUG: soft lockup - CPU#2 stuck for 22s! [kworker/2:1:456]
+[  120.001235] Modules linked in: vendor_acme_driver(O)
+[  120.001236] CPU: 2 PID: 456 Comm: kworker/2:1 Not tainted 5.15.0-android13
+[  120.001237] Hardware name: Acme Board v1 (DT)
+[  120.001238] pstate: 00400009 (nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[  120.001239] pc : _raw_spin_lock_irqsave+0x28/0x60
+[  120.001240] lr : vendor_acme_irq_handler+0x1c/0xa0
+[  120.001241] sp : ffff800012ab3e90
+[  120.001242] Call Trace:
+[  120.001243]  _raw_spin_lock_irqsave+0x28/0x60
+[  120.001244]  vendor_acme_irq_handler+0x1c/0xa0
+[  120.001245]  __handle_irq_event_percpu+0x64/0x1e0
+[  120.001246]  handle_irq_event_percpu+0x34/0xa0
+[  120.001247]  handle_irq_event+0x44/0xa0
+[  120.200000] SError Interrupt on CPU 2
+[  120.200001] ESR_EL1 = 0xBE000000
+[  120.200002] FAR_EL1 = 0x0000000000000000
+[  120.200003] arm64: taking pending SError interrupt
+[  120.200004] Kernel panic - not syncing: Asynchronous SError Interrupt

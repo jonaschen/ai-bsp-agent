@@ -42,9 +42,11 @@ def my_bsp_skill(input: MySkillInput) -> MySkillOutput:
 | `bsp_diagnostics/log_segmenter.py` | `segment_boot_log` | **universal** (all routes) | Boot Stage Triage |
 | `bsp_diagnostics/early_boot.py` | `parse_early_boot_uart_log` | `early_boot_advisor` | TF-A / BootROM UART |
 | `bsp_diagnostics/early_boot.py` | `analyze_lk_panic` | `early_boot_advisor` | LK / U-Boot Panic |
-| `bsp_diagnostics/std_hibernation.py` | `analyze_std_hibernation_error` | `hardware_advisor` | STD / Suspend-to-Disk |
-| `bsp_diagnostics/aarch64_exceptions.py` | `decode_esr_el1` | `kernel_pathologist` | AArch64 Exceptions |
+| `bsp_diagnostics/kernel_oops.py` | `extract_kernel_oops_log` | `kernel_pathologist` | Kernel Oops / BUG Parser |
+| `bsp_diagnostics/aarch64_exceptions.py` | `decode_esr_el1` | `kernel_pathologist` | AArch64 ESR_EL1 Decode |
+| `bsp_diagnostics/aarch64_exceptions.py` | `decode_aarch64_exception` | `kernel_pathologist` | ESR_EL1 + FAR_EL1 Decode |
 | `bsp_diagnostics/aarch64_exceptions.py` | `check_cache_coherency_panic` | `kernel_pathologist` | AArch64 Cache Coherency |
+| `bsp_diagnostics/std_hibernation.py` | `analyze_std_hibernation_error` | `hardware_advisor` | STD / Suspend-to-Disk |
 | `bsp_diagnostics/vendor_boot.py` | `check_vendor_boot_ufs_driver` | `hardware_advisor` | UFS Driver / STD Restore |
 | `bsp_diagnostics/watchdog.py` | `analyze_watchdog_timeout` | `kernel_pathologist` | Watchdog / Soft+Hard Lockup |
 | `bsp_diagnostics/pmic.py` | `check_pmic_rail_voltage` | `hardware_advisor` | PMIC Rail Voltages |
