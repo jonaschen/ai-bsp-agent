@@ -89,9 +89,13 @@ Markdown files in `docs/` with YAML frontmatter scoping each document to a super
 ├── CLAUDE.md                        # Coding agent guidance and milestone tracker.
 ├── DESIGN.md                        # Software design document (class diagram, sequence diagram, roadmap).
 ├── README.md                        # This file.
+├── pyproject.toml                   # Installable package — provides bsp-diagnostics-mcp entry point.
 ├── cli.py                           # CLI entry point: python cli.py --dmesg <path> [--meminfo <path>]
-├── requirements.txt                 # Python dependencies.
+├── requirements.txt                 # Python dependencies (includes mcp>=1.0).
 ├── pytest.ini                       # Pytest configuration (pythonpath = .).
+├── mcp_server/                      # MCP server — registers all skills with Claude CLI / VS Code.
+│   ├── __init__.py
+│   └── server.py                    # stdio MCP server; entry point: bsp-diagnostics-mcp
 ├── docs/                            # Knowledge base — domain reference for the Brain.
 │   ├── aarch64-exceptions.md        # ESR_EL1 field layout, EC/DFSC tables, SError checklist.
 │   └── memory-reclamation.md        # STD hibernation failure logic, SUnreclaim/SwapFree thresholds.
@@ -149,6 +153,62 @@ Run a single skill test file:
 ```bash
 source venv/bin/activate && python -m pytest tests/product_tests/test_watchdog_skill.py
 ```
+
+### Using as an MCP Server (Claude CLI / Claude Code in VS Code)
+
+All 11 BSP diagnostic skills can be registered as an MCP server so they appear
+as native tools inside `claude` (CLI) or the Claude Code VS Code extension.
+
+**Step 1 — install the package (editable, from project root):**
+
+```bash
+pip install -e .
+```
+
+**Step 2 — register the MCP server:**
+
+```bash
+# Claude CLI
+claude mcp add bsp-diagnostics bsp-diagnostics-mcp
+
+# Without installing (run from project root):
+claude mcp add bsp-diagnostics -- python -m mcp_server.server
+```
+
+**Step 3 — VS Code (Claude Code extension):**
+
+Add the following to `~/.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "bsp-diagnostics": {
+      "command": "bsp-diagnostics-mcp"
+    }
+  }
+}
+```
+
+Or, without a package install (replace `/path/to/ai-bsp-agent` with your clone path):
+
+```json
+{
+  "mcpServers": {
+    "bsp-diagnostics": {
+      "command": "python",
+      "args": ["-m", "mcp_server.server"],
+      "cwd": "/path/to/ai-bsp-agent"
+    }
+  }
+}
+```
+
+After registration, all 11 skills (`segment_boot_log`, `extract_kernel_oops_log`,
+`decode_esr_el1`, `analyze_watchdog_timeout`, etc.) appear in Claude's tool list.
+No `ANTHROPIC_API_KEY` is required for the MCP server itself — the skills are
+pure deterministic Python functions.
+
+---
 
 ### CLI Usage
 
