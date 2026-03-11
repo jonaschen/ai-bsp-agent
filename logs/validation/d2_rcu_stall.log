@@ -21,7 +21,8 @@
 [    0.000000] psci: SMC Calling Convention v1.0
 [    0.000000] percpu: Embedded 31 pages/cpu s89128 r8192 d29656 u126976
 [    0.000000] Detected PIPT I-cache on CPU0
-[    0.000000] CPU features: [   62.345678] rcu: INFO: rcu_sched detected stalls on CPUs/tasks:
+[    0.000000] CPU features: detected: Spectre-v4
+[   62.345678] rcu: INFO: rcu_sched detected stalls on CPUs/tasks:
 [   62.456789] rcu: 0-...0: (1 GPs behind) idle=1234/0/0x1 softirq=12345/12346 fqs=3001
 [   62.567890] rcu: 1-...0: (0 GPs behind) idle=5678/0/0x1 softirq=23456/23457 fqs=3001
 [   62.678901] rcu: (detected by 2, t=18006 jiffies, g=14313, q=1245 ncpus=4)

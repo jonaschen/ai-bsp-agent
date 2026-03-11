@@ -23,7 +23,8 @@
 [    0.000000] Detected PIPT I-cache on CPU0
 [    0.000000] CPU features: detected: Spectre-v2
 [    0.000000] CPU features: detected: Spectre-v4
-[    0.000000] CPU features: [    8.123456] ufshcd-qcom 1d84000.ufshc: probe of 1d84000.ufshc failed with error -110
+[    0.000000] CPU features: detected: Spectre-v4
+[    8.123456] ufshcd-qcom 1d84000.ufshc: probe of 1d84000.ufshc failed with error -110
 [    8.234567] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000010
 [    8.345678] ESR = 0x0000000096000044
 [    8.456789] EC = 0x25: DABT (current EL), IL = 32 bits

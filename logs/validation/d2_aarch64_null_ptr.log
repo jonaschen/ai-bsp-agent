@@ -23,7 +23,8 @@
 [    0.000000] Detected PIPT I-cache on CPU0
 [    0.000000] CPU features: detected: Spectre-v2
 [    0.000000] CPU features: detected: Spectre-v4
-[    0.000000] CPU features: [    4.123456] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000001
+[    0.000000] CPU features: detected: Spectre-v4
+[    4.123456] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000001
 [    4.234567] Mem abort info:
 [    4.345678]   ESR = 0x0000000096000044
 [    4.456789]   EC = 0x25: DABT (current EL), IL = 32 bits

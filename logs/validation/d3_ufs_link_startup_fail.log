@@ -23,7 +23,8 @@
 [    0.000000] Detected PIPT I-cache on CPU0
 [    0.000000] CPU features: detected: Spectre-v2
 [    0.000000] CPU features: detected: Spectre-v4
-[    0.000000] CPU features: [    9.234567] ufshcd 1d84000.ufshc: ufshcd_link_startup: link startup failed -5
+[    0.000000] CPU features: detected: Spectre-v4
+[    9.234567] ufshcd 1d84000.ufshc: ufshcd_link_startup: link startup failed -5
 [    9.345678] ufshcd 1d84000.ufshc: ufshcd_link_startup failed -5
 [    9.456789] ufshcd 1d84000.ufshc: ufshcd_link_startup: link startup failed -5
 [    9.567890] ufshcd 1d84000.ufshc: ufshcd_link_startup failed -5

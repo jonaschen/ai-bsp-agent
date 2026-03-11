@@ -21,7 +21,8 @@
 [    0.000000] psci: SMC Calling Convention v1.0
 [    0.000000] percpu: Embedded 31 pages/cpu s89128 r8192 d29656 u126976
 [    0.000000] Detected PIPT I-cache on CPU0
-[    0.000000] CPU features: [   30.123456] watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [kworker/0:1:123]
+[    0.000000] CPU features: detected: Spectre-v4
+[   30.123456] watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [kworker/0:1:123]
 [   30.234567] CPU: 0 PID: 123 Comm: kworker/0:1 Not tainted 6.6.14-0-virt #1-Alpine
 [   30.345678] Hardware name: linux,dummy-virt (DT)
 [   30.456789] pstate: 00000085 (nzcv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)

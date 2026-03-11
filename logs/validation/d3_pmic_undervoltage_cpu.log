@@ -23,7 +23,8 @@
 [    0.000000] Detected PIPT I-cache on CPU0
 [    0.000000] CPU features: detected: Spectre-v2
 [    0.000000] CPU features: detected: Spectre-v4
-[    0.000000] CPU features: [   20.123456] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-1: s1a: set_voltage (756000 uV)
+[    0.000000] CPU features: detected: Spectre-v4
+[   20.123456] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-1: s1a: set_voltage (756000 uV)
 [   20.234567] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-1: s1a: under-voltage detected
 [   20.345678] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-1: s1a: set_voltage failed with rc = -22
 [   20.456789] cpu cpu0: cpufreq_cpu_set_target_index: failed to set freq: -22

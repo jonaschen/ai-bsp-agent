@@ -21,7 +21,8 @@
 [    0.000000] psci: SMC Calling Convention v1.0
 [    0.000000] percpu: Embedded 31 pages/cpu s89128 r8192 d29656 u126976
 [    0.000000] Detected PIPT I-cache on CPU0
-[    0.000000] CPU features: [   45.678901] Watchdog detected hard LOCKUP on cpu 3
+[    0.000000] CPU features: detected: Spectre-v4
+[   45.678901] Watchdog detected hard LOCKUP on cpu 3
 [   45.789012] Modules linked in: nf_conntrack
 [   45.890123] CPU: 3 PID: 987 Comm: irq/45-audio Not tainted 6.6.14-0-virt #1-Alpine
 [   45.901234] Hardware name: linux,dummy-virt (DT)

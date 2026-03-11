@@ -23,7 +23,8 @@
 [    0.000000] Detected PIPT I-cache on CPU0
 [    0.000000] CPU features: detected: Spectre-v2
 [    0.000000] CPU features: detected: Spectre-v4
-[    0.000000] CPU features: [   15.123456] qpnp-regulator qpnp-regulator-51: qpnp_regulator_enable: vreg_lcd_vsp: over-current fault
+[    0.000000] CPU features: detected: Spectre-v4
+[   15.123456] qpnp-regulator qpnp-regulator-51: qpnp_regulator_enable: vreg_lcd_vsp: over-current fault
 [   15.234567] qpnp-regulator qpnp-regulator-51: qpnp_regulator_enable: vreg_lcd_vsn: over-current fault
 [   15.345678] msm-drm msm_drm: drm_atomic_commit: [CRTC:0:crtc-0] already active, OCP detected
 [   15.456789] qpnp-regulator qpnp-regulator-51: qpnp_regulator_enable: vreg_lcd_vsp: over-current fault
