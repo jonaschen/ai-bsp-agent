@@ -18,6 +18,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from skills.extensions import get_extension_patterns
+
 EarlyBootErrorType = Literal[
     "auth_failure",
     "image_load_failure",
@@ -296,6 +298,23 @@ def parse_early_boot_uart_log(raw_uart_log: str) -> EarlyBootUARTOutput:
                 recommended_action="Provide the UART serial output from the device.",
                 confidence=0.9,
             )
+        # --- User extension patterns (checked when built-in detection misses) ---
+        for pat in get_extension_patterns("parse_early_boot_uart_log"):
+            if re.search(pat["match"], raw_uart_log, re.IGNORECASE):
+                first_error = next(
+                    (l.strip() for l in raw_uart_log.splitlines()
+                     if re.search(pat["match"], l, re.IGNORECASE)), None
+                )
+                return EarlyBootUARTOutput(
+                    failure_detected=True,
+                    detected_bl_stage=detected_stage,
+                    last_successful_step=last_good,
+                    first_error_line=first_error,
+                    error_type=pat["category"],
+                    root_cause=f"[user pattern] {pat['description']}",
+                    recommended_action="Pattern added by user extension — review the matched log line.",
+                    confidence=0.60,
+                )
         return EarlyBootUARTOutput(
             failure_detected=False,
             detected_bl_stage=detected_stage,
@@ -490,6 +509,20 @@ def analyze_lk_panic(uart_log_snippet: str) -> LKPanicOutput:
         confidence = 0.55
 
     else:
+        # --- User extension patterns ---
+        for pat in get_extension_patterns("analyze_lk_panic"):
+            if re.search(pat["match"], uart_log_snippet, re.IGNORECASE):
+                return LKPanicOutput(
+                    panic_detected=True,
+                    panic_type=pat["category"],
+                    failing_function=failing_function,
+                    assert_file=None,
+                    assert_line=None,
+                    register_dump=register_lines[:20],
+                    root_cause=f"[user pattern] {pat['description']}",
+                    recommended_action="Pattern added by user extension — review the matched log line.",
+                    confidence=0.60,
+                )
         return LKPanicOutput(
             panic_detected=False,
             panic_type="none",

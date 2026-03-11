@@ -14,6 +14,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from skills.extensions import get_extension_patterns
+
 
 # ---------------------------------------------------------------------------
 # Schemas
@@ -150,6 +152,21 @@ def analyze_watchdog_timeout(dmesg_log: str) -> WatchdogOutput:
             lockup_line_idx = idx
 
     if lockup_type is None:
+        # --- User extension patterns ---
+        for pat in get_extension_patterns("analyze_watchdog_timeout"):
+            if re.search(pat["match"], dmesg_log, re.IGNORECASE):
+                return WatchdogOutput(
+                    lockup_detected=True,
+                    lockup_type=pat["category"],
+                    cpu=None,
+                    pid=None,
+                    process_name=None,
+                    stuck_duration_s=None,
+                    call_trace=[],
+                    root_cause=f"[user pattern] {pat['description']}",
+                    recommended_action="Pattern added by user extension — review the matched log line.",
+                    confidence=0.60,
+                )
         return WatchdogOutput(
             lockup_detected=False,
             lockup_type=None,

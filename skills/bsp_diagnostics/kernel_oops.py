@@ -14,6 +14,8 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+from skills.extensions import get_extension_patterns
+
 from pydantic import BaseModel, Field
 
 
@@ -172,6 +174,22 @@ def extract_kernel_oops_log(dmesg_log: str) -> KernelOopsOutput:
     oops_detected = oops_type != "none"
 
     if not oops_detected:
+        # --- User extension patterns ---
+        for pat in get_extension_patterns("extract_kernel_oops_log"):
+            if re.search(pat["match"], dmesg_log, re.IGNORECASE):
+                first_oops_line = next(
+                    (l.strip() for l in dmesg_log.splitlines()
+                     if re.search(pat["match"], l, re.IGNORECASE)), None
+                )
+                return KernelOopsOutput(
+                    oops_detected=True,
+                    oops_type=pat["category"],
+                    faulting_process=None,
+                    faulting_pid=None,
+                    call_trace=[],
+                    root_cause=f"[user pattern] {pat['description']}",
+                    confidence=0.60,
+                )
         return KernelOopsOutput(
             oops_detected=False,
             oops_type="none",

@@ -17,6 +17,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from skills.extensions import get_extension_patterns
+
 # ---------------------------------------------------------------------------
 # Exception Class (EC) table — ESR_EL1 bits [31:26]
 # ---------------------------------------------------------------------------
@@ -447,12 +449,22 @@ def check_cache_coherency_panic(panic_log: str) -> CacheCoherencyOutput:
         )
         confidence = min(0.6 + 0.1 * len(found), 0.95)
     else:
-        root_cause = "No cache coherency or SError indicators found in the panic log."
-        recommended_action = (
-            "Collect the full panic log including ESR_EL1 register value. "
-            "Run decode_esr_el1 on the ESR_EL1 value to classify the exception type."
-        )
-        confidence = 0.1
+        # --- User extension patterns ---
+        for pat in get_extension_patterns("check_cache_coherency_panic"):
+            if re.search(pat["match"], panic_log, re.IGNORECASE):
+                is_coherency_panic = True
+                found.append("user_pattern")
+                root_cause = f"[user pattern] {pat['description']}"
+                recommended_action = "Pattern added by user extension — review the matched log line."
+                confidence = 0.60
+                break
+        else:
+            root_cause = "No cache coherency or SError indicators found in the panic log."
+            recommended_action = (
+                "Collect the full panic log including ESR_EL1 register value. "
+                "Run decode_esr_el1 on the ESR_EL1 value to classify the exception type."
+            )
+            confidence = 0.1
 
     return CacheCoherencyOutput(
         is_coherency_panic=is_coherency_panic,

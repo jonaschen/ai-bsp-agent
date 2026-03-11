@@ -15,6 +15,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from skills.extensions import get_extension_patterns
+
 BootStage = Literal["early_boot", "kernel_init", "android_init", "unknown"]
 
 # ---------------------------------------------------------------------------
@@ -163,13 +165,25 @@ def segment_boot_log(raw_log: str) -> BootLogSegmenterOutput:
             "Route to kernel_pathologist or hardware_advisor for further triage."
         )
     else:
-        detected_stage = "unknown"
-        stage_indicators = []
-        confidence = 0.20
-        summary = (
-            "No recognisable boot stage markers found. "
-            "Log may be incomplete, corrupted, or not a boot log."
-        )
+        # --- User extension patterns ---
+        user_stage: Optional[BootStage] = None
+        for pat in get_extension_patterns("segment_boot_log"):
+            if re.search(pat["match"], raw_log, re.IGNORECASE):
+                user_stage = pat["category"]  # type: ignore[assignment]
+                break
+        if user_stage is not None:
+            detected_stage = user_stage
+            stage_indicators = ["user_pattern"]
+            confidence = 0.60
+            summary = f"[user pattern] Stage classified as '{user_stage}' by user extension."
+        else:
+            detected_stage = "unknown"
+            stage_indicators = []
+            confidence = 0.20
+            summary = (
+                "No recognisable boot stage markers found. "
+                "Log may be incomplete, corrupted, or not a boot log."
+            )
 
     # --- First error line extraction ---
     first_error_line: Optional[str] = None

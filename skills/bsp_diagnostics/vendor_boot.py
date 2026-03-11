@@ -14,6 +14,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from skills.extensions import get_extension_patterns
+
 
 # ---------------------------------------------------------------------------
 # Schemas
@@ -130,6 +132,18 @@ def check_vendor_boot_ufs_driver(dmesg_log: str) -> VendorBootUFSOutput:
                 detected_phase = matched_phase
 
     if not error_lines:
+        # --- User extension patterns ---
+        for pat in get_extension_patterns("check_vendor_boot_ufs_driver"):
+            m = re.search(pat["match"], dmesg_log, re.IGNORECASE)
+            if m:
+                return VendorBootUFSOutput(
+                    failure_detected=True,
+                    error_lines=[m.group(0)],
+                    failure_phase=pat["category"],
+                    root_cause=f"[user pattern] {pat['description']}",
+                    recommended_action="Pattern added by user extension — review the matched log line.",
+                    confidence=0.60,
+                )
         return VendorBootUFSOutput(
             failure_detected=False,
             error_lines=[],

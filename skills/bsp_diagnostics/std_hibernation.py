@@ -10,6 +10,8 @@ import re
 from typing import Optional
 from pydantic import BaseModel, Field
 
+from skills.extensions import get_extension_patterns
+
 
 SUNRECLAIM_THRESHOLD_RATIO = 0.10  # 10% of MemTotal
 
@@ -67,6 +69,21 @@ def analyze_std_hibernation_error(dmesg_log: str, meminfo_log: str) -> STDHibern
         sunreclaim_exceeds_threshold = sunreclaim_ratio > SUNRECLAIM_THRESHOLD_RATIO
 
     if not error_detected:
+        # --- User extension patterns ---
+        combined = dmesg_log + "\n" + meminfo_log
+        for pat in get_extension_patterns("analyze_std_hibernation_error"):
+            if re.search(pat["match"], combined, re.IGNORECASE):
+                return STDHibernationOutput(
+                    error_detected=True,
+                    mem_total_kb=mem_total_kb,
+                    sunreclaim_kb=sunreclaim_kb,
+                    swap_free_kb=swap_free_kb,
+                    sunreclaim_ratio=sunreclaim_ratio,
+                    sunreclaim_exceeds_threshold=sunreclaim_exceeds_threshold,
+                    root_cause=f"[user pattern] {pat['description']}",
+                    recommended_action="Pattern added by user extension — review the matched log line.",
+                    confidence=0.60,
+                )
         return STDHibernationOutput(
             error_detected=False,
             mem_total_kb=mem_total_kb,

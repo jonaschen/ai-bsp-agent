@@ -47,6 +47,12 @@ from skills.bsp_diagnostics.watchdog import (
     WatchdogInput,
     analyze_watchdog_timeout,
 )
+from skills.bsp_diagnostics.skill_improvement import (
+    ValidateExtensionInput,
+    SuggestPatternInput,
+    validate_skill_extension,
+    suggest_pattern_improvement,
+)
 
 
 def _pydantic_to_input_schema(model_cls) -> dict:
@@ -186,11 +192,37 @@ TOOL_DEFINITIONS: list[dict] = [
         ),
         "input_schema": _pydantic_to_input_schema(PMICVoltageInput),
     },
+    {
+        "name": "validate_skill_extension",
+        "description": (
+            "Dry-run a proposed regex pattern against a log snippet before committing it. "
+            "Returns whether the pattern matches, how many lines match, and a preview of "
+            "matched lines. Call this BEFORE suggest_pattern_improvement to confirm the "
+            "pattern captures the intended lines."
+        ),
+        "input_schema": _pydantic_to_input_schema(ValidateExtensionInput),
+    },
+    {
+        "name": "suggest_pattern_improvement",
+        "description": (
+            "Propose and persist a new detection pattern for an existing skill. "
+            "Use this when a core skill returns failure_detected=False (or low confidence) "
+            "on a real-hardware log that clearly contains a failure. "
+            "Validates skill_name, category, regex syntax, and that the pattern matches "
+            "the provided log_snippet before writing to ~/.bsp-diagnostics/skill_extensions.json. "
+            "On the next run the skill will apply the new pattern automatically."
+        ),
+        "input_schema": _pydantic_to_input_schema(SuggestPatternInput),
+    },
 ]
 
 # Maps supervisor routing decisions to the set of tool names for that domain.
 # The Brain uses this to offer only relevant tools to Claude per diagnostic session.
-_UNIVERSAL_TOOLS: set[str] = {"segment_boot_log"}
+_UNIVERSAL_TOOLS: set[str] = {
+    "segment_boot_log",
+    "validate_skill_extension",
+    "suggest_pattern_improvement",
+}
 
 ROUTE_TOOLS: dict[str, set[str]] = {
     "hardware_advisor": _UNIVERSAL_TOOLS | {
@@ -247,6 +279,12 @@ _DISPATCH_TABLE: dict[str, Any] = {
     "check_pmic_rail_voltage": lambda inp: check_pmic_rail_voltage(
         dmesg_log=inp["dmesg_log"],
         logcat_log=inp.get("logcat_log", ""),
+    ).model_dump(),
+    "validate_skill_extension": lambda inp: validate_skill_extension(
+        ValidateExtensionInput(**inp)
+    ).model_dump(),
+    "suggest_pattern_improvement": lambda inp: suggest_pattern_improvement(
+        SuggestPatternInput(**inp)
     ).model_dump(),
 }
 

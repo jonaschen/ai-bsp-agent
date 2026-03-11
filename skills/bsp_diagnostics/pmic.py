@@ -16,6 +16,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from skills.extensions import get_extension_patterns
+
 
 # ---------------------------------------------------------------------------
 # Schemas
@@ -226,6 +228,23 @@ def check_pmic_rail_voltage(dmesg_log: str, logcat_log: str = "") -> PMICVoltage
         fault_rail = uvlo_rails[0].name
 
     if not rails:
+        # --- User extension patterns ---
+        combined_log = dmesg_log + "\n" + logcat_log
+        for pat in get_extension_patterns("check_pmic_rail_voltage"):
+            m = re.search(pat["match"], combined_log, re.IGNORECASE)
+            if m:
+                rail_name = m.group("rail") if "rail" in (m.groupdict() or {}) else "unknown_rail"
+                status = pat["category"]  # "ocp" or "undervoltage"
+                user_rail = PMICRailInfo(name=rail_name, status=status, raw_line=m.group(0))
+                return PMICVoltageOutput(
+                    rails_found=[user_rail],
+                    ocp_detected=(status == "ocp"),
+                    undervoltage_rails=[rail_name] if status == "undervoltage" else [],
+                    fault_rail=rail_name,
+                    root_cause=f"[user pattern] {pat['description']}",
+                    recommended_action="Pattern added by user extension — review the matched log line.",
+                    confidence=0.60,
+                )
         return PMICVoltageOutput(
             rails_found=[],
             ocp_detected=False,
