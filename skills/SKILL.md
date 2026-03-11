@@ -6,6 +6,10 @@ This directory contains pure Python **Diagnostic Skills** (Tools) for the Androi
 Consultant Agent. Each Skill is a deterministic, human-authored function that parses
 hardware/kernel logs and returns a structured diagnostic report.
 
+**Related documentation:**
+- `docs/emulator-spec.md` — exact software/source versions for all training emulators
+- `docs/skill-extension-guide.md` — how end-user agents extend skills for real hardware
+
 ## Architecture
 
 Skills follow the **Anthropic Tool-Use** paradigm:
@@ -50,6 +54,8 @@ def my_bsp_skill(input: MySkillInput) -> MySkillOutput:
 | `bsp_diagnostics/vendor_boot.py` | `check_vendor_boot_ufs_driver` | `hardware_advisor` | UFS Driver / STD Restore |
 | `bsp_diagnostics/watchdog.py` | `analyze_watchdog_timeout` | `kernel_pathologist` | Watchdog / Soft+Hard Lockup |
 | `bsp_diagnostics/pmic.py` | `check_pmic_rail_voltage` | `hardware_advisor` | PMIC Rail Voltages |
+| `bsp_diagnostics/skill_improvement.py` | `validate_skill_extension` | **any** (end-user agent) | Dry-run regex against log snippet |
+| `bsp_diagnostics/skill_improvement.py` | `suggest_pattern_improvement` | **any** (end-user agent) | Validate + persist new detection pattern |
 
 ## Domains
 
@@ -62,3 +68,13 @@ def my_bsp_skill(input: MySkillInput) -> MySkillOutput:
 3. Register the function as an Anthropic-compatible Tool in the Agent's tool registry.
 
 See `AGENTS.md` §2.2 for the full Skill Registry contract.
+
+## Extending Skills for Real Hardware
+
+The built-in patterns are trained on emulator logs (see `docs/emulator-spec.md`).
+When a skill misses a real-hardware pattern, use the two improvement skills:
+
+1. `validate_skill_extension` — dry-run test of a proposed regex
+2. `suggest_pattern_improvement` — write the validated pattern to `~/.bsp-diagnostics/skill_extensions.json`
+
+See `docs/skill-extension-guide.md` for the full workflow and examples.
