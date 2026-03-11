@@ -60,7 +60,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **File** | `logs/validation/d0_mixed_uart_kernel.log` |
 | **Source** | `aarch64-qemu` — real TF-A v2.7 UART header prepended to Alpine Linux 3.19 aarch64 QEMU dmesg |
 | **Skills validated** | `segment_boot_log` |
-| **Content** | First ~30 lines are TF-A / U-Boot UART output with no kernel timestamps; remainder is a standard kernel dmesg with `[    0.000000]` timestamps. |
+| **Content** | First ~30 lines are TF-A UART output (BL1→BL2→BL31) with no kernel timestamps; remainder is a standard kernel dmesg with `[    0.000000]` timestamps. |
 | **Expected outcome** | `detected_stage: "early_boot"` (early-boot markers take priority); confidence ≥ 0.70. `segment_boot_log` must not be confused by the later kernel section. |
 | **Validation focus** | Stage priority: `early_boot` must win over `kernel_init` when both markers are present in the same log. |
 | **Status** | DONE |
@@ -97,15 +97,15 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 
 ---
 
-### LOG-006 — U-Boot DDR initialisation failure
+### LOG-006 — LK DDR initialisation failure
 
 | Field | Value |
 |---|---|
-| **File** | `logs/validation/d1_uboot_ddr_init_fail.log` |
+| **File** | `logs/validation/d1_lk_ddr_init_fail.log` |
 | **Source** | `aarch64-qemu` — LK AArch64 boot (github.com/littlekernel/lk `qemu-virt-arm64-test`) with DDR init failure injected via real panic path |
 | **Skills validated** | `parse_early_boot_uart_log` |
-| **Content** | SPL loads U-Boot; U-Boot prints CPU/SoC info then fails during DRAM init before memory sizing is printed. |
-| **Expected outcome** | `error_type: "ddr_init_failure"`, `last_stage` one of `BL2`/`SPL`/`U-Boot`, confidence ≥ 0.80. |
+| **Content** | LK initializes GIC, memory, and timer then fails during DRAM init (DDR PHY training timeout). LK panic path reached with `PANIC: ddr_init` message and crash shell. |
+| **Expected outcome** | `error_type: "ddr_init_failure"`, `last_stage` one of `BL2`/`LK`, confidence ≥ 0.80. |
 | **Validation focus** | DDR failure strings are vendor-specific (Qualcomm vs. Rockchip vs. MTK differ). Confirm at least the generic patterns match. |
 | **Status** | DONE |
 
@@ -139,14 +139,14 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 
 ---
 
-### LOG-009 — U-Boot panic with AArch64 register dump
+### LOG-009 — LK panic with AArch64 register dump
 
 | Field | Value |
 |---|---|
-| **File** | `logs/validation/d1_uboot_panic_aarch64.log` |
+| **File** | `logs/validation/d1_lk_panic_aarch64.log` |
 | **Source** | `aarch64-qemu` — real LK AArch64 `crash` command output (github.com/littlekernel/lk `qemu-virt-arm64-test`); real ESR `0x96000044`, real x0–x29 register dump, real stack trace from QEMU `cortex-a53` |
 | **Skills validated** | `analyze_lk_panic` |
-| **Content** | U-Boot reaches network stack init then takes a data abort. Output includes `ELR:`, `ESR_EL2:`, and AArch64 `x0`–`x30` register values. |
+| **Content** | LK AArch64 `crash` command triggers a data abort (write access fault, FAR=0x1, ESR=0x96000044). Output includes `ESR 0x96000044`, AArch64 `x0`–`x29` register values, `elr`, `spsr`, and stack trace. |
 | **Expected outcome** | `panic_type: "generic"` or `"assert"`, `registers` dict has `x0`–`x30` + `elr`, confidence ≥ 0.75. |
 | **Validation focus** | AArch64 vs ARM32 register format branch — `x0`–`x30` must be parsed without matching the ARM32 `r0`–`r15` pattern. |
 | **Status** | DONE |
@@ -434,10 +434,10 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | LOG-003 | d0_mixed_uart_kernel.log | aarch64-qemu | `segment_boot_log` | DONE |
 | LOG-004 | d0_unknown_fragment.log | aarch64-qemu | `segment_boot_log` | DONE |
 | LOG-005 | d1_tfa_auth_failure.log | aarch64-qemu | `parse_early_boot_uart_log` | DONE |
-| LOG-006 | d1_uboot_ddr_init_fail.log | aarch64-qemu | `parse_early_boot_uart_log` (LK) | DONE |
+| LOG-006 | d1_lk_ddr_init_fail.log | aarch64-qemu (LK) | `parse_early_boot_uart_log` | DONE |
 | LOG-007 | d1_tfa_pmic_failure.log | aarch64-qemu | `parse_early_boot_uart_log` | DONE |
 | LOG-008 | d1_lk_assert_arm32.log | aarch64-qemu (LK) | `analyze_lk_panic` | DONE |
-| LOG-009 | d1_uboot_panic_aarch64.log | aarch64-qemu (LK) | `analyze_lk_panic` | DONE |
+| LOG-009 | d1_lk_panic_aarch64.log | aarch64-qemu (LK) | `analyze_lk_panic` | DONE |
 | LOG-010 | d2_qemu_null_pointer.log | linux-qemu | `extract_kernel_oops_log` | DONE |
 | LOG-011 | d2_aarch64_null_ptr.log | aarch64-qemu | `extract_kernel_oops_log` + `decode_aarch64_exception` | DONE |
 | LOG-012 | d2_aarch64_paging_request.log | aarch64-qemu | `extract_kernel_oops_log` + `decode_aarch64_exception` | DONE |
