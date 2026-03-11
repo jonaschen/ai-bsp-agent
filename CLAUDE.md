@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Follow `AGENTS.md` at all times.** It is the supreme governance document ("The Constitution" — currently v6.1). Key rules:
 - **TDD is Law**: Write a failing test first (Red), then minimal implementation (Green), then one refactor attempt. If refactor breaks tests, revert to Green and tag `#TODO: Tech Debt`.
 - **No Self-Modification**: The Agent cannot modify `AGENTS.md`, its own source code, or its Tools.
-- **Skill Purity**: Every skill in `skills/` must be a pure function — no side effects, no LLM calls, no global state.
+- **Skill Purity**: Every skill in `skills/` must be a pure function — no side effects, no LLM calls, no global state. **Exception:** `suggest_pattern_improvement` intentionally writes to `~/.bsp-diagnostics/skill_extensions.json` — this is its designed purpose and is documented as such.
 - **Frozen Dirs**: `studio/subgraphs/engineer.py` and `studio/utils/sandbox.py` are deprecated. Do not modify them.
 
 ### Diagnostic Workflow (AGENTS.md §3 — mandatory sequence)
@@ -44,14 +44,20 @@ This system is an **Android BSP Diagnostic Expert Agent**. It pivoted from a cod
 Three layers + two support components:
 
 ### MCP Server (`mcp_server/`)
-- `mcp_server/server.py` — stdio MCP server exposing all 11 skills as MCP tools.
+- `mcp_server/server.py` — stdio MCP server exposing all 13 skills as MCP tools.
 - Registered with `claude mcp add bsp-diagnostics bsp-diagnostics-mcp` (after `pip install -e .`).
 - No LLM calls — delegates entirely to `skills/registry.py`.
 
+### Skill Extension System (`skills/extensions.py`)
+- `skills/extensions.py` — reads/writes `~/.bsp-diagnostics/skill_extensions.json` (user-local, never committed).
+- `BSP_EXTENSIONS_PATH` env var overrides the path (used in tests for isolation).
+- All 9 extensible diagnostic skills check this file when built-in detection misses; user patterns applied with `confidence=0.60` and `[user pattern]` prefix in `root_cause`.
+- See **Phase 5.5** in the roadmap for the full design.
+
 ### Log Generation (`emulator_scripts/`)
-- `setup.sh` — installs QEMU (x86_64 + aarch64), Android SDK, creates AVD `boot_log_avd` (Android 34 x86_64), downloads Alpine Linux ISO.
+- `setup.sh` — installs `qemu-system-aarch64`, `gcc-aarch64-linux-gnu`, Android SDK; builds Little Kernel (`qemu-virt-arm64-test`); downloads Alpine Linux **aarch64** ISO; creates AVD `boot_log_avd` (Android 34 x86_64).
 - `run-android-emulator.sh` — 4 scenarios (normal, slow, SELinux denials, kernel panic via sysrq).
-- `run-linux-qemu.sh` — 4 scenarios (normal, slow, throttled CPU, panic via sysrq, audit/AppArmor).
+- `run-linux-qemu.sh` — 4 AArch64 scenarios: `lk-normal` / `lk-panic` (LK ELF via `expect`), `linux-panic` / `linux-audit` (Alpine aarch64 via QEMU monitor). No KVM flag — TCG only on x86_64 host.
 - `collect-logs.sh` — normalizes outputs into `logs/normalized/` with `INDEX.md`.
 
 ### Layer 1: The Brain (Reasoning Engine)
@@ -81,6 +87,8 @@ Pure Python functions in `skills/bsp_diagnostics/`. Each skill:
 | `skills/bsp_diagnostics/vendor_boot.py` | `check_vendor_boot_ufs_driver(dmesg_log)` | `hardware_advisor` | UFS Driver / STD Restore |
 | `skills/bsp_diagnostics/watchdog.py` | `analyze_watchdog_timeout(dmesg_log)` | `kernel_pathologist` | Watchdog / Soft+Hard Lockup |
 | `skills/bsp_diagnostics/pmic.py` | `check_pmic_rail_voltage(dmesg_log, logcat_log)` | `hardware_advisor` | PMIC Rail Voltages |
+| `skills/bsp_diagnostics/skill_improvement.py` | `validate_skill_extension(...)` | **universal** | Dry-run user pattern |
+| `skills/bsp_diagnostics/skill_improvement.py` | `suggest_pattern_improvement(...)` | **universal** | Persist user pattern |
 
 ### Layer 3: The Knowledge Base
 - `skills/SKILL.md` — Skill Registry index and authoring contract.
@@ -124,8 +132,8 @@ All pieces of the v6 architecture are in place and tested.
 | 8 | Skill: `check_vendor_boot_ufs_driver` | DONE | `skills/bsp_diagnostics/vendor_boot.py` — 16 tests; phase-classified (probe/link_startup/resume) |
 | 9 | Skill: `analyze_watchdog_timeout` | DONE | `skills/bsp_diagnostics/watchdog.py` — 19 tests; soft/hard lockup, RCU stall, call trace extraction |
 | 10 | Skill: `check_pmic_rail_voltage` | DONE | `skills/bsp_diagnostics/pmic.py` — 19 tests; OCP + undervoltage detection, rpm-smd/qpnp/generic formats |
-| 11 | Real-world log validation | IN PROGRESS | `emulator_scripts/` toolkit generates Android AVD + Linux QEMU logs; feed into `cli.py` / `orchestrator.sh`; tune thresholds per results |
-| **Total product tests** | **347 passing** | |
+| 11 | Real-world log validation | IN PROGRESS | `emulator_scripts/` toolkit generates Android AVD + AArch64 QEMU/LK logs; 28-log corpus validated by `tools/validate_logs.py` (30/30 PASS); real hardware validation deferred to end users |
+| **Total product tests** | **361 passing** | |
 
 ### Phase 4 — Early Boot Skills (DONE) ✓
 
@@ -141,13 +149,47 @@ New supervisor route: `early_boot_advisor`. 298 tests passing.
 
 ### Phase 5 — Kernel Exception & Oops Skills (DONE) ✓
 
-Extends `kernel_pathologist` route. No new supervisor route needed. **347 tests passing.**
+Extends `kernel_pathologist` route. No new supervisor route needed. **347 tests passing** (361 after Phase 5.5).
 
 | Deliverable | Detail |
 |---|---|
 | `skills/bsp_diagnostics/kernel_oops.py` | `extract_kernel_oops_log` — Oops/BUG detection, ESR/FAR/pc/lr/call-trace extraction; 22 tests |
 | Update `skills/bsp_diagnostics/aarch64_exceptions.py` | Added `decode_aarch64_exception(esr_val, far_val)` — ESR + FAR pair decoding, EL inference, kernel/user FAR classification; 14 new tests |
 | Multi-tool synergy integration test | `TestMultiToolSynergy` in `test_integration.py` — `watchdog_esr_synergy_04.txt` fixture; verifies Brain invokes both `analyze_watchdog_timeout` AND `decode_esr_el1` in one session (AGENTS.md §3.3) |
+
+### Phase 5.5 — Skill Extension System (DONE) ✓
+
+User-driven pattern improvement loop. **361 tests passing.**
+
+| Deliverable | Detail |
+|---|---|
+| `skills/extensions.py` | Loader/writer for `~/.bsp-diagnostics/skill_extensions.json`; `BSP_EXTENSIONS_PATH` env var for test isolation |
+| `skills/bsp_diagnostics/skill_improvement.py` | `validate_skill_extension` (dry-run, pure) + `suggest_pattern_improvement` (validates 4 gates then writes); `VALID_CATEGORIES` dict |
+| `tests/product_tests/test_skill_improvement.py` | 14 tests |
+| Hooks in 9 skills | `early_boot.py` (×2), `watchdog.py`, `kernel_oops.py`, `vendor_boot.py`, `std_hibernation.py`, `pmic.py`, `aarch64_exceptions.py`, `log_segmenter.py` — 6-line hook at no-detection return |
+| Registry update | `validate_skill_extension` + `suggest_pattern_improvement` added to `_UNIVERSAL_TOOLS` (available in all routes) |
+
+**Extension file schema:** `~/.bsp-diagnostics/skill_extensions.json` — `{ version, skills: { <skill_name>: { patterns: [{ match, category, description, added }] } } }`
+
+**Valid categories per skill:**
+
+| Skill | Valid categories |
+|---|---|
+| `parse_early_boot_uart_log` | `auth_failure` `image_load_failure` `ddr_init_failure` `pmic_failure` `generic_error` |
+| `analyze_lk_panic` | `assert` `ddr_failure` `image_load` `pmic_failure` `generic` |
+| `extract_kernel_oops_log` | `null_pointer` `paging_request` `kernel_bug` `generic_oops` |
+| `check_cache_coherency_panic` | `cache_coherency` |
+| `analyze_std_hibernation_error` | `high_sunreclaim` `swap_exhausted` `generic_hibernation_error` |
+| `check_vendor_boot_ufs_driver` | `probe` `link_startup` `resume` |
+| `analyze_watchdog_timeout` | `soft_lockup` `hard_lockup` `rcu_stall` |
+| `check_pmic_rail_voltage` | `ocp` `undervoltage` |
+| `segment_boot_log` | `early_boot` `kernel_init` `android_init` |
+
+**Agent workflow on a real-hardware miss:**
+1. Skill returns `failure_detected=False` (vendor format not in core patterns)
+2. Agent calls `validate_skill_extension` to confirm the pattern matches the log snippet
+3. Agent calls `suggest_pattern_improvement` — 4-gate validation then writes to `~/.bsp-diagnostics/`
+4. Next run: skill picks it up automatically (confidence=0.60, `[user pattern]` prefix)
 
 ### Phase 6 — Android Init Skills (PLANNED)
 
