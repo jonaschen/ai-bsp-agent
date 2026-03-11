@@ -1,11 +1,20 @@
 #!/bin/bash
 # ============================================================
 #  setup.sh — Install all dependencies for boot log generation
-#  Supports: Linux x86_64
+#  Supports: Linux x86_64 host; AArch64 QEMU guests (TCG)
+#
+#  Installs:
+#    - qemu-system-aarch64 (TCG; no KVM needed for AArch64 targets)
+#    - gcc-aarch64-linux-gnu cross-compiler (for Little Kernel build)
+#    - Little Kernel (github.com/littlekernel/lk) — target qemu-virt-arm64-test
+#    - Alpine Linux 3.19 aarch64 ISO + qcow2 base disk
+#    - Android SDK + AVD (for android-avd scenarios)
 # ============================================================
 set -euo pipefail
 
 ALPINE_VERSION="3.19.1"
+LK_REPO="https://github.com/littlekernel/lk.git"
+LK_TARGET="qemu-virt-arm64-test"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
@@ -35,26 +44,26 @@ case "$PKG_MGR" in
   apt)
     sudo apt-get update -qq
     sudo apt-get install -y \
-      qemu-system-x86 qemu-system-arm qemu-system-aarch64 qemu-utils \
+      qemu-system-aarch64 qemu-utils \
+      gcc-aarch64-linux-gnu make git \
       adb android-tools-adb \
       wget curl unzip python3 \
-      ovmf \
       expect socat
     ;;
   dnf)
     sudo dnf install -y \
-      qemu qemu-kvm qemu-system-aarch64 \
+      qemu-system-aarch64 qemu-img \
+      gcc-aarch64-linux-gnu make git \
       android-tools \
       wget curl unzip python3 \
-      edk2-ovmf \
       expect socat
     ;;
   pacman)
     sudo pacman -Sy --noconfirm \
-      qemu-full \
+      qemu-system-aarch64 \
+      aarch64-linux-gnu-gcc make git \
       android-tools \
       wget curl unzip python3 \
-      edk2-ovmf \
       expect socat
     ;;
 esac
@@ -147,25 +156,50 @@ else
   ok "AVD '$AVD_NAME' created"
 fi
 
-# ── 7. Download Alpine Linux for QEMU ────────────────────────
+# ── 7. Download Alpine Linux aarch64 for QEMU ────────────────
 ALPINE_DIR="$HOME/qemu-alpine"
-ALPINE_ISO="$ALPINE_DIR/alpine.iso"
-ALPINE_DISK="$ALPINE_DIR/alpine-disk.qcow2"
+ALPINE_ISO="$ALPINE_DIR/alpine-aarch64.iso"
+ALPINE_DISK="$ALPINE_DIR/alpine-aarch64-disk.qcow2"
 
 mkdir -p "$ALPINE_DIR"
 
 if [[ -f "$ALPINE_DISK" ]]; then
-  ok "Alpine QEMU disk already exists at $ALPINE_DISK"
+  ok "Alpine aarch64 QEMU disk already exists at $ALPINE_DISK"
 else
-  log "Downloading Alpine Linux ${ALPINE_VERSION} ISO..."
+  log "Downloading Alpine Linux ${ALPINE_VERSION} aarch64 ISO..."
   ALPINE_MINOR="${ALPINE_VERSION%.*}"   # e.g. 3.19
-  ALPINE_URL="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_MINOR}/releases/x86_64/alpine-virt-${ALPINE_VERSION}-x86_64.iso"
+  ALPINE_URL="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_MINOR}/releases/aarch64/alpine-virt-${ALPINE_VERSION}-aarch64.iso"
   wget -q --show-progress "$ALPINE_URL" -O "$ALPINE_ISO"
 
   log "Creating QEMU disk image (4GB)..."
   qemu-img create -f qcow2 "$ALPINE_DISK" 4G
 
-  ok "Alpine ISO and disk ready"
+  ok "Alpine aarch64 ISO and disk ready"
+fi
+
+# ── 8. Build Little Kernel (AArch64 QEMU target) ─────────────
+LK_DIR="$ALPINE_DIR/lk"
+LK_ELF="$ALPINE_DIR/lk.elf"
+
+if [[ -f "$LK_ELF" ]]; then
+  ok "Little Kernel ELF already exists at $LK_ELF"
+else
+  log "Cloning Little Kernel from $LK_REPO ..."
+  if [[ -d "$LK_DIR" ]]; then
+    git -C "$LK_DIR" pull --ff-only
+  else
+    git clone --depth=1 "$LK_REPO" "$LK_DIR"
+  fi
+
+  log "Building LK target: $LK_TARGET (cross-compiler: aarch64-linux-gnu-gcc)..."
+  make -C "$LK_DIR" -j"$(nproc)" \
+    ARCH=arm64 \
+    TOOLCHAIN_PREFIX=aarch64-linux-gnu- \
+    "$LK_TARGET"
+
+  # Copy the ELF to a fixed path so run-linux-qemu.sh can find it
+  cp "$LK_DIR/build-${LK_TARGET}/lk.elf" "$LK_ELF"
+  ok "Little Kernel ELF built → $LK_ELF"
 fi
 
 # ── Summary ──────────────────────────────────────────────────
@@ -174,11 +208,12 @@ echo -e "${BOLD}╔════════════════════�
 echo -e "${BOLD}║  Setup Complete!                             ║${NC}"
 echo -e "${BOLD}╚══════════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "  Android SDK  : $ANDROID_SDK"
-echo -e "  AVD Name     : $AVD_NAME"
-echo -e "  Alpine disk  : $ALPINE_DISK"
+echo -e "  Android SDK    : $ANDROID_SDK"
+echo -e "  AVD Name       : $AVD_NAME"
+echo -e "  Alpine aarch64 : $ALPINE_DISK"
+echo -e "  LK ELF         : $LK_ELF"
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
-echo "  source $SHELL_RC          # reload PATH"
+echo "  source $SHELL_RC           # reload PATH"
 echo "  ./run-android-emulator.sh  # capture Android boot logs"
-echo "  ./run-linux-qemu.sh        # capture Linux boot logs"
+echo "  ./run-linux-qemu.sh        # capture AArch64 boot logs (LK + Alpine)"

@@ -170,8 +170,8 @@ main() {
     normalize_android "$scenario"
   done
 
-  # Linux scenarios
-  for scenario in normal slow panic audit; do
+  # AArch64 QEMU scenarios (LK + Alpine aarch64)
+  for scenario in lk-normal lk-panic linux-panic linux-audit; do
     normalize_linux "$scenario"
   done
 

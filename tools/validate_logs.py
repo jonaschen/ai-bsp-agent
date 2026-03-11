@@ -158,10 +158,9 @@ SPECS: list[LogSpec] = [
 
     LogSpec(
         log_id="LOG-006",
-        filename="d1_uboot_ddr_init_fail.log",
+        filename="d1_lk_ddr_init_fail.log",
         primary_skill="parse_early_boot_uart_log",
         min_lines=10,
-        alt_filenames=["d1_lk_ddr_init_fail.log"],
         required=[
             Check(
                 r"ddr.*fail|ddr training fail|DRAM.*fail|PHY.*timed out|ddr_init failure",
@@ -203,10 +202,9 @@ SPECS: list[LogSpec] = [
 
     LogSpec(
         log_id="LOG-009",
-        filename="d1_uboot_panic_aarch64.log",
+        filename="d1_lk_panic_aarch64.log",
         primary_skill="analyze_lk_panic",
         min_lines=15,
-        alt_filenames=["d1_lk_panic_aarch64.log"],
         required=[
             Check(r"x0\s+0x|x1\s+0x|x29\s+0x|elr\s+0x", "AArch64 register dump (x0/x29/elr)"),
             Check(r"ESR\s+0x[0-9a-fA-F]+|ESR_EL[12]\s*=\s*0x", "ESR register value"),
