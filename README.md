@@ -96,6 +96,11 @@ Markdown files in `docs/` with YAML frontmatter scoping each document to a super
 ├── mcp_server/                      # MCP server — registers all skills with Claude CLI / VS Code.
 │   ├── __init__.py
 │   └── server.py                    # stdio MCP server; entry point: bsp-diagnostics-mcp
+├── emulator_scripts/                # Log generation toolkit for real-world validation (item #20).
+│   ├── setup.sh                     # One-time install: QEMU, Android SDK, AVD, Alpine ISO.
+│   ├── run-android-emulator.sh      # 4 scenarios: normal, slow, SELinux, kernel panic via AVD.
+│   ├── run-linux-qemu.sh            # 4 scenarios: normal, slow, panic, audit via QEMU/Alpine.
+│   └── collect-logs.sh              # Normalize + merge outputs; generates INDEX.md.
 ├── docs/                            # Knowledge base — domain reference for the Brain.
 │   ├── aarch64-exceptions.md        # ESR_EL1 field layout, EC/DFSC tables, SError checklist.
 │   └── memory-reclamation.md        # STD hibernation failure logic, SUnreclaim/SwapFree thresholds.
@@ -259,7 +264,32 @@ print(response.model_dump_json(indent=2))
 
 ---
 
-## Real-World Log Validation (Item #11)
+## Generating Logs with the Emulator Scripts (Item #20)
+
+If real hardware logs are not available, use `emulator_scripts/` to generate
+realistic boot logs from an Android AVD and a Linux QEMU VM.
+
+```bash
+# 1. One-time setup (installs QEMU, Android SDK, creates AVD + Alpine disk)
+cd emulator_scripts && bash setup.sh
+
+# 2. Generate Android logs (4 scenarios: normal, slow, SELinux denials, panic)
+bash run-android-emulator.sh ./logs/android
+
+# 3. Generate Linux QEMU logs (4 scenarios: normal, slow, panic, audit)
+bash run-linux-qemu.sh ./logs/linux
+
+# 4. Normalize and merge into a single indexed collection
+bash collect-logs.sh ./logs/android ./logs/linux ./logs/normalized
+# → produces logs/normalized/INDEX.md with ready-to-run analysis commands
+```
+
+The normalized logs feed directly into `orchestrator.sh` (multi-agent shell
+analysis) or `cli.py` (BSP diagnostic agent with MCP skills).
+
+---
+
+## Real-World Log Validation (Item #20)
 
 The skills were authored from documentation and synthetic test logs. Running against real hardware logs is the next critical step. Here is the recommended workflow.
 

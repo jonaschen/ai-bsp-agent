@@ -41,7 +41,18 @@ This system is an **Android BSP Diagnostic Expert Agent**. It pivoted from a cod
 
 **Do NOT attempt to fix legacy `studio/` factory logic, Docker/sandbox issues, or `issues.md` items.**
 
-Three layers:
+Three layers + two support components:
+
+### MCP Server (`mcp_server/`)
+- `mcp_server/server.py` — stdio MCP server exposing all 11 skills as MCP tools.
+- Registered with `claude mcp add bsp-diagnostics bsp-diagnostics-mcp` (after `pip install -e .`).
+- No LLM calls — delegates entirely to `skills/registry.py`.
+
+### Log Generation (`emulator_scripts/`)
+- `setup.sh` — installs QEMU (x86_64 + aarch64), Android SDK, creates AVD `boot_log_avd` (Android 34 x86_64), downloads Alpine Linux ISO.
+- `run-android-emulator.sh` — 4 scenarios (normal, slow, SELinux denials, kernel panic via sysrq).
+- `run-linux-qemu.sh` — 4 scenarios (normal, slow, throttled CPU, panic via sysrq, audit/AppArmor).
+- `collect-logs.sh` — normalizes outputs into `logs/normalized/` with `INDEX.md`.
 
 ### Layer 1: The Brain (Reasoning Engine)
 - `product/bsp_agent/agent.py` — `BSPDiagnosticAgent`: runs the Anthropic tool-use loop. Accepts a `CaseFile`, calls the Supervisor, selects route-appropriate tools, returns a `ConsultantResponse`.
@@ -113,8 +124,8 @@ All pieces of the v6 architecture are in place and tested.
 | 8 | Skill: `check_vendor_boot_ufs_driver` | DONE | `skills/bsp_diagnostics/vendor_boot.py` — 16 tests; phase-classified (probe/link_startup/resume) |
 | 9 | Skill: `analyze_watchdog_timeout` | DONE | `skills/bsp_diagnostics/watchdog.py` — 19 tests; soft/hard lockup, RCU stall, call trace extraction |
 | 10 | Skill: `check_pmic_rail_voltage` | DONE | `skills/bsp_diagnostics/pmic.py` — 19 tests; OCP + undervoltage detection, rpm-smd/qpnp/generic formats |
-| 11 | Real-world log validation | FUTURE | Run against actual BSP logs; tune thresholds; document edge cases |
-| **Total product tests** | **231 passing** | |
+| 11 | Real-world log validation | IN PROGRESS | `emulator_scripts/` toolkit generates Android AVD + Linux QEMU logs; feed into `cli.py` / `orchestrator.sh`; tune thresholds per results |
+| **Total product tests** | **347 passing** | |
 
 ### Phase 4 — Early Boot Skills (DONE) ✓
 
