@@ -1,0 +1,2 @@
+[    1.234567] rpm_smd_regulator: s1a: Requested voltage 756000 uV is below minimum 800000 uV
+[    1.234568] cpufreq: Failed to set voltage for CPU0

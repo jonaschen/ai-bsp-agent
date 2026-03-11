@@ -1,0 +1,3 @@
+[   12.345678] qpnp-regulator: qpnp_regulator_enable: vreg_lcd_vsp: over-current fault
+[   12.345679] display-driver: Failed to enable vreg_lcd_vsp, retrying...
+[   13.345678] qpnp-regulator: qpnp_regulator_enable: vreg_lcd_vsp: over-current fault

@@ -1,0 +1,4 @@
+[    1.234567] ufshcd-qcom 1d84000.ufshc: ufs_qcom_probe()
+[    1.345678] ufshcd-qcom 1d84000.ufshc: ufshcd_probe_hba()
+[    4.456789] ufshcd-qcom 1d84000.ufshc: ufshcd_probe_hba: probe of 1d84000.ufshc failed with error -110
+[    4.567890] ufshcd-qcom: probe of 1d84000.ufshc failed with error -110

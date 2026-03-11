@@ -1,0 +1,10 @@
+NOTICE:  BL1: v2.7(release):v2.7
+NOTICE:  BL1: Booting BL2
+NOTICE:  BL2: v2.7(release):v2.7
+NOTICE:  BL2: Booting BL31
+NOTICE:  BL31: v2.7(release):v2.7
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd034]
+[    0.000000] Linux version 5.15.0-generic (build@server) (gcc (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0, GNU ld (GNU Binutils for Ubuntu) 2.34) #1 SMP Thu Jan 1 00:00:00 UTC 1970
+[    0.000000] Machine model: Generic ARM64 Board
+[    0.000000] earlycon: pl11 at MMIO 0x09000000 (options '')
+[    0.000000] printk: bootconsole [pl11] enabled

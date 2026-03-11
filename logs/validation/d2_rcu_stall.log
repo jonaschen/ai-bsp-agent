@@ -1,0 +1,12 @@
+[  120.456789] rcu: INFO: rcu_sched detected stalls on CPUs/tasks:
+[  120.456790] rcu:     2-...!: (1 ticks this GP) idle=001/1/0x4000000000000000 softirq=123/123 fqs=0
+[  120.456791] rcu:     (detected by 0, t=5252 jiffies, g=123, q=456)
+[  120.456792] Task dump for CPU 2:
+[  120.456793] task:kworker/2:1     state:R  running task     stack:    0 pid: 456 ppid:     2 flags:0x00000008
+[  120.456794] Call trace:
+[  120.456795]  __switch_to+0xc4/0x140
+[  120.456796]  foo_driver_work+0x54/0xb0
+[  120.456797]  process_one_work+0x1c4/0x380
+[  120.456798]  worker_thread+0x1cc/0x3a0
+[  120.456799]  kthread+0x130/0x140
+[  120.456800]  ret_from_fork+0x10/0x20

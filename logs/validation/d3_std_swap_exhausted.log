@@ -1,0 +1,9 @@
+[  360.123456] PM: hibernation entry
+[  360.234567] PM: Syncing filesystems ... done.
+[  360.345678] Freezing user space processes ... (elapsed 0.001 seconds) done.
+[  360.456789] OOM killer disabled.
+[  360.567890] Freezing remaining freezable tasks ... (elapsed 0.001 seconds) done.
+[  360.678901] PM: Error -12 creating hibernation image
+[  360.789012] OOM killer enabled.
+[  360.890123] Restarting tasks ... done.
+[  361.001234] PM: hibernation exit

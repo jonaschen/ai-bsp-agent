@@ -1,0 +1,9 @@
+================================================================
+  Android Boot Log — Scenario: normal
+  Generated: 2024-03-11 10:20:00
+================================================================
+
+-------- KERNEL DMESG --------
+[    1.234567] qpnp-regulator: qpnp_regulator_enable: vreg_lcd_vsp: enabled
+[    1.345678] qpnp-regulator: qpnp_regulator_enable: vreg_lvs1a: enabled
+[    1.456789] rpm_smd_regulator: s1a: enabled

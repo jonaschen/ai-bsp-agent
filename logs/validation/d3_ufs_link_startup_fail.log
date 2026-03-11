@@ -1,0 +1,6 @@
+[  360.123456] PM: hibernation exit
+[  360.234567] ufshcd-qcom 1d84000.ufshc: ufshcd_resume()
+[  365.345678] ufshcd-qcom 1d84000.ufshc: ufshcd_link_startup: link startup failed -5
+[  365.456789] ufshcd-qcom 1d84000.ufshc: ufshcd_resume failed: -5
+[  365.567890] PM: dpm_run_callback(): ufshcd_resume+0x0/0x100 [ufshcd_core] returns -5
+[  365.678901] PM: Device 1d84000.ufshc failed to resume async: error -5

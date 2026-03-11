@@ -1,0 +1,12 @@
+NOTICE:  BL1: v2.7(release):v2.7
+NOTICE:  BL1: Booting BL2
+NOTICE:  BL2: v2.7(release):v2.7
+NOTICE:  BL2: Booting BL31
+NOTICE:  BL31: v2.7(release):v2.7
+NOTICE:  BL31: Booting BL33
+U-Boot 2023.04 (Jan 01 1970 - 00:00:00 +0000)
+
+CPU:   Generic ARM64
+Model: Generic Board
+DRAM:  2 GiB
+Hit any key to stop autoboot:  0

@@ -1,0 +1,6 @@
+NOTICE:  BL1: v2.7(release):v2.7
+NOTICE:  BL1: Booting BL2
+NOTICE:  BL2: v2.7(release):v2.7
+NOTICE:  BL2: Booting BL31
+ERROR: BL2: Failed to load image id=5
+ERROR: Authentication of BL31 image failed

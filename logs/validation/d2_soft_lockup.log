@@ -1,0 +1,17 @@
+[   25.432100] watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [kworker/0:1:123]
+[   25.432101] Modules linked in:
+[   25.432102] CPU: 0 PID: 123 Comm: kworker/0:1 Not tainted 5.15.0-generic #1
+[   25.432103] Hardware name: Generic ARM64 Board (DT)
+[   25.432104] pstate: 80400005 (Nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   25.432105] pc : delay_tsc+0x34/0x60
+[   25.432106] lr : delay_tsc+0x30/0x60
+[   25.432107] sp : ffff80001234bcde
+[   25.432108] Call trace:
+[   25.432109]  delay_tsc+0x34/0x60
+[   25.432110]  __const_udelay+0x34/0x40
+[   25.432111]  foo_driver_wait+0x44/0x120
+[   25.432112]  foo_driver_work+0x54/0xb0
+[   25.432113]  process_one_work+0x1c4/0x380
+[   25.432114]  worker_thread+0x1cc/0x3a0
+[   25.432115]  kthread+0x130/0x140
+[   25.432116]  ret_from_fork+0x10/0x20

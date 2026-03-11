@@ -1,0 +1,41 @@
+[   52.432100] watchdog: BUG: soft lockup - CPU#2 stuck for 22s! [kworker/2:1:456]
+[   52.432101] Modules linked in:
+[   52.432102] CPU: 2 PID: 456 Comm: kworker/2:1 Not tainted 5.15.0-generic #1
+[   52.432103] Hardware name: Generic ARM64 Board (DT)
+[   52.432104] pstate: 80400005 (Nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   52.432105] pc : delay_tsc+0x34/0x60
+[   52.432106] lr : delay_tsc+0x30/0x60
+[   52.432107] sp : ffff80001234bcde
+[   52.432108] Call trace:
+[   52.432109]  delay_tsc+0x34/0x60
+[   52.432110]  __const_udelay+0x34/0x40
+[   52.432111]  foo_driver_wait+0x44/0x120
+[   52.432112]  foo_driver_work+0x54/0xb0
+[   52.432113]  process_one_work+0x1c4/0x380
+[   52.432114]  worker_thread+0x1cc/0x3a0
+[   52.432115]  kthread+0x130/0x140
+[   52.432116]  ret_from_fork+0x10/0x20
+[   54.123456] Internal error: SError Interrupt: 96000210 [#1] PREEMPT SMP
+[   54.123457] Modules linked in:
+[   54.123458] CPU: 2 PID: 456 Comm: kworker/2:1 Not tainted 5.15.0-generic #1
+[   54.123459] Hardware name: Generic ARM64 Board (DT)
+[   54.123460] pstate: 80400005 (Nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   54.123461] pc : foo_driver_work+0x44/0x120
+[   54.123462] lr : process_one_work+0x54/0xb0
+[   54.123463] sp : ffff80001234bcde
+[   54.123464] x29: ffff80001234bcde x28: ffff000012345678 x27: ffff800012345678
+[   54.123465] x26: ffff000012345678 x25: 0000000000000000 x24: ffff000012345678
+[   54.123466] x23: 0000000000000000 x22: ffff000012345678 x21: ffff800012345678
+[   54.123467] x20: ffff000012345678 x19: ffff000012345678 x18: 0000000000000000
+[   54.123468] x17: 0000000000000000 x16: 0000000000000000 x15: 0000000000000000
+[   54.123469] x14: 0000000000000000 x13: 0000000000000000 x12: 0000000000000000
+[   54.123470] x11: 0000000000000000 x10: 0000000000000000 x9 : ffff800012345678
+[   54.123471] x8 : 0000000000000000 x7 : 0000000000000000 x6 : 0000000000000000
+[   54.123472] x5 : 0000000000000000 x4 : 0000000000000000 x3 : 0000000000000000
+[   54.123473] x2 : 0000000000000000 x1 : 0000000000000000 x0 : 0000000000000000
+[   54.123474] Call trace:
+[   54.123475]  foo_driver_work+0x44/0x120
+[   54.123476]  process_one_work+0x54/0xb0
+[   54.123477]  worker_thread+0x1cc/0x3a0
+[   54.123478]  kthread+0x130/0x140
+[   54.123479]  ret_from_fork+0x10/0x20

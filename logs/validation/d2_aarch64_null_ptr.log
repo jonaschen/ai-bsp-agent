@@ -1,0 +1,55 @@
+[   12.345678] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000018
+[   12.345680] Mem abort info:
+[   12.345681]   ESR = 0x96000006
+[   12.345682]   EC = 0x25: DABT (current EL), IL = 32 bits
+[   12.345683]   SET = 0, FnV = 0
+[   12.345684]   EA = 0, S1PTW = 0
+[   12.345685] Data abort info:
+[   12.345686]   ISV = 0, ISS = 0x00000006
+[   12.345687]   CM = 0, WnR = 0
+[   12.345688] user pgtable: 4k pages, 48-bit VAs, pgdp=00000001014e3000
+[   12.345689] [0000000000000018] pgd=0000000000000000, p4d=0000000000000000
+[   12.345690] Internal error: Oops: 96000006 [#1] PREEMPT SMP
+[   12.345691] Modules linked in: foo_driver
+[   12.345692] CPU: 0 PID: 123 Comm: kworker/0:1 Not tainted 5.15.0-generic #1
+[   12.345693] Hardware name: Generic ARM64 Board (DT)
+[   12.345694] pstate: 80400005 (Nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   12.345695] pc : foo_driver_probe+0x44/0x120 [foo_driver]
+[   12.345696] lr : platform_drv_probe+0x54/0xb0
+[   12.345697] sp : ffff80001234bcde
+[   12.345698] x29: ffff80001234bcde x28: ffff000012345678 x27: ffff800012345678
+[   12.345699] x26: ffff000012345678 x25: 0000000000000000 x24: ffff000012345678
+[   12.345700] x23: 0000000000000000 x22: ffff000012345678 x21: ffff800012345678
+[   12.345701] x20: ffff000012345678 x19: ffff000012345678 x18: 0000000000000000
+[   12.345702] x17: 0000000000000000 x16: 0000000000000000 x15: 0000000000000000
+[   12.345703] x14: 0000000000000000 x13: 0000000000000000 x12: 0000000000000000
+[   12.345704] x11: 0000000000000000 x10: 0000000000000000 x9 : ffff800012345678
+[   12.345705] x8 : 0000000000000000 x7 : 0000000000000000 x6 : 0000000000000000
+[   12.345706] x5 : 0000000000000000 x4 : 0000000000000000 x3 : 0000000000000000
+[   12.345707] x2 : 0000000000000000 x1 : 0000000000000000 x0 : 0000000000000000
+[   12.345708] Call trace:
+[   12.345709]  foo_driver_probe+0x44/0x120 [foo_driver]
+[   12.345710]  platform_drv_probe+0x54/0xb0
+[   12.345711]  really_probe+0xc4/0x310
+[   12.345712]  __driver_probe_device+0x7c/0x110
+[   12.345713]  driver_probe_device+0x44/0x100
+[   12.345714]  __device_attach_driver+0xb8/0x100
+[   12.345715]  bus_for_each_drv+0x80/0xe0
+[   12.345716]  __device_attach+0xe8/0x160
+[   12.345717]  device_initial_probe+0x18/0x20
+[   12.345718]  bus_probe_device+0x9c/0xa0
+[   12.345719]  device_add+0x3b8/0x810
+[   12.345720]  platform_device_add+0x114/0x240
+[   12.345721]  platform_device_register_full+0x108/0x180
+[   12.345722]  foo_init+0x34/0x1000 [foo_driver]
+[   12.345723]  do_one_initcall+0x50/0x280
+[   12.345724]  do_init_module+0x58/0x260
+[   12.345725]  load_module+0x2128/0x2320
+[   12.345726]  __do_sys_finit_module+0xa8/0x110
+[   12.345727]  __arm64_sys_finit_module+0x24/0x30
+[   12.345728]  invoke_syscall+0x48/0x110
+[   12.345729]  el0_svc_common.constprop.0+0x48/0xf0
+[   12.345730]  do_el0_svc+0x28/0x80
+[   12.345731]  el0_svc+0x18/0x50
+[   12.345732]  el0t_64_sync_handler+0xa4/0x130
+[   12.345733]  el0t_64_sync+0x1a0/0x1a4

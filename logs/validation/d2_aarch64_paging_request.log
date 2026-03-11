@@ -1,0 +1,40 @@
+[   12.345678] Unable to handle kernel paging request at virtual address ffff800012345678
+[   12.345680] Mem abort info:
+[   12.345681]   ESR = 0x9600004f
+[   12.345682]   EC = 0x25: DABT (current EL), IL = 32 bits
+[   12.345683]   SET = 0, FnV = 0
+[   12.345684]   EA = 0, S1PTW = 0
+[   12.345685] Data abort info:
+[   12.345686]   ISV = 0, ISS = 0x0000004f
+[   12.345687]   CM = 0, WnR = 0
+[   12.345688] swapper pgtable: 4k pages, 48-bit VAs, pgdp=00000000014e3000
+[   12.345689] [ffff800012345678] pgd=0000000000000000, p4d=0000000000000000
+[   12.345690] Internal error: Oops: 9600004f [#1] PREEMPT SMP
+[   12.345691] Modules linked in: foo_driver
+[   12.345692] CPU: 0 PID: 123 Comm: kworker/0:1 Not tainted 5.15.0-generic #1
+[   12.345693] Hardware name: Generic ARM64 Board (DT)
+[   12.345694] pstate: 80400005 (Nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   12.345695] pc : foo_driver_read+0x44/0x120 [foo_driver]
+[   12.345696] lr : vfs_read+0x54/0xb0
+[   12.345697] sp : ffff80001234bcde
+[   12.345698] x29: ffff80001234bcde x28: ffff000012345678 x27: ffff800012345678
+[   12.345699] x26: ffff000012345678 x25: 0000000000000000 x24: ffff000012345678
+[   12.345700] x23: 0000000000000000 x22: ffff000012345678 x21: ffff800012345678
+[   12.345701] x20: ffff000012345678 x19: ffff000012345678 x18: 0000000000000000
+[   12.345702] x17: 0000000000000000 x16: 0000000000000000 x15: 0000000000000000
+[   12.345703] x14: 0000000000000000 x13: 0000000000000000 x12: 0000000000000000
+[   12.345704] x11: 0000000000000000 x10: 0000000000000000 x9 : ffff800012345678
+[   12.345705] x8 : ffff800012345678 x7 : 0000000000000000 x6 : 0000000000000000
+[   12.345706] x5 : 0000000000000000 x4 : 0000000000000000 x3 : 0000000000000000
+[   12.345707] x2 : 0000000000000000 x1 : 0000000000000000 x0 : 0000000000000000
+[   12.345708] Call trace:
+[   12.345709]  foo_driver_read+0x44/0x120 [foo_driver]
+[   12.345710]  vfs_read+0x54/0xb0
+[   12.345711]  ksys_read+0x64/0xd0
+[   12.345712]  __arm64_sys_read+0x18/0x20
+[   12.345713]  invoke_syscall+0x48/0x110
+[   12.345714]  el0_svc_common.constprop.0+0x48/0xf0
+[   12.345715]  do_el0_svc+0x28/0x80
+[   12.345716]  el0_svc+0x18/0x50
+[   12.345717]  el0t_64_sync_handler+0xa4/0x130
+[   12.345718]  el0t_64_sync+0x1a0/0x1a4

@@ -1,0 +1,21 @@
+================================================================
+  Android Boot Log — Scenario: selinux
+  Generated: 2024-03-11 10:20:00
+================================================================
+
+-------- KERNEL DMESG --------
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd034]
+[    1.234567] init: init first stage started!
+[    8.234567] audit: type=1400 audit(1234567890.123:45): avc: denied { read } for pid=1234 comm="zygote" name="maps" dev="proc"
+[    9.345678] audit: type=1400 audit(1234567890.234:46): avc: denied { open } for pid=1234 comm="zygote" name="maps" dev="proc"
+[   10.456789] audit: type=1400 audit(1234567890.345:47): avc: denied { getattr } for pid=1234 comm="zygote" name="maps" dev="proc"
+
+-------- LOGCAT (ALL BUFFERS) --------
+10-01 12:00:00.000  1234  1234 I Zygote  : System server process 456 has been created
+
+-------- BOOT EVENTS --------
+
+-------- SELINUX / AVC --------
+[    8.234567] audit: type=1400 audit(1234567890.123:45): avc: denied { read } for pid=1234 comm="zygote" name="maps" dev="proc"
+[    9.345678] audit: type=1400 audit(1234567890.234:46): avc: denied { open } for pid=1234 comm="zygote" name="maps" dev="proc"
+[   10.456789] audit: type=1400 audit(1234567890.345:47): avc: denied { getattr } for pid=1234 comm="zygote" name="maps" dev="proc"

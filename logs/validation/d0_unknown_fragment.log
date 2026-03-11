@@ -1,0 +1,8 @@
+Rx Data: 0x45 0x12 0x99
+Tx Data: 0x01
+Status: OK
+Wait for interrupt...
+Interrupt received on pin 4.
+Rx Data: 0x46 0x13 0x00
+Tx Data: 0x02
+Status: OK

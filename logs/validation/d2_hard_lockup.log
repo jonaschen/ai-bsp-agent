@@ -1,0 +1,23 @@
+[   60.123456] Watchdog detected hard LOCKUP on cpu 3
+[   60.123457] Modules linked in:
+[   60.123458] CPU: 3 PID: 987 Comm: irq/45-audio Not tainted 5.15.0-generic #1
+[   60.123459] Hardware name: Generic ARM64 Board (DT)
+[   60.123460] pstate: 80400005 (Nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   60.123461] pc : delay_tsc+0x34/0x60
+[   60.123462] lr : delay_tsc+0x30/0x60
+[   60.123463] sp : ffff80001234bcde
+[   60.123464] Call trace:
+[   60.123465]  delay_tsc+0x34/0x60
+[   60.123466]  __const_udelay+0x34/0x40
+[   60.123467]  audio_irq_handler+0x44/0x120
+[   60.123468]  __handle_irq_event_percpu+0x54/0xb0
+[   60.123469]  handle_irq_event+0x34/0x80
+[   60.123470]  handle_fasteoi_irq+0x94/0x180
+[   60.123471]  __handle_domain_irq+0x74/0xd0
+[   60.123472]  gic_handle_irq+0x54/0xa0
+[   60.123473]  el1_irq+0xbc/0x140
+[   60.123474]  cpuidle_enter_state+0x13c/0x2f0
+[   60.123475]  cpuidle_enter+0x34/0x50
+[   60.123476]  do_idle+0x21c/0x2a0
+[   60.123477]  cpu_startup_entry+0x24/0x30
+[   60.123478]  secondary_start_kernel+0x138/0x150

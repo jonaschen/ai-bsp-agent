@@ -1,0 +1,22 @@
+================================================================
+  Android Boot Log — Scenario: slow
+  Generated: 2024-03-11 10:20:00
+================================================================
+
+-------- KERNEL DMESG --------
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd034]
+[    1.234567] init: init first stage started!
+[   12.543210] mmc0: Timeout waiting for hardware interrupt.
+[   12.643210] mmc0: Got data interrupt 0x00000002 even though no data operation was in progress.
+[   25.456789] platform regulatory.0: Direct firmware load for regulatory.db failed with error -2
+[   25.456790] cfg80211: failed to load regulatory.db
+
+-------- LOGCAT (ALL BUFFERS) --------
+10-01 12:00:00.000   123   123 I Zygote  : System server process 456 has been created
+10-01 12:02:10.000   456   456 I SystemServer: sys.boot_completed=1
+
+-------- BOOT EVENTS --------
+10-01 12:00:01.000   456   456 I boot_progress_start: 12000
+10-01 12:02:00.000   456   456 I boot_progress_ams_ready: 131000
+
+-------- SELINUX / AVC --------
