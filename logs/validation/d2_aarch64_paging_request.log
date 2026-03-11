@@ -1,42 +1,48 @@
-[  245.001234] Unable to handle kernel paging request at virtual address ffff800012345678
-[  245.001567] Mem abort info:
-[  245.001789]   ESR = 0x9600004f
-[  245.002012]   EC = 0x25: DABT (current EL), IL = 32 bits
-[  245.002234]   SET = 0, FnV = 0
-[  245.002456]   EA = 0, S1PTW = 0
-[  245.002678]   FSC = 0x0f: level 3 permission fault
-[  245.002890] Data abort info:
-[  245.003012]   ISV = 0, ISS = 0x0000004f
-[  245.003234]   CM = 0, WnR = 1
-[  245.003456] swapper pgtable: 4k pages, 48-bit VAs, pgdp=0000000102800000
-[  245.003678] [ffff800012345678] pgd=180000010a000003, p4d=180000010a000003, pud=180000010b000003, pmd=180000010c000003, pte=006800010d000e87
-[  245.003890] Internal error: Oops: 000000009600004f [#1] PREEMPT SMP
-[  245.004012] Modules linked in: acme_drv(O) platform_core
-[  245.004234] CPU: 1 PID: 4567 Comm: kworker/1:2 Not tainted 5.15.131-android13-8 #1
-[  245.004456] Hardware name: Android/Virtual Device (DT)
-[  245.004678] pstate: 80400009 (Nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
-[  245.004890] pc : acme_drv_write+0xb4/0x200
-[  245.005012] lr : acme_drv_worker+0x68/0x100
-[  245.005234] sp : ffff800014ab3c80
-[  245.005456] x29: ffff800014ab3c80 x28: ffff800012345678 x27: 0000000000000001
-[  245.005678] x26: ffff800014ab3d00 x25: ffff0000fe123400 x24: 0000000000000040
-[  245.005890] x23: ffff0000fe123000 x22: 0000000000000001 x21: ffff800014ab3d50
-[  245.006012] x20: ffff800012345678 x19: ffff0000fe100000 x18: 0000000000000000
-[  245.006234] x17: 0000000000000000 x16: 0000000000000000 x15: 0000000000000000
-[  245.006456] x14: 0000000000000000 x13: ffff800012345678 x12: 0000000000000000
-[  245.006678] x11: 0000000000000001 x10: 0000000000000010 x9 : ffff800014ab3cb0
-[  245.006890] x8 : ffff800012345678 x7 : 0000000000000000 x6 : 0000000000000040
-[  245.007012] x5 : ffff0000fd000000 x4 : 0000000000000000 x3 : 0000000000000001
-[  245.007234] x2 : ffff800012345678 x1 : ffff0000fe100000 x0 : 0000000000000000
-[  245.007456] Call trace:
-[  245.007567]  acme_drv_write+0xb4/0x200
-[  245.007678]  acme_drv_worker+0x68/0x100
-[  245.007789]  process_one_work+0x1e8/0x390
-[  245.007890]  worker_thread+0x50/0x3c0
-[  245.008012]  kthread+0x14c/0x160
-[  245.008123]  ret_from_fork+0x10/0x18
-[  245.008234] Code: f9000108 d65f03c0 90004ca1 91080021 (f9000301)
-[  245.008456] FAR_EL1 = 0xffff800012345678
-[  245.008678] ESR_EL1 = 0x9600004f
-[  245.008890] ---[ end trace fedcba9876543210 ]---
-[  245.009012] Kernel panic - not syncing: Oops: Fatal exception
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[    0.000000] Linux version 6.6.14-0-virt (buildozer@build-3-19-aarch64) (gcc (Alpine 13.2.1_git20231014) 13.2.1 20231014, GNU ld (GNU Binutils) 2.41) #1-Alpine SMP Fri, 26 Jan 2024 11:08:07 +0000
+[    0.000000] random: crng init done
+[    0.000000] Machine model: linux,dummy-virt
+[    0.000000] efi: UEFI not found.
+[    0.000000] NUMA: No NUMA configuration found
+[    0.000000] NUMA: Faking a node at [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] NUMA: NODE_DATA [mem 0x5fcebf80-0x5fcedfff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not requi[    6.123456] Unable to handle kernel paging request at virtual address ffff800012345678
+[    6.234567] Mem abort info:
+[    6.345678]   ESR = 0x000000009600004f
+[    6.456789]   EC = 0x25: DABT (current EL), IL = 32 bits
+[    6.567890]   SET = 0, FnV = 0
+[    6.678901]   EA = 0, S1PTW = 0
+[    6.789012]   FSC = 0x0f: level 3 permission fault
+[    6.890123] Data abort info:
+[    6.901234]   ISV = 0, ISS = 0x0000004f, ISS2 = 0x00000000
+[    6.902345]   CM = 0, WnR = 1, TnD = 0, TagAccess = 0
+[    6.903456] swapper pgtable: 4k pages, 48-bit VAs, pgdp=0000000040d57000
+[    6.904567] [ffff800012345678] pgd=1800000040d58003, p4d=1800000040d58003, pud=1800000040b58003, pmd=1800000040b59003, pte=0060000012345783
+[    6.905678] Internal error: Oops: 9600004f [#1] PREEMPT SMP
+[    6.906789] Modules linked in: nf_conntrack nf_defrag_ipv4
+[    6.907890] CPU: 1 PID: 456 Comm: kswapd0 Not tainted 6.6.14-0-virt #1-Alpine
+[    6.908901] Hardware name: linux,dummy-virt (DT)
+[    6.909012] pstate: 80000005 (Nzcv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[    6.910123] pc : mem_cgroup_migrate+0x44/0xd0
+[    6.911234] lr : migrate_pages+0x280/0x640
+[    6.912345] sp : ffff800009a8fd30
+[    6.913456] x29: ffff800009a8fd30 x28: 0000000000000010 x27: ffff800012345678
+[    6.914567] x26: ffff00003f456000 x25: ffff00003f567800 x24: 0000000000000001
+[    6.915678] x23: 0000000000000000 x22: ffff00003e890000 x21: ffff000000234560
+[    6.916789] Call trace:
+[    6.917890]  mem_cgroup_migrate+0x44/0xd0
+[    6.918901]  migrate_pages+0x280/0x640
+[    6.919012]  reclaim_pages+0x1c8/0x2f0
+[    6.920123] Code: f9400260 b5fffec0 d503201f (b9001260)
+[    6.921234] ---[ end trace 9600004f00000001 ]---

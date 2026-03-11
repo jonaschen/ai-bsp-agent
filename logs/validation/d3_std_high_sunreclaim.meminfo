@@ -25,26 +25,11 @@ SReclaimable:      30720 kB
 SUnreclaim:       153600 kB
 KernelStack:        8192 kB
 PageTables:         4096 kB
-NFS_Unstable:          0 kB
-Bounce:                0 kB
-WritebackTmp:          0 kB
-CommitLimit:     1572864 kB
-Committed_AS:     614400 kB
 VmallocTotal:   133143461888 kB
 VmallocUsed:       40960 kB
 VmallocChunk:          0 kB
-Percpu:             1024 kB
-HardwareCorrupted:     0 kB
-AnonHugePages:         0 kB
-ShmemHugePages:        0 kB
-ShmemPmdMapped:        0 kB
-FileHugePages:         0 kB
-FilePmdMapped:         0 kB
 HugePages_Total:       0
 HugePages_Free:        0
 HugePages_Rsvd:        0
 HugePages_Surp:        0
 Hugepagesize:       2048 kB
-Hugetlb:               0 kB
-DirectMap4k:       32768 kB
-DirectMap2M:     1015808 kB

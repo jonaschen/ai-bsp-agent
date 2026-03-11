@@ -1,10 +1,38 @@
-[  456.100451] PM: Syncing filesystems ... done.
-[  456.200123] PM: Preparing system for sleep (hibernation)
-[  456.300456] PM: Freezing user space processes
-[  456.400789] PM: Freezing remaining freezable tasks
-[  456.500122] PM: Suspending devices
-[  456.600456] PM: Creating hibernation image
-[  456.700789] PM: Error -12 creating hibernation image
-[  456.800123] PM: Restoring freed pages
-[  456.900456] PM: resume of devices complete
-[  457.000789] PM: Finishing wakeup.
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[    0.000000] Linux version 6.6.14-0-virt (buildozer@build-3-19-aarch64) (gcc (Alpine 13.2.1_git20231014) 13.2.1 20231014, GNU ld (GNU Binutils) 2.41) #1-Alpine SMP Fri, 26 Jan 2024 11:08:07 +0000
+[    0.000000] random: crng init done
+[    0.000000] Machine model: linux,dummy-virt
+[    0.000000] efi: UEFI not found.
+[    0.000000] NUMA: No NUMA configuration found
+[    0.000000] NUMA: Faking a node at [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] NUMA: NODE_DATA [mem 0x5fcebf80-0x5fcedfff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not required
+[    0.000000] psci: SMC Calling Convention v1.0
+[    0.000000] percpu: Embedded 31 pages/cpu s89128 r8192 d29656 u126976
+[    0.000000] Detected PIPT I-cache on CPU0
+[    0.000000] CPU features: detected: Spectre-v2
+[    0.000000] CPU features: detected: Spectre-v4
+[    0.000000] CPU features: detected: Spectre-BHB
+[    0.000000] CPU features: detected: ARM erratum 1742098
+[    0.000000] CPU features: detected: ARM errata 1165522, 1319367, or 1530923
+[    0.000000] alternatives: applying bo[  401.100451] PM: Syncing filesystems ... done.
+[  401.200123] PM: Preparing system for sleep (hibernation)
+[  401.300456] PM: Freezing user space processes
+[  401.400789] PM: Freezing remaining freezable tasks
+[  401.500122] PM: Suspending devices
+[  401.600456] PM: Creating hibernation image
+[  401.700789] PM: Error -12 creating hibernation image
+[  401.800123] PM: Restoring freed pages
+[  401.900456] PM: resume of devices complete
+[  402.000789] PM: Finishing wakeup.

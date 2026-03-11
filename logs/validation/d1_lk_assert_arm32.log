@@ -1,28 +1,200 @@
-[00000] platform_init()
-[00000] target_init()
-[00000] display_init(): Initializing display subsystem
-[00000] display_init(): Configuring DSI panel
-[00000] display_init(): DSI clock init done
-[00000] panel_driver_init(): Loading panel config
+cntpct_per_ms: 62500.000000000
+
+ms_per_cntpct: 0.000015999
+
+us_per_cntpct: 0.015999999
+
+Generic timer initialized with freq 62500000 Hz, irq 27
+
+FDT: found memory bank range [0x40000000, 0x5fffffff] (length 0x20000000)
+
+FDT: reserving physical range for FDT: [0x40000000, 0x400fffff]
+
+PSCI: detected version 1:1
+
+
+
+welcome to lk/MP
+
+
+
+
+boot args 0x0 0x0 0x0 0x0
+
+INIT: cpu 0, calling hook 0xffff00000012faa0 (version) at level 0x3fff, flags 0x1
+
+version:
+
+	arch:     arm64
+
+	platform: qemu-virt-arm
+
+	target:   qemu-virt-arm
+
+	project:  qemu-virt-arm64-test
+
+	buildid:  P3BBS_LOCAL
+
+INIT: cpu 0, calling hook 0xffff0000001349c0 (vm_preheap) at level 0x3fff, flags 0x1
+
+initializing heap
+
+calling constructors
+
+INIT: cpu 0, calling hook 0xffff000000134a20 (vm) at level 0x4fff, flags 0x1
+
+INIT: cpu 0, calling hook 0xffff000000102090 (platform_postvm_init) at level 0x5000, flags 0x1
+
+FDT: found gic version 2
+
+FDT: GICv2 distributor base 0x8000000, len 0x10000
+
+FDT: GICv2 cpu interface base 0x8010000, len 0x10000
+
+arm_gic_init_map:346: GICD mapped to vaddr 0xffff000780000000
+
+arm_gic_init_map:357: GICC mapped to vaddr 0xffff000780010000
+
+GIC: version 2
+
+GICv2: GICD_TYPER 0x8, cpu_count 2, max_int 128
+
+INIT: cpu 0, calling hook 0xffff000000111430 (arm_generic_timer_init_postvm) at level 0x5001, flags 0x1
+
+Generic timer register irq 27 on cpu 0
+
+initializing mp
+
+initializing threads
+
+initializing timers
+
+initializing ports
+
+creating bootstrap completion thread
+
+top of bootstrap2()
+
+INIT: cpu 0, calling hook 0xffff0000001168b0 (mutex_threading_ready) at level 0x7000, flags 0x1
+
+INIT: cpu 0, calling hook 0xffff000000126f90 (minip) at level 0x7000, flags 0x1
+
+INIT: cpu 0, calling hook 0xffff000000127f10 (pktbuf) at level 0x7000, flags 0x1
+
+pktbuf: creating 256 pktbuf entries of size 1536 (total 393216)
+
+INIT: cpu 0, calling hook 0xffff0000001336f0 (virtio) at level 0x7000, flags 0x1
+
+ARM64: boot EL1
+
+initializing platform
+
+FDT: found 1 cpu 
+
+PCIE: initializing pcie with ecam at 0x4010000000 found in FDT
+
+PCI: pci ecam functions installed
+
+PCI: last pci bus is 255
+
+PCI dump:
+
+  bus 0
+
+   dev 0000:00:00.0 vid:pid 1b36:0008 base:sub:intr 6:0:0 int 0 
+
+   dev 0000:00:01.0 vid:pid 1af4:1000 base:sub:intr 2:0:0 int 0 msix 
+
+    BAR 0: addr 0        size 20       io 1 64b 0 pref 0
+
+    BAR 1: addr 0        size 1000     io 0 64b 0 pref 0
+
+    BAR 4: addr 0        size 4000     io 0 64b 1 pref 1
+
+     capability: offset 0x98 id 0x11
+
+     capability: offset 0x84 id 0x9
+
+     capability: offset 0x70 id 0x9
+
+     capability: offset 0x60 id 0x9
+
+     capability: offset 0x50 id 0x9
+
+     capability: offset 0x40 id 0x9
+
+PCI dump post assign:
+
+  bus 0
+
+   dev 0000:00:00.0 vid:pid 1b36:0008 base:sub:intr 6:0:0 int 0 
+
+   dev 0000:00:01.0 vid:pid 1af4:1000 base:sub:intr 2:0:0 int 0 msix 
+
+    BAR 0: addr 0        size 20       io 1 64b 0 pref 0
+
+    BAR 1: addr 10000000 size 1000     io 0 64b 0 pref 0
+
+    BAR 4: addr 8000000000       size 4000             io 0 64b 1 pref 1
+
+     capability: offset 0x98 id 0x11
+
+     capability: offset 0x84 id 0x9
+
+     capability: offset 0x70 id 0x9
+
+     capability: offset 0x60 id 0x9
+
+     capability: offset 0x50 id 0x9
+
+     capability: offset 0x40 id 0x9
+
+virtio-pci: looking at device at 0000:00:01.0
+
+virtio device independent features (0x10130bf8024): INDIRECT_DESC EVENT_IDX VERSION_1 RING_RESET
+
+platform_allocate_interrupts:169: count 1 align 0 msi 1
+
+platform_allocate_interrupts:200: allocated msi at 80
+
+virtio-net host features (0x10130bf8024): CTRL_GUEST_OFFLOADS MAC MRG_RXBUF STATUS CTRL_VQ CTRL_RX CTRL_VLAN GUEST_ANNOUNCE CTRL_MAC_ADDR
+
+platform_init:135: found virtio networking interface
+
+initializing target
+
+INIT: cpu 0, calling hook 0xffff0000001300c0 (ahci) at level 0x9001, flags 0x1
+
+INIT: cpu 0, calling hook 0xffff000000131f64 (e1000) at level 0x9001, flags 0x1
+
+initializing apps
+
+starting app inetsrv
+
+starting internet servers
+
+starting app shell
+
+entering main console loop
+] 
 ASSERT FAILED at [kernel/thread.c:423]
-thread_resume: thread 0x12ab3e40 is not in BLOCKED or SLEEPING state (state=0x4)
+panic msg: ASSERT FAILED
+platform: qemu-virt-arm (running in arm32 compat mode)
+arch: arm
 
-r0 = 0x00000000
-r1 = 0x12ab3e40
-r2 = 0x00000004
-r3 = 0x000089ac
-r4 = 0xdeadbeef
-r5 = 0x00000001
-r6 = 0xf8000000
-r7 = 0x00000000
-r8 = 0x12ab3e40
-r9 = 0x00000000
-r10 = 0x12ab3d00
-r11 = 0x00000423
-r12 = 0x00000000
-sp = 0xf9ab3d00
-lr = 0xf0012345
-pc = 0xf0023456
-cpsr = 0x600001d3
+register dump:
+r0  0x00000000  r1  0x00000001  r2  0xc0a1b2c3  r3  0x00000000
+r4  0xc0100000  r5  0xc0102340  r6  0x00000003  r7  0x00000000
+r8  0x00000001  r9  0xc0a1b000 r10  0x00000001 r11  0xc0a1a000
+r12  0x00000000  sp  0xc0a1be00  lr  0xc0100234  pc  0xc0100244
 
-panic ("thread_resume called on non-blocked/sleeping thread\n");
+CPSR: 0x800001d3 (Supervisor, IRQ/FIQ disabled, ARM mode)
+stack trace:
+0xc0100244
+0xc0100234
+0xc0a1b001
+0xc0a1a823
+
+CRASH: starting debug shell, reason 'ASSERT FAILED'
+entering panic shell loop
+! 

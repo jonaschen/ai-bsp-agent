@@ -1,13 +1,29 @@
-[    2.001234] qpnp-regulator: L5A: 1800000 uV
-[    2.101456] qpnp-regulator: L6A: 1200000 uV
-[    2.201678] qpnp-regulator: S3A: 1352000 uV
-[    3.001234] msm_drm: Initializing display subsystem
-[    3.101456] dsi_panel_lcd: Power on display panel
-[    3.201678] qpnp-regulator: vreg_lcd_vsp: 5400000 uV
-[    3.301890] qpnp-regulator: vreg_lcd_vsn: 5400000 uV
-[    3.402012] qpnp-regulator: qpnp_regulator_enable: vreg_lcd_vsp: over-current fault
-[    3.502234] qpnp-regulator: vreg_lcd_vsp OCP fault detected
-[    3.602456] dsi_panel_lcd: Display panel power-on OCP event on vreg_lcd_vsp
-[    3.702678] dsi_panel_lcd: Retrying power-on sequence (attempt 1/3)
-[    3.802890] qpnp-regulator: qpnp_regulator_enable: vreg_lcd_vsp: over-current fault
-[    3.903012] dsi_panel_lcd: Retrying power-on sequence (attempt 2/3)
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[    0.000000] Linux version 6.6.14-0-virt (buildozer@build-3-19-aarch64) (gcc (Alpine 13.2.1_git20231014) 13.2.1 20231014, GNU ld (GNU Binutils) 2.41) #1-Alpine SMP Fri, 26 Jan 2024 11:08:07 +0000
+[    0.000000] random: crng init done
+[    0.000000] Machine model: linux,dummy-virt
+[    0.000000] efi: UEFI not found.
+[    0.000000] NUMA: No NUMA configuration found
+[    0.000000] NUMA: Faking a node at [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] NUMA: NODE_DATA [mem 0x5fcebf80-0x5fcedfff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not required
+[    0.000000] psci: SMC Calling Convention v1.0
+[    0.000000] percpu: Embedded 31 pages/cpu s89128 r8192 d29656 u126976
+[    0.000000] Detected PIPT I-cache on CPU0
+[    0.000000] CPU features: detected: Spectre-v2
+[    0.000000] CPU features: detected: Spectre-v4
+[    0.000000] CPU features: [   15.123456] qpnp-regulator qpnp-regulator-51: qpnp_regulator_enable: vreg_lcd_vsp: over-current fault
+[   15.234567] qpnp-regulator qpnp-regulator-51: qpnp_regulator_enable: vreg_lcd_vsn: over-current fault
+[   15.345678] msm-drm msm_drm: drm_atomic_commit: [CRTC:0:crtc-0] already active, OCP detected
+[   15.456789] qpnp-regulator qpnp-regulator-51: qpnp_regulator_enable: vreg_lcd_vsp: over-current fault

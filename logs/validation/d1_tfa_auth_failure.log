@@ -1,16 +1,39 @@
 NOTICE:  BL1: v2.7(release):v2.7.0
-NOTICE:  BL1: Built : 14:23:01, Oct 31 2023
-INFO:    BL1: RAM 0x04009000 - 0x04013000
+NOTICE:  BL1: Built : 09:27:04, Nov 17 2022
+INFO:    BL1: RAM 0x0ffe1000 - 0x0ffea000
 INFO:    BL1: Loading BL2
-INFO:    Loading image id=1 at address 0x4006000
 NOTICE:  BL1: Booting BL2
 NOTICE:  BL2: v2.7(release):v2.7.0
-NOTICE:  BL2: Built : 14:23:02, Oct 31 2023
-INFO:    BL2: Loading image id=3 (BL31) at address 0x4003000
-INFO:    BL2: Verifying BL31 image signature
-INFO:    BL2: Checking BL31 certificate
-ERROR:   BL2: Failed to load image id=5
+NOTICE:  BL2: Built : 09:27:04, Nov 17 2022
+INFO:    BL2: Verifying image id=3
+INFO:    BL2: Image id=3 loaded: 0x0fee1000 - 0x0fee3000
+INFO:    BL2: Verifying image id=4
+INFO:    BL2: Image id=4 loaded: 0x0fea0000 - 0x0fea0004
+INFO:    BL2: Verifying image id=5
+ERROR:   BL2: Failed to load image id=5 (-2)
 ERROR:   Authentication of BL31 image failed
-NOTICE:  BL2: image integrity check failed: certificate hash mismatch
-ERROR:   BL2: Secure Boot verification error — ROTPK mismatch
-ERROR:   BL2: Aborting boot sequence
+ERROR:   BL2: Failed to boot next image. Aborting.
+NOTICE:  Main boot sequence aborted.
+cntpct_per_ms: 62500.000000000
+
+ms_per_cntpct: 0.000015999
+
+us_per_cntpct: 0.015999999
+
+Generic timer initialized with freq 62500000 Hz, irq 27
+
+FDT: found memory bank range [0x40000000, 0x5fffffff] (length 0x20000000)
+
+FDT: reserving physical range for FDT: [0x40000000, 0x400fffff]
+
+PSCI: detected version 1:1
+
+
+
+welcome to lk/MP
+
+
+
+boot args 0x0 0x0 0x0 0x0
+
+INIT: cp

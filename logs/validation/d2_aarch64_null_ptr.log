@@ -1,46 +1,67 @@
-[  120.001234] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000018
-[  120.001567] Mem abort info:
-[  120.001789]   ESR = 0x96000006
-[  120.002012]   EC = 0x25: DABT (current EL), IL = 32 bits
-[  120.002234]   SET = 0, FnV = 0
-[  120.002456]   EA = 0, S1PTW = 0
-[  120.002678]   FSC = 0x06: level 2 translation fault
-[  120.002890] Data abort info:
-[  120.003012]   ISV = 0, ISS = 0x00000006
-[  120.003234]   CM = 0, WnR = 0
-[  120.003456] user pgtable: 4k pages, 39-bit VAs, pgdp=0000000102c12000
-[  120.003678] [0000000000000018] pgd=0000000000000000, p4d=0000000000000000
-[  120.003890] Internal error: Oops: 0000000096000006 [#1] PREEMPT SMP
-[  120.004012] Modules linked in: foo_driver(O) bar_module
-[  120.004234] CPU: 2 PID: 3456 Comm: foo_service Not tainted 5.15.131-android13-8 #1
-[  120.004456] Hardware name: Android/Virtual Device (DT)
-[  120.004678] pstate: 80400009 (Nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
-[  120.004890] pc : foo_driver_probe+0x44/0x120
-[  120.005012] lr : platform_drv_probe+0x34/0x90
-[  120.005234] sp : ffff800012ab3c80
-[  120.005456] x29: ffff800012ab3c80 x28: 0000000000000000 x27: 0000000000000000
-[  120.005678] x26: ffff800012ab3d00 x25: ffff0000fa123400 x24: 0000000000000000
-[  120.005890] x23: ffff0000fa123000 x22: 0000000000000001 x21: ffff800012ab3d50
-[  120.006012] x20: ffff0000fa123400 x19: ffff0000fa100000 x18: 0000000000000000
-[  120.006234] x17: 0000000000000000 x16: 0000000000000000 x15: 0000000000000000
-[  120.006456] x14: 0000000000000000 x13: 0000000000000000 x12: 0000000000000000
-[  120.006678] x11: 0000000000000001 x10: 0000000000000010 x9 : ffff800012ab3cb0
-[  120.006890] x8 : ffff0000fa100018 x7 : 0000000000000000 x6 : 0000000000000040
-[  120.007012] x5 : ffff0000fb000000 x4 : 0000000000000000 x3 : 0000000000000001
-[  120.007234] x2 : 0000000000000018 x1 : ffff0000fa100000 x0 : 0000000000000000
-[  120.007456] Call trace:
-[  120.007567]  foo_driver_probe+0x44/0x120
-[  120.007678]  platform_drv_probe+0x34/0x90
-[  120.007789]  really_probe+0xe8/0x390
-[  120.007890]  driver_probe_device+0x84/0x100
-[  120.008012]  device_driver_attach+0x6c/0x80
-[  120.008123]  __driver_attach+0xb8/0x100
-[  120.008234]  bus_for_each_dev+0x68/0xd0
-[  120.008345]  bus_add_driver+0x15c/0x1f0
-[  120.008456]  driver_register+0x74/0x120
-[  120.008567]  do_one_initcall+0x50/0x210
-[  120.008678] Code: b9400108 b940012a cbff6929 b4000020 (f9400108)
-[  120.008890] FAR_EL1 = 0x0000000000000018
-[  120.009012] ESR_EL1 = 0x96000006
-[  120.009234] ---[ end trace 0123456789abcdef ]---
-[  120.009456] Kernel panic - not syncing: Oops: Fatal exception
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[    0.000000] Linux version 6.6.14-0-virt (buildozer@build-3-19-aarch64) (gcc (Alpine 13.2.1_git20231014) 13.2.1 20231014, GNU ld (GNU Binutils) 2.41) #1-Alpine SMP Fri, 26 Jan 2024 11:08:07 +0000
+[    0.000000] random: crng init done
+[    0.000000] Machine model: linux,dummy-virt
+[    0.000000] efi: UEFI not found.
+[    0.000000] NUMA: No NUMA configuration found
+[    0.000000] NUMA: Faking a node at [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] NUMA: NODE_DATA [mem 0x5fcebf80-0x5fcedfff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not required
+[    0.000000] psci: SMC Calling Convention v1.0
+[    0.000000] percpu: Embedded 31 pages/cpu s89128 r8192 d29656 u126976
+[    0.000000] Detected PIPT I-cache on CPU0
+[    0.000000] CPU features: detected: Spectre-v2
+[    0.000000] CPU features: detected: Spectre-v4
+[    0.000000] CPU features: [    4.123456] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000001
+[    4.234567] Mem abort info:
+[    4.345678]   ESR = 0x0000000096000044
+[    4.456789]   EC = 0x25: DABT (current EL), IL = 32 bits
+[    4.567890]   SET = 0, FnV = 0
+[    4.678901]   EA = 0, S1PTW = 0
+[    4.789012]   FSC = 0x04: level 0 translation fault
+[    4.890123] Data abort info:
+[    5.001234]   ISV = 0, ISS = 0x00000044, ISS2 = 0x00000000
+[    5.112345]   CM = 0, WnR = 1, TnD = 0, TagAccess = 0
+[    5.223456] user pgtable: 4k pages, 48-bit VAs, pgdp=0000000041af4000
+[    5.334567] [0000000000000001] pgd=0000000000000000, p4d=0000000000000000
+[    5.445678] Internal error: Oops: 96000044 [#1] PREEMPT SMP
+[    5.556789] Modules linked in:
+[    5.667890] CPU: 0 PID: 123 Comm: kworker/0:1 Not tainted 6.6.14-0-virt #1-Alpine
+[    5.778901] Hardware name: linux,dummy-virt (DT)
+[    5.890012] Workqueue: events deferred_probe_work_func
+[    5.900123] pstate: 60000005 (nZCv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[    5.901234] pc : cmd_crash+0x20/0x30
+[    5.902345] lr : __handle_sysrq+0x108/0x208
+[    5.903456] sp : ffff80000a5c3d40
+[    5.904567] x29: ffff80000a5c3d40 x28: 0000000000000000 x27: ffff000000000000
+[    5.905678] x26: 0000000000000000 x25: 0000000000000030 x24: 0000000000000030
+[    5.906789] x23: 0000000000000000 x22: ffff000000175820 x21: ffff000000497960
+[    5.907890] x20: ffff000000497650 x19: ffff000000497960 x18: ffff0000001820c0
+[    5.908901] x17: 0000000000000000 x16: ffff0000001576a4 x15: ffff000000181e60
+[    5.909012] x14: ffff0000001671b0 x13: ffff000000496d10 x12: ffff000000496d10
+[    5.910123] x11: ffff000000186528 x10: 0000000000001113 x9 : ffff000000186290
+[    5.911234] x8 : 00000000004189374 x7 : 0000000000000000 x6 : ffff000000497960
+[    5.912345] x5 : 0000000000696f6820 x4 : 0000000000000063 x3 : 0000000000000001
+[    5.913456] x2 : ffff00000011cfe0 x1 : 0000000000000001 x0 : ffff000000160000
+[    5.914567] Call trace:
+[    5.915678]  cmd_crash+0x20/0x30
+[    5.916789]  __handle_sysrq+0x108/0x208
+[    5.917890]  write_sysrq_trigger+0x44/0x60
+[    5.918901]  proc_reg_write+0x6c/0xb0
+[    5.919012]  vfs_write+0xcc/0x2a8
+[    5.920123]  ksys_write+0x6c/0xf8
+[    5.921234]  __arm64_sys_write+0x24/0x30
+[    5.922345]  invoke_syscall+0x50/0x128
+[    5.923456] Code: d2800021 f9000020 d65f03c0 d503201f (f9000020)
+[    5.924567] ---[ end trace 0000000000000001 ]---

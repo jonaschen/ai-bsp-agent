@@ -1,20 +1,21 @@
 NOTICE:  BL1: v2.7(release):v2.7.0
-NOTICE:  BL1: Built : 14:23:01, Oct 31 2023
-NOTICE:  BL1: Booting BL2
+NOTICE:  BL1: Built : 09:27:04, Nov 17 2022
+INFO:    BL1: RAM 0x0ffe1000 - 0x0ffea000
 NOTICE:  BL2: v2.7(release):v2.7.0
-NOTICE:  BL2: Loading image id=3 (BL31)
-NOTICE:  BL2: Booting BL31
-NOTICE:  BL31: v2.7(release):v2.7.0
-NOTICE:  BL31: Built : 14:23:03, Oct 31 2023
-INFO:    BL31: Initializing runtime services
-INFO:    BL31: Initializing GIC-600
-INFO:    BL31: GIC-600 initialized successfully
-INFO:    BL31: Configuring platform power domains
-INFO:    BL31: Initializing PMIC power sequencer
-INFO:    BL31: Enabling VDD_CPU rail
-INFO:    BL31: Enabling VDD_MX rail
-INFO:    BL31: Enabling VDD_GPU rail
-ERROR:   BL31: PMIC: regulator not ready — VDD_GPU timeout after 5ms
-ERROR:   VDD_GPU not ready after 100ms wait
-NOTICE:  Failed to enable vdd_gpu rail
-ERROR:   BL31: Power sequencing abort — cannot hand off to BL33
+INFO:    BL2: Loading BL31
+INFO:    BL31: Initializing power domains
+NOTICE:  BL31: Enabling VDD_GPU rail
+ERROR:   BL31: PMIC: regulator not ready
+ERROR:   BL31: Failed to enable vdd_gpu rail, status=-1
+NOTICE:  BL31: Attempting fallback voltage configuration
+ERROR:   BL31: Fallback failed. System cannot boot.
+ERROR:   BL31: SYSTEM HALT
+cntpct_per_ms: 62500.000000000
+
+ms_per_cntpct: 0.000015999
+
+us_per_cntpct: 0.015999999
+
+Generic timer initialized with freq 62500000 Hz, irq 27
+
+FDT: found memory bank ra

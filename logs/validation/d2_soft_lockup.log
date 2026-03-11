@@ -1,17 +1,43 @@
-[  185.001234] watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [kworker/0:1:123]
-[  185.001456] Modules linked in: sdhci_msm(O) mmc_core
-[  185.001678] CPU: 0 PID: 123 Comm: kworker/0:1 Not tainted 5.15.131-android13-8 #1
-[  185.001890] Hardware name: Android/Virtual Device (DT)
-[  185.002012] pstate: 00400005 (nzcv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
-[  185.002234] pc : sdhci_msm_check_busy+0x78/0xb0
-[  185.002456] lr : sdhci_msm_execute_tuning+0x1c4/0x300
-[  185.002678] sp : ffff800012ab3e90
-[  185.002890] Call trace:
-[  185.003012]  sdhci_msm_check_busy+0x78/0xb0
-[  185.003234]  sdhci_msm_execute_tuning+0x1c4/0x300
-[  185.003456]  sdhci_execute_tuning+0x88/0x140
-[  185.003678]  mmc_execute_tuning+0x3c/0x80
-[  185.003890]  mmc_init_card+0x360/0x520
-[  185.004012]  mmc_attach_mmc+0x78/0x100
-[  185.004234]  mmc_rescan+0x240/0x340
-[  185.004456]  process_one_work+0x1e8/0x390
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[    0.000000] Linux version 6.6.14-0-virt (buildozer@build-3-19-aarch64) (gcc (Alpine 13.2.1_git20231014) 13.2.1 20231014, GNU ld (GNU Binutils) 2.41) #1-Alpine SMP Fri, 26 Jan 2024 11:08:07 +0000
+[    0.000000] random: crng init done
+[    0.000000] Machine model: linux,dummy-virt
+[    0.000000] efi: UEFI not found.
+[    0.000000] NUMA: No NUMA configuration found
+[    0.000000] NUMA: Faking a node at [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] NUMA: NODE_DATA [mem 0x5fcebf80-0x5fcedfff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not required
+[    0.000000] psci: SMC Calling Convention v1.0
+[    0.000000] percpu: Embedded 31 pages/cpu s89128 r8192 d29656 u126976
+[    0.000000] Detected PIPT I-cache on CPU0
+[    0.000000] CPU features: [   30.123456] watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [kworker/0:1:123]
+[   30.234567] Modules linked in: nf_conntrack nf_defrag_ipv4
+[   30.345678] CPU: 0 PID: 123 Comm: kworker/0:1 Not tainted 6.6.14-0-virt #1-Alpine
+[   30.456789] Hardware name: linux,dummy-virt (DT)
+[   30.567890] pstate: 00000085 (nzcv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   30.678901] pc : _raw_spin_lock_irqsave+0x60/0xa0
+[   30.789012] lr : process_one_work+0x1fc/0x3d0
+[   30.890123] sp : ffff800009a73e10
+[   30.901234] x29: ffff800009a73e10 x28: ffff000000456780 x27: ffff000000000000
+[   30.902345] x26: 0000000000000000 x25: ffff00003f678000 x24: 0000000000000001
+[   30.903456] x23: ffff000000234567 x22: ffff000000345678 x21: 0000000000000000
+[   30.904567] Call trace:
+[   30.905678]  _raw_spin_lock_irqsave+0x60/0xa0
+[   30.906789]  process_one_work+0x1fc/0x3d0
+[   30.907890]  worker_thread+0x180/0x3f0
+[   30.908901]  kthread+0x11c/0x128
+[   30.909012]  ret_from_fork+0x10/0x20
+[   30.910123] Sending NMI from CPU 1 to CPUs 0:
+[   30.911234] NMI backtrace for cpu 0
+[   30.912345] CPU: 0 PID: 123 Comm: kworker/0:1 Not tainted 6.6.14-0-virt #1-Alpine
