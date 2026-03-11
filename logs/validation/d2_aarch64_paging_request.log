@@ -1,0 +1,48 @@
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[    0.000000] Linux version 6.6.14-0-virt (buildozer@build-3-19-aarch64) (gcc (Alpine 13.2.1_git20231014) 13.2.1 20231014, GNU ld (GNU Binutils) 2.41) #1-Alpine SMP Fri, 26 Jan 2024 11:08:07 +0000
+[    0.000000] random: crng init done
+[    0.000000] Machine model: linux,dummy-virt
+[    0.000000] efi: UEFI not found.
+[    0.000000] NUMA: No NUMA configuration found
+[    0.000000] NUMA: Faking a node at [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] NUMA: NODE_DATA [mem 0x5fcebf80-0x5fcedfff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not requi[    6.123456] Unable to handle kernel paging request at virtual address ffff800012345678
+[    6.234567] Mem abort info:
+[    6.345678]   ESR = 0x000000009600004f
+[    6.456789]   EC = 0x25: DABT (current EL), IL = 32 bits
+[    6.567890]   SET = 0, FnV = 0
+[    6.678901]   EA = 0, S1PTW = 0
+[    6.789012]   FSC = 0x0f: level 3 permission fault
+[    6.890123] Data abort info:
+[    6.901234]   ISV = 0, ISS = 0x0000004f, ISS2 = 0x00000000
+[    6.902345]   CM = 0, WnR = 1, TnD = 0, TagAccess = 0
+[    6.903456] swapper pgtable: 4k pages, 48-bit VAs, pgdp=0000000040d57000
+[    6.904567] [ffff800012345678] pgd=1800000040d58003, p4d=1800000040d58003, pud=1800000040b58003, pmd=1800000040b59003, pte=0060000012345783
+[    6.905678] Internal error: Oops: 9600004f [#1] PREEMPT SMP
+[    6.906789] Modules linked in: nf_conntrack nf_defrag_ipv4
+[    6.907890] CPU: 1 PID: 456 Comm: kswapd0 Not tainted 6.6.14-0-virt #1-Alpine
+[    6.908901] Hardware name: linux,dummy-virt (DT)
+[    6.909012] pstate: 80000005 (Nzcv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[    6.910123] pc : mem_cgroup_migrate+0x44/0xd0
+[    6.911234] lr : migrate_pages+0x280/0x640
+[    6.912345] sp : ffff800009a8fd30
+[    6.913456] x29: ffff800009a8fd30 x28: 0000000000000010 x27: ffff800012345678
+[    6.914567] x26: ffff00003f456000 x25: ffff00003f567800 x24: 0000000000000001
+[    6.915678] x23: 0000000000000000 x22: ffff00003e890000 x21: ffff000000234560
+[    6.916789] Call trace:
+[    6.917890]  mem_cgroup_migrate+0x44/0xd0
+[    6.918901]  migrate_pages+0x280/0x640
+[    6.919012]  reclaim_pages+0x1c8/0x2f0
+[    6.920123] Code: f9400260 b5fffec0 d503201f (b9001260)
+[    6.921234] ---[ end trace 9600004f00000001 ]---

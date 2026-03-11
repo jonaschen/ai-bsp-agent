@@ -1,0 +1,23 @@
+cntpct_per_ms: 62500.000000000
+
+ms_per_cntpct: 0.000015999
+
+us_per_cntpct: 0.015999999
+
+Generic timer initialized with freq 62500000 Hz, irq 27
+
+FDT: found memory bank range [0x40000000, 0x5fffffff] (length 0x20000000)
+
+FDT: reserving physical range for FDT: [0x40000000cntpct_per_ms: 62500.000000000
+ms_per_cntpct: 0.000015999
+Generic timer initialized with freq 62500000 Hz, irq 27
+FDT: found memory bank range [0x40000000, 0x5fffffff] (length 0x20000000)
+NOTICE: lk: DDR: Initializing LPDDR4X subsystem
+NOTICE: lk: DDR: PHY training sequence started
+NOTICE: lk: DDR: ERROR: PHY training timed out (LPDDR4X 4266MHz)
+NOTICE: lk: DDR: ddr training fail
+PANIC: ddr_init: 0xdeadbeef
+panic (caller 0xffff0000001000a0): ddr_init failure
+CRASH: starting debug shell, reason 'ddr init failure'
+entering panic shell loop
+! 

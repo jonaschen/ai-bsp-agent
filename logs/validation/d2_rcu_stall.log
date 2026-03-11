@@ -1,0 +1,40 @@
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[    0.000000] Linux version 6.6.14-0-virt (buildozer@build-3-19-aarch64) (gcc (Alpine 13.2.1_git20231014) 13.2.1 20231014, GNU ld (GNU Binutils) 2.41) #1-Alpine SMP Fri, 26 Jan 2024 11:08:07 +0000
+[    0.000000] random: crng init done
+[    0.000000] Machine model: linux,dummy-virt
+[    0.000000] efi: UEFI not found.
+[    0.000000] NUMA: No NUMA configuration found
+[    0.000000] NUMA: Faking a node at [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] NUMA: NODE_DATA [mem 0x5fcebf80-0x5fcedfff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not required
+[    0.000000] psci: SMC Calling Convention v1.0
+[    0.000000] percpu: Embedded 31 pages/cpu s89128 r8192 d29656 u126976
+[    0.000000] Detected PIPT I-cache on CPU0
+[    0.000000] CPU features: detected: Spectre-v4
+[   62.345678] rcu: INFO: rcu_sched detected stalls on CPUs/tasks:
+[   62.456789] rcu: 0-...0: (1 GPs behind) idle=1234/0/0x1 softirq=12345/12346 fqs=3001
+[   62.567890] rcu: 1-...0: (0 GPs behind) idle=5678/0/0x1 softirq=23456/23457 fqs=3001
+[   62.678901] rcu: (detected by 2, t=18006 jiffies, g=14313, q=1245 ncpus=4)
+[   62.789012] rcu: All QSes seen, last rcu_sched kthread activity 18006 (4303062564-4303044558), jiffies_till_next_fqs=1, root ->qsmask 0x0
+[   62.890123] rcu: rcu_sched kthread timer wakeup didn't happen for 18005 jiffies! g14313 f0x0 RCU_GP_WAIT_FQS(5) ->state=0x402
+[   62.901234] rcu: Possible timer handler delay on CPU 0. Probable RCU grace-period kthread stall
+[   62.902345] Task dump for CPU 0:
+[   62.903456] task:ksoftirqd/0   state:R  running task    stack:0     pid:   14  ppid:     2  flags:0x00004000
+[   62.904567] Call trace:
+[   62.905678]  rcu_core+0x2c4/0x3a0
+[   62.906789]  __do_softirq+0xf8/0x3f0
+[   62.907890]  run_ksoftirqd+0x50/0x78
+[   62.908901]  smpboot_thread_fn+0x1b8/0x260
+[   62.909012]  kthread+0x11c/0x128
+[   62.910123]  ret_from_fork+0x10/0x20

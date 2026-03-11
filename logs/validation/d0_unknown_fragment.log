@@ -1,0 +1,19 @@
+USB 2-1: new high-speed USB device number 3 using xhci_hcd
+USB 2-1: New USB device found, idVendor=0781, idProduct=5567, bcdDevice= 1.00
+USB 2-1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+USB 2-1: Product: Cruzer Blade
+USB 2-1: Manufacturer: SanDisk
+USB 2-1: SerialNumber: 4C530012340219114583
+USB 2-1: 2 interface(s) found
+USB 2-1: configuration #1 chosen from 1 choice
+scsi host0: usb-storage 2-1:1.0
+scsi 0:0:0:0: Direct-Access     SanDisk  Cruzer Blade     1.00 PQ: 0 ANSI: 6
+sd 0:0:0:0: [sda] 30277632 512-byte logical blocks: (15.5 GB/14.4 GiB)
+sd 0:0:0:0: [sda] Write Protect is off
+sd 0:0:0:0: [sda] Mode Sense: 43 00 00 00
+sd 0:0:0:0: [sda] Write cache: disabled, read cache: enabled, doesn't support DPO or FUA
+ sda: sda1
+sd 0:0:0:0: [sda] Attached SCSI removable disk
+usbcore: registered new interface driver usb-storage
+USB disconnect, device number 3
+usb 2-1: USB disconnect, device number 3

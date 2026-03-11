@@ -1,0 +1,44 @@
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[    0.000000] Linux version 6.6.14-0-virt (buildozer@build-3-19-aarch64) (gcc (Alpine 13.2.1_git20231014) 13.2.1 20231014, GNU ld (GNU Binutils) 2.41) #1-Alpine SMP Fri, 26 Jan 2024 11:08:07 +0000
+[    0.000000] random: crng init done
+[    0.000000] Machine model: linux,dummy-virt
+[    0.000000] efi: UEFI not found.
+[    0.000000] NUMA: No NUMA configuration found
+[    0.000000] NUMA: Faking a node at [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] NUMA: NODE_DATA [mem 0x5fcebf80-0x5fcedfff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not required
+[    0.000000] psci: SMC Calling Convention v1.0
+[    0.000000] percpu: Embedded 31 pages/cpu s89128 r8192 d29656 u126976
+[    0.000000] Detected PIPT I-cache on CPU0
+[    0.000000] CPU features: detected: Spectre-v4
+[   45.678901] Watchdog detected hard LOCKUP on cpu 3
+[   45.789012] Modules linked in: nf_conntrack
+[   45.890123] CPU: 3 PID: 987 Comm: irq/45-audio Not tainted 6.6.14-0-virt #1-Alpine
+[   45.901234] Hardware name: linux,dummy-virt (DT)
+[   45.902345] pstate: 60400005 (nZCv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   45.903456] pc : irq_wait_for_poll+0x3c/0x60
+[   45.904567] lr : __synchronize_hardirq+0x74/0xb8
+[   45.905678] sp : ffff800009c87da0
+[   45.906789] x29: ffff800009c87da0 x28: ffff000000000000 x27: 0000000000000001
+[   45.907890] x26: ffff00003f9ab000 x25: 0000000000000000 x24: 0000000000000080
+[   45.908901] x23: 0000000000000045 x22: ffff000000567890 x21: ffff000000678901
+[   45.909012] Call trace:
+[   45.910123]  irq_wait_for_poll+0x3c/0x60
+[   45.911234]  __synchronize_hardirq+0x74/0xb8
+[   45.912345]  synchronize_hardirq+0x50/0x90
+[   45.913456]  free_irq+0xe8/0x1e0
+[   45.914567]  snd_pcm_drop+0x1fc/0x2a0
+[   45.915678] BUG: hard lockup - CPU#3 stuck for 60s! [irq/45-audio:987]
+[   45.916789] Kernel panic - not syncing: Hard LOCKUP
+[   45.917890] CPU: 3 PID: 987 Comm: irq/45-audio Not tainted 6.6.14-0-virt #1-Alpine

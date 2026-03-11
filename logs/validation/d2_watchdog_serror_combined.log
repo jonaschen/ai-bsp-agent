@@ -1,0 +1,45 @@
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[    0.000000] Linux version 6.6.14-0-virt (buildozer@build-3-19-aarch64) (gcc (Alpine 13.2.1_git20231014) 13.2.1 20231014, GNU ld (GNU Binutils) 2.41) #1-Alpine SMP Fri, 26 Jan 2024 11:08:07 +0000
+[    0.000000] random: crng init done
+[    0.000000] Machine model: linux,dummy-virt
+[    0.000000] efi: UEFI not found.
+[    0.000000] NUMA: No NUMA configuration found
+[    0.000000] NUMA: Faking a node at [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] NUMA: NODE_DATA [mem 0x5fcebf80-0x5fcedfff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not required
+[    0.000000] psci: SMC Calling Convention v1.0
+[    0.000000] percpu: Embedded 31 pages/cpu s89128 r8192 d29656 u126976
+[    0.000000] Detected PIPT I-cache on CPU0
+[    0.000000] CPU features: detected: Spectre-v4
+[   30.123456] watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [kworker/0:1:123]
+[   30.234567] CPU: 0 PID: 123 Comm: kworker/0:1 Not tainted 6.6.14-0-virt #1-Alpine
+[   30.345678] Hardware name: linux,dummy-virt (DT)
+[   30.456789] pstate: 00000085 (nzcv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   30.567890] pc : _raw_spin_lock_irqsave+0x60/0xa0
+[   30.678901] Call trace:
+[   30.789012]  _raw_spin_lock_irqsave+0x60/0xa0
+[   30.890123]  process_one_work+0x1fc/0x3d0
+[   30.901234]  worker_thread+0x180/0x3f0
+[   30.902345]  kthread+0x11c/0x128
+[   31.234567] SError Interrupt on CPU0, code 0x96000210 -- SError
+[   31.345678] Internal error: SError Interrupt: 96000210 [#1] PREEMPT SMP
+[   31.456789] CPU: 0 PID: 0 Comm: swapper/0 Not tainted 6.6.14-0-virt #1-Alpine
+[   31.567890] ESR_EL1 = 0x96000210
+[   31.678901] EC = 0x25: SError, ISS = 0x210
+[   31.789012] FAR_EL1 = 0x0000000000000000
+[   31.890123] Call trace:
+[   31.901234]  default_idle+0x20/0x30
+[   31.902345]  do_idle+0x198/0x1e0
+[   31.903456]  cpu_startup_entry+0x34/0x40
+[   31.904567] Kernel panic - not syncing: Asynchronous SError Interrupt

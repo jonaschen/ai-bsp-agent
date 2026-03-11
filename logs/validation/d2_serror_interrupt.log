@@ -1,0 +1,57 @@
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[    0.000000] Linux version 6.6.14-0-virt (buildozer@build-3-19-aarch64) (gcc (Alpine 13.2.1_git20231014) 13.2.1 20231014, GNU ld (GNU Binutils) 2.41) #1-Alpine SMP Fri, 26 Jan 2024 11:08:07 +0000
+[    0.000000] random: crng init done
+[    0.000000] Machine model: linux,dummy-virt
+[    0.000000] efi: UEFI not found.
+[    0.000000] NUMA: No NUMA configuration found
+[    0.000000] NUMA: Faking a node at [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] NUMA: NODE_DATA [mem 0x5fcebf80-0x5fcedfff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x000000005fffffff]
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not required
+[    0.000000] psci: SMC Calling Convention v1.0
+[    0.000000] percpu: Embedded 31 pages/cpu s8[   10.234567] SError Interrupt on CPU0, code 0x96000210 -- SError
+[   10.345678] CPU: 0 PID: 0 Comm: swapper/0 Not tainted 6.6.14-0-virt #1-Alpine
+[   10.456789] Hardware name: linux,dummy-virt (DT)
+[   10.567890] pstate: 60000085 (nZCv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   10.678901] pc : default_idle+0x20/0x30
+[   10.789012] lr : do_idle+0x198/0x1e0
+[   10.890123] sp : ffff80000a407e80
+[   10.901234] x29: ffff80000a407e80 x28: 0000000000000000 x27: ffff000000000000
+[   10.902345] x26: 0000000000000000 x25: ffff000000123456 x24: 0000000000000001
+[   10.903456] Internal error: SError Interrupt: 96000210 [#1] PREEMPT SMP
+[   10.904567] Modules linked in: nf_conntrack
+[   10.905678] CPU: 0 PID: 0 Comm: swapper/0 Not tainted 6.6.14-0-virt #1-Alpine
+[   10.906789] Hardware name: linux,dummy-virt (DT)
+[   10.907890] ESR_EL1 = 0x96000210
+[   10.908901] EC = 0x25: SError, ISS = 0x210
+[   10.909012] FAR_EL1 = 0x0000000000000000
+[   10.910123] Cache maintenance error (PoC synchronization failure)
+[   10.911234] Call trace:
+[   10.912345]  default_idle+0x20/0x30
+[   10.913456]  do_idle+0x198/0x1e0
+[   10.914567]  cpu_startup_entry+0x34/0x40
+[   10.915678]  rest_init+0xd8/0xe8
+[   10.916789] Kernel panic - not syncing: Asynchronous SError Interrupt
+[   10.917890] CPU: 0 PID: 0 Comm: swapper/0 Not tainted 6.6.14-0-virt #1-Alpine
+[   10.918901] Call trace:
+[   10.919012]  dump_backtrace+0x0/0x1d0
+[   10.920123]  show_stack+0x20/0x30
+[   10.921234]  dump_stack_lvl+0x68/0xa0
+[   10.922345]  dump_stack+0x18/0x24
+[   10.923456]  panic+0x17c/0x330
+[   10.924567]  arm64_serror_panic+0x68/0x78
+[   10.925678] SMP: stopping secondary CPUs
+[   10.926789] Kernel Offset: disabled
+[   10.927890] CPU features: 0x00000000,00200040
+[   10.928901] Memory Limit: none
+[   10.929012] ---[ end Kernel panic - not syncing: Asynchronous SError Interrupt ]---
