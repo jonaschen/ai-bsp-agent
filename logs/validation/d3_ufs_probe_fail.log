@@ -1,0 +1,6 @@
+[    1.001234] ufshcd-qcom 1d84000.ufshc: ufshcd_pltfrm_init
+[    1.101456] ufshcd-qcom 1d84000.ufshc: Reset to power on reset mode if err
+[    1.201678] ufshcd-qcom 1d84000.ufshc: ufshcd_hba_enable: Controller enable failed
+[    1.301890] ufshcd-qcom 1d84000.ufshc: ufshcd_probe_hba failed with error -110
+[    1.402012] ufshcd-qcom: probe of 1d84000.ufshc failed with error -110
+[    1.502234] ufshcd-qcom 1d84000.ufshc: UFS host controller not initialized

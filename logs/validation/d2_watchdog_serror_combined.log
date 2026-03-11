@@ -1,0 +1,28 @@
+[   52.001234] watchdog: BUG: soft lockup - CPU#2 stuck for 22s! [kworker/2:1:456]
+[   52.001456] Modules linked in: vendor_acme_driver(O) qcom_glink_rpm
+[   52.001678] CPU: 2 PID: 456 Comm: kworker/2:1 Not tainted 5.15.131-android13-8 #1
+[   52.001890] Hardware name: Android/Virtual Device (DT)
+[   52.002012] pstate: 00400009 (nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   52.002234] pc : _raw_spin_lock_irqsave+0x28/0x60
+[   52.002456] lr : vendor_acme_irq_handler+0x1c/0xa0
+[   52.002678] sp : ffff800012ab3e90
+[   52.002890] Call trace:
+[   52.003012]  _raw_spin_lock_irqsave+0x28/0x60
+[   52.003234]  vendor_acme_irq_handler+0x1c/0xa0
+[   52.003456]  __handle_irq_event_percpu+0x64/0x1e0
+[   52.003678]  handle_irq_event_percpu+0x34/0xa0
+[   52.003890]  handle_irq_event+0x44/0xa0
+[   54.001234] SError Interrupt on CPU 2
+[   54.001456] ESR_EL1 = 0xBE000000
+[   54.001678] FAR_EL1 = 0x0000000000000000
+[   54.001890] arm64: taking pending SError interrupt
+[   54.002012] Kernel panic - not syncing: Asynchronous SError Interrupt
+[   54.002234] CPU: 2 PID: 456 Comm: kworker/2:1
+[   54.002456] Call trace:
+[   54.002678]  dump_backtrace+0x0/0x1d4
+[   54.002890]  show_stack+0x18/0x24
+[   54.003012]  dump_stack_lvl+0x68/0x84
+[   54.003234]  panic+0x180/0x390
+[   54.003456]  arm64_serror_panic+0x78/0xa0
+[   54.003678]  do_serror+0x44/0x60
+[   54.003890]  el1h_64_error_handler+0x30/0x50

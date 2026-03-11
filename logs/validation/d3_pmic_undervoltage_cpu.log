@@ -1,0 +1,6 @@
+[    0.001234] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-5: S1A: set_voltage (756000 uV)
+[    0.101456] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-5: s1a: Requested voltage 756000 uV is below minimum 800000 uV
+[    0.201678] rpm-smd-regulator 627c0000.qcom,rpm-smd: s1a: under-voltage detected — CPU core rail out of spec
+[    0.301890] S1A: under-voltage detected at 756 mV (minimum 800 mV)
+[    0.402012] regulator: s1a: voltage not ok (756 mV < 800 mV minimum)
+[    0.502234] cpu0: throttling to 576 MHz due to low supply voltage on S1A

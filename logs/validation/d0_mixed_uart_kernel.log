@@ -1,0 +1,31 @@
+NOTICE:  BL1: v2.7(release):v2.7.0
+NOTICE:  BL1: Built : 14:23:01, Oct 31 2023
+INFO:    BL1: RAM 0x04009000 - 0x4013000
+NOTICE:  BL1: Booting BL2
+INFO:    Loading image id=1 at address 0x4006000
+NOTICE:  BL2: v2.7(release):v2.7.0
+NOTICE:  BL2: Built : 14:23:02, Oct 31 2023
+INFO:    BL2: Loading image id=3 (BL31) at address 0x4003000
+INFO:    BL2: Loading image id=5 (BL33/U-Boot) at address 0x60000000
+NOTICE:  BL2: Booting BL31
+NOTICE:  BL31: v2.7(release):v2.7.0
+NOTICE:  BL31: Built : 14:23:03, Oct 31 2023
+INFO:    BL31: Initializing runtime services
+INFO:    BL31: Preparing for EL3 exit to normal world
+INFO:    BL31: Booting BL33
+
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd034]
+[    0.000000] Linux version 5.15.0-alpine (builder@alpine-build) (gcc 12.2.1) #1 SMP
+[    0.000000] Machine model: QEMU Virtual Machine
+[    0.000000] earlycon: pl011 at MMIO 0x0000000009000000 (options '115200n8')
+[    0.012345] smp: Bringing up secondary CPUs ...
+[    0.025678] smp: Brought up 1 node, 4 CPUs
+[    0.080123] EXT4-fs (vda1): mounted filesystem with ordered data mode.
+[    0.120456] VFS: Mounted root (ext4 filesystem) readonly on device 253:1.
+[    0.150789] devtmpfs: initialized
+[    0.200890] NET: Registered PF_INET protocol family
+[    0.350234] OpenRC 0.44 is starting up Linux 5.15.0-alpine (aarch64)
+[    1.001345] Welcome to Alpine Linux 3.18
+[    1.001346] Kernel 5.15.0-alpine on an aarch64 (/dev/ttyAMA0)
+
+localhost login:

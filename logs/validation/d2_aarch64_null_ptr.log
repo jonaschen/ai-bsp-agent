@@ -1,0 +1,46 @@
+[  120.001234] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000018
+[  120.001567] Mem abort info:
+[  120.001789]   ESR = 0x96000006
+[  120.002012]   EC = 0x25: DABT (current EL), IL = 32 bits
+[  120.002234]   SET = 0, FnV = 0
+[  120.002456]   EA = 0, S1PTW = 0
+[  120.002678]   FSC = 0x06: level 2 translation fault
+[  120.002890] Data abort info:
+[  120.003012]   ISV = 0, ISS = 0x00000006
+[  120.003234]   CM = 0, WnR = 0
+[  120.003456] user pgtable: 4k pages, 39-bit VAs, pgdp=0000000102c12000
+[  120.003678] [0000000000000018] pgd=0000000000000000, p4d=0000000000000000
+[  120.003890] Internal error: Oops: 0000000096000006 [#1] PREEMPT SMP
+[  120.004012] Modules linked in: foo_driver(O) bar_module
+[  120.004234] CPU: 2 PID: 3456 Comm: foo_service Not tainted 5.15.131-android13-8 #1
+[  120.004456] Hardware name: Android/Virtual Device (DT)
+[  120.004678] pstate: 80400009 (Nzcv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[  120.004890] pc : foo_driver_probe+0x44/0x120
+[  120.005012] lr : platform_drv_probe+0x34/0x90
+[  120.005234] sp : ffff800012ab3c80
+[  120.005456] x29: ffff800012ab3c80 x28: 0000000000000000 x27: 0000000000000000
+[  120.005678] x26: ffff800012ab3d00 x25: ffff0000fa123400 x24: 0000000000000000
+[  120.005890] x23: ffff0000fa123000 x22: 0000000000000001 x21: ffff800012ab3d50
+[  120.006012] x20: ffff0000fa123400 x19: ffff0000fa100000 x18: 0000000000000000
+[  120.006234] x17: 0000000000000000 x16: 0000000000000000 x15: 0000000000000000
+[  120.006456] x14: 0000000000000000 x13: 0000000000000000 x12: 0000000000000000
+[  120.006678] x11: 0000000000000001 x10: 0000000000000010 x9 : ffff800012ab3cb0
+[  120.006890] x8 : ffff0000fa100018 x7 : 0000000000000000 x6 : 0000000000000040
+[  120.007012] x5 : ffff0000fb000000 x4 : 0000000000000000 x3 : 0000000000000001
+[  120.007234] x2 : 0000000000000018 x1 : ffff0000fa100000 x0 : 0000000000000000
+[  120.007456] Call trace:
+[  120.007567]  foo_driver_probe+0x44/0x120
+[  120.007678]  platform_drv_probe+0x34/0x90
+[  120.007789]  really_probe+0xe8/0x390
+[  120.007890]  driver_probe_device+0x84/0x100
+[  120.008012]  device_driver_attach+0x6c/0x80
+[  120.008123]  __driver_attach+0xb8/0x100
+[  120.008234]  bus_for_each_dev+0x68/0xd0
+[  120.008345]  bus_add_driver+0x15c/0x1f0
+[  120.008456]  driver_register+0x74/0x120
+[  120.008567]  do_one_initcall+0x50/0x210
+[  120.008678] Code: b9400108 b940012a cbff6929 b4000020 (f9400108)
+[  120.008890] FAR_EL1 = 0x0000000000000018
+[  120.009012] ESR_EL1 = 0x96000006
+[  120.009234] ---[ end trace 0123456789abcdef ]---
+[  120.009456] Kernel panic - not syncing: Oops: Fatal exception

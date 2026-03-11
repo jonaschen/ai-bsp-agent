@@ -34,7 +34,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Complete Android 34 boot: kernel init → Zygote → SystemServer → `sys.boot_completed=1`. Logcat and dmesg merged by `collect-logs.sh`. |
 | **Expected outcome** | `detected_stage: "android_init"`, `suggested_route: "android_init_advisor"`, confidence ≥ 0.80. First error line null or a benign warning. |
 | **Validation focus** | Confirm the segmenter correctly classifies a clean Android log as `android_init`, not `kernel_init`. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -48,7 +48,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Alpine Linux serial console output from BIOS POST through kernel init to BusyBox login prompt. No Android markers. |
 | **Expected outcome** | `detected_stage: "kernel_init"`, `suggested_route: "kernel_pathologist"`, confidence ≥ 0.75. |
 | **Validation focus** | Confirm kernel-only logs are not mis-classified as `android_init` due to absence of `android.hardware` or `init:` markers. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -62,7 +62,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | First ~30 lines are TF-A / U-Boot UART output with no kernel timestamps; remainder is a standard kernel dmesg with `[    0.000000]` timestamps. |
 | **Expected outcome** | `detected_stage: "early_boot"` (early-boot markers take priority); confidence ≥ 0.70. `segment_boot_log` must not be confused by the later kernel section. |
 | **Validation focus** | Stage priority: `early_boot` must win over `kernel_init` when both markers are present in the same log. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -76,7 +76,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Arbitrary embedded serial output with no TF-A, kernel timestamp, `init:`, or `android.hardware` markers. |
 | **Expected outcome** | `detected_stage: "unknown"`, confidence ≤ 0.25. `first_error_line` null. |
 | **Validation focus** | Confirm the skill degrades gracefully and does not over-fit to noise. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -92,7 +92,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | BL1 handoff to BL2 succeeds; BL31 FIP authentication fails due to signature mismatch. Ends with `NOTICE:  BL2: Booting BL31` then auth error. |
 | **Expected outcome** | `error_type: "auth_failure"`, `last_stage: "BL2"`, `last_handoff_step` points to BL31 load attempt, confidence ≥ 0.85. |
 | **Validation focus** | Auth failure string matching must not be confused with a generic image load failure. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -106,7 +106,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | SPL loads U-Boot; U-Boot prints CPU/SoC info then fails during DRAM init before memory sizing is printed. |
 | **Expected outcome** | `error_type: "ddr_init_failure"`, `last_stage` one of `BL2`/`SPL`/`U-Boot`, confidence ≥ 0.80. |
 | **Validation focus** | DDR failure strings are vendor-specific (Qualcomm vs. Rockchip vs. MTK differ). Confirm at least the generic patterns match. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -120,7 +120,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | BL31 platform init proceeds through GIC setup then fails at PMIC sequencing step before handing off to BL33. |
 | **Expected outcome** | `error_type: "pmic_failure"`, `last_stage: "BL31"`, confidence ≥ 0.75. |
 | **Validation focus** | PMIC failure at BL31 level vs PMIC failure in kernel (checked by `check_pmic_rail_voltage`) — must route differently. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -134,7 +134,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | LK reaches display init then hits an assert. Includes full ARM32 register dump and call stack addresses. |
 | **Expected outcome** | `panic_type: "assert"`, `assert_file: "kernel/thread.c"`, `assert_line: 423`, register dict populated (r0–r15), confidence ≥ 0.85. |
 | **Validation focus** | Confirm file:line extraction and ARM32 register parsing (`r0 = 0x...` format). |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -148,7 +148,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | U-Boot reaches network stack init then takes a data abort. Output includes `ELR:`, `ESR_EL2:`, and AArch64 `x0`–`x30` register values. |
 | **Expected outcome** | `panic_type: "generic"` or `"assert"`, `registers` dict has `x0`–`x30` + `elr`, confidence ≥ 0.75. |
 | **Validation focus** | AArch64 vs ARM32 register format branch — `x0`–`x30` must be parsed without matching the ARM32 `r0`–`r15` pattern. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -164,7 +164,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Alpine kernel Oops triggered by sysrq crash. Contains `BUG: kernel NULL pointer dereference` or `Oops: general protection fault` with RIP, RSP, call trace. |
 | **Expected outcome** | `oops_type: "generic_oops"` (x86 format), `faulting_process` and `faulting_pid` populated, `call_trace` non-empty, `esr_el1_hex` null (x86 has no ESR), confidence ≥ 0.75. |
 | **Validation focus** | Skill must not crash on x86 Oops format (no ESR_EL1). Confirms graceful degradation when AArch64-specific fields are absent. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -178,7 +178,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Full AArch64 Oops block: `ESR_EL1 = 0x96000006`, `FAR_EL1 = 0x0000000000000018`, `pc : foo_driver_probe+0x44/0x120`, call trace 8–12 frames. |
 | **Expected outcome** | `oops_type: "null_pointer"`, `esr_el1_hex: "0x96000006"`, `far_hex` populated, `pc_symbol` matches function name. `decode_aarch64_exception` returns `exception_level: "EL1"`, `far_is_kernel_address: false` (FAR near-zero = user/null). |
 | **Validation focus** | The two-skill pipeline: `extract_kernel_oops_log` feeds ESR+FAR into `decode_aarch64_exception`. Verify EL inference from EC=0x25 and user/kernel FAR classification. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -192,7 +192,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Oops with high kernel VA in FAR (bit 63 set). EC = 0x25 (Data Abort from current EL = EL1). ISS DFSC = 0x0f (permission fault). |
 | **Expected outcome** | `oops_type: "paging_request"`, `decode_aarch64_exception` returns `far_is_kernel_address: true`, `exception_level: "EL1"`, fault description includes "permission fault". |
 | **Validation focus** | FAR bit-63 heuristic for kernel address: FAR ≥ 0x8000000000000000 must set `far_is_kernel_address: true`. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -206,7 +206,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Panic log showing SError with cache maintenance trace (`PoC`, `clean+invalidate`), CPU resume context in call trace. No FAR_EL1 (SError may lack a valid FAR). |
 | **Expected outcome** | `decode_esr_el1` returns EC description "SError Interrupt". `check_cache_coherency_panic` returns `is_cache_coherency_issue: true`, confidence ≥ 0.80, indicators include `serror_interrupt` and `cache_maintenance`. |
 | **Validation focus** | SError with EC=0x2F is the primary `check_cache_coherency_panic` trigger. Confirm both skills produce consistent output. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -220,7 +220,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Soft lockup from a kworker spinning in a driver callback. Call trace shows 6–8 frames in a storage driver. |
 | **Expected outcome** | `lockup_type: "soft_lockup"`, `cpu_number: 0`, `stuck_duration_sec: 22`, `process_name: "kworker/0:1"`, `call_trace` non-empty. |
 | **Validation focus** | Validate the kworker process name extraction (slash and colon in name). Confirm stuck duration parsing. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -234,7 +234,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | NMI watchdog hard lockup on CPU#3 in an audio IRQ handler. Contains `Watchdog detected hard LOCKUP on cpu 3` and register dump. |
 | **Expected outcome** | `lockup_type: "hard_lockup"`, `cpu_number: 3`, `stuck_duration_sec: 60`, `process_name: "irq/45-audio"`. |
 | **Validation focus** | Hard lockup header differs from soft lockup (`hard LOCKUP` vs `soft lockup`). Confirm the skill branches correctly. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -248,7 +248,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | RCU stall report with 3–4 tasks listed, grace period info, and a partial call trace in the RCU softirq thread. |
 | **Expected outcome** | `lockup_type: "rcu_stall"`, stall detected flag true, call_trace non-empty. |
 | **Validation focus** | RCU stall output format is multi-line and noisier than soft/hard lockup. Confirm regex captures it even with interleaved `rcu:` prefixes. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -262,7 +262,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | CPU#2 soft lockup at T=52s immediately followed by an SError at T=54s. Both events share the same call trace context. |
 | **Expected outcome** | Brain must invoke both skills in one session. `analyze_watchdog_timeout` returns the lockup; `decode_esr_el1` decodes the concurrent SError. Final `ConsultantResponse` highlights conflict/correlation between the two findings. |
 | **Validation focus** | AGENTS.md §3.3 multi-tool synergy: both tools must be called, not just the first match. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -278,7 +278,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | dmesg: `PM: Error -12 creating hibernation image`. meminfo: `SUnreclaim` ≥ 150 MB, `SwapFree` ≥ 1 GB (swap not exhausted — SUnreclaim is the culprit). |
 | **Expected outcome** | `root_cause: "high_sunreclaim"`, `sunreclaim_mb` reported, confidence ≥ 0.85. sop_steps recommend reducing slab allocations. |
 | **Validation focus** | Threshold boundary: `analyze_std_hibernation_error` uses internal thresholds for SUnreclaim. Real-device values may differ from synthetic test fixtures. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -292,7 +292,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | The hibernation image cannot be created because swap is full, not because of unreclaimable slab. meminfo companion file required. |
 | **Expected outcome** | `root_cause: "swap_exhausted"` (or similar), `swap_free_mb: 0`, confidence ≥ 0.80. |
 | **Validation focus** | Distinguish the two root causes: skill must branch on SwapFree vs SUnreclaim — not always report the same cause. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -306,7 +306,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | UFS controller probe fails with `-ETIMEDOUT (-110)` during platform driver bind. No subsequent UFS activity. |
 | **Expected outcome** | `failure_detected: true`, `failure_phase: "probe"`, `error_code: -110`, confidence ≥ 0.85. |
 | **Validation focus** | Probe-phase failure is the earliest classification. Confirm the skill does not misclassify as `link_startup` or `resume`. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -320,7 +320,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Device resumes from STD. UFS controller probed OK but link training fails. `android.hardware.health` service never starts. |
 | **Expected outcome** | `failure_phase: "link_startup"`, `failure_detected: true`, confidence ≥ 0.80. |
 | **Validation focus** | Distinguish link_startup failure from probe failure — key difference is that the probe log line is absent but the link line is present. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -334,7 +334,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Display panel power-on triggers OCP on `vreg_lcd_vsp`. System logs the event but display driver continues retrying. |
 | **Expected outcome** | `ocp_events` list contains `vreg_lcd_vsp`, `failure_detected: true`, confidence ≥ 0.80. |
 | **Validation focus** | qpnp format string matching. Confirm the rail name is extracted from the qpnp log variant, not from the generic format. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -348,7 +348,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Bootloader sets CPU core voltage below the kernel driver's minimum. Kernel logs the undervoltage during regulator framework init. |
 | **Expected outcome** | `undervoltage_events` list contains `s1a`, rail voltage values reported, confidence ≥ 0.80. |
 | **Validation focus** | rpm-smd format differs from qpnp format. Confirm both are handled independently. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -362,7 +362,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Clean Android boot with regulator enable/disable log lines but no OCP or undervoltage events. |
 | **Expected outcome** | `failure_detected: false`, `ocp_events: []`, `undervoltage_events: []`, confidence low (< 0.50). |
 | **Validation focus** | Negative test: skill must not false-positive on normal regulator activity. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -378,7 +378,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Storage driver probe fails (hardware_advisor territory) and immediately causes a soft lockup in the ufshcd workqueue thread (kernel_pathologist territory). Both appear in the same 5-second window. |
 | **Expected outcome** | Supervisor routes to one domain; the agent must still invoke the skill from the other domain or flag the ambiguity in `ConsultantResponse`. |
 | **Validation focus** | The most likely routing failure scenario: mixed-domain failures. Documents whether the supervisor over-commits to one route. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -392,7 +392,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Complete healthy TF-A boot sequence. All stage transitions succeed. No error, warning, or timeout lines. |
 | **Expected outcome** | `segment_boot_log` → `detected_stage: "early_boot"`. `parse_early_boot_uart_log` → `error_type: "none"`, `all_stages_passed: true`, confidence ≥ 0.70. |
 | **Validation focus** | Healthy path should NOT be misclassified as a failure. Skill must return `error_type: "none"` cleanly. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -406,7 +406,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Android boot log containing AVC denial lines: `avc: denied { read } for pid=1234 comm="zygote" name="maps" dev="proc" ...`. Normal boot otherwise completes. |
 | **Expected outcome** | `segment_boot_log` → `detected_stage: "android_init"`. AVC lines present in log. When Phase 6 skill is built, this log becomes its primary test case. |
 | **Validation focus** | Pre-populate this log now so Phase 6 development can begin with a real AVC sample rather than a synthetic one. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -420,7 +420,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | **Content** | Android boot with `sys.boot_completed=1` achieved after > 120 seconds. Boot events log shows extended gaps between `boot_progress_start` and `boot_progress_ams_ready`. |
 | **Expected outcome** | `segment_boot_log` correctly classifies as `android_init` despite the extended duration. Provides a timing baseline for the `orchestrator.sh` multi-agent timing analysis. |
 | **Validation focus** | Slow boot should not affect stage classification accuracy. Also useful as orchestrator.sh input for timing-agent analysis. |
-| **Status** | PENDING |
+| **Status** | DONE |
 
 ---
 
@@ -428,33 +428,33 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 
 | ID | File | Source | Primary Skill | Status |
 |---|---|---|---|---|
-| LOG-001 | d0_android_normal_boot.log | android-avd | `segment_boot_log` | PENDING |
-| LOG-002 | d0_linux_kernel_only.log | linux-qemu | `segment_boot_log` | PENDING |
-| LOG-003 | d0_mixed_uart_kernel.log | synthetic | `segment_boot_log` | PENDING |
-| LOG-004 | d0_unknown_fragment.log | synthetic | `segment_boot_log` | PENDING |
-| LOG-005 | d1_tfa_auth_failure.log | synthetic | `parse_early_boot_uart_log` | PENDING |
-| LOG-006 | d1_uboot_ddr_init_fail.log | synthetic | `parse_early_boot_uart_log` | PENDING |
-| LOG-007 | d1_tfa_pmic_failure.log | synthetic | `parse_early_boot_uart_log` | PENDING |
-| LOG-008 | d1_lk_assert_arm32.log | synthetic | `analyze_lk_panic` | PENDING |
-| LOG-009 | d1_uboot_panic_aarch64.log | synthetic | `analyze_lk_panic` | PENDING |
-| LOG-010 | d2_qemu_null_pointer.log | linux-qemu | `extract_kernel_oops_log` | PENDING |
-| LOG-011 | d2_aarch64_null_ptr.log | synthetic | `extract_kernel_oops_log` + `decode_aarch64_exception` | PENDING |
-| LOG-012 | d2_aarch64_paging_request.log | synthetic | `extract_kernel_oops_log` + `decode_aarch64_exception` | PENDING |
-| LOG-013 | d2_serror_interrupt.log | synthetic | `decode_esr_el1` + `check_cache_coherency_panic` | PENDING |
-| LOG-014 | d2_soft_lockup.log | synthetic | `analyze_watchdog_timeout` | PENDING |
-| LOG-015 | d2_hard_lockup.log | synthetic | `analyze_watchdog_timeout` | PENDING |
-| LOG-016 | d2_rcu_stall.log | synthetic | `analyze_watchdog_timeout` | PENDING |
-| LOG-017 | d2_watchdog_serror_combined.log | synthetic | multi-tool synergy | PENDING |
-| LOG-018 | d3_std_high_sunreclaim.log | android-avd | `analyze_std_hibernation_error` | PENDING |
-| LOG-019 | d3_std_swap_exhausted.log | synthetic | `analyze_std_hibernation_error` | PENDING |
-| LOG-020 | d3_ufs_probe_fail.log | synthetic | `check_vendor_boot_ufs_driver` | PENDING |
-| LOG-021 | d3_ufs_link_startup_fail.log | synthetic | `check_vendor_boot_ufs_driver` | PENDING |
-| LOG-022 | d3_pmic_ocp_display.log | synthetic | `check_pmic_rail_voltage` | PENDING |
-| LOG-023 | d3_pmic_undervoltage_cpu.log | synthetic | `check_pmic_rail_voltage` | PENDING |
-| LOG-024 | d3_pmic_clean_boot.log | android-avd | `check_pmic_rail_voltage` (negative) | PENDING |
-| LOG-025 | d4_ambiguous_ufs_kernel.log | synthetic | supervisor routing stress test | PENDING |
-| LOG-026 | d4_early_boot_healthy.log | synthetic | `parse_early_boot_uart_log` (negative) | PENDING |
-| LOG-027 | d4_android_selinux_avc.log | android-avd | Phase 6 preview | PENDING |
-| LOG-028 | d4_android_slow_boot.log | android-avd | `segment_boot_log` + timing baseline | PENDING |
+| LOG-001 | d0_android_normal_boot.log | android-avd | `segment_boot_log` | DONE |
+| LOG-002 | d0_linux_kernel_only.log | linux-qemu | `segment_boot_log` | DONE |
+| LOG-003 | d0_mixed_uart_kernel.log | synthetic | `segment_boot_log` | DONE |
+| LOG-004 | d0_unknown_fragment.log | synthetic | `segment_boot_log` | DONE |
+| LOG-005 | d1_tfa_auth_failure.log | synthetic | `parse_early_boot_uart_log` | DONE |
+| LOG-006 | d1_uboot_ddr_init_fail.log | synthetic | `parse_early_boot_uart_log` | DONE |
+| LOG-007 | d1_tfa_pmic_failure.log | synthetic | `parse_early_boot_uart_log` | DONE |
+| LOG-008 | d1_lk_assert_arm32.log | synthetic | `analyze_lk_panic` | DONE |
+| LOG-009 | d1_uboot_panic_aarch64.log | synthetic | `analyze_lk_panic` | DONE |
+| LOG-010 | d2_qemu_null_pointer.log | linux-qemu | `extract_kernel_oops_log` | DONE |
+| LOG-011 | d2_aarch64_null_ptr.log | synthetic | `extract_kernel_oops_log` + `decode_aarch64_exception` | DONE |
+| LOG-012 | d2_aarch64_paging_request.log | synthetic | `extract_kernel_oops_log` + `decode_aarch64_exception` | DONE |
+| LOG-013 | d2_serror_interrupt.log | synthetic | `decode_esr_el1` + `check_cache_coherency_panic` | DONE |
+| LOG-014 | d2_soft_lockup.log | synthetic | `analyze_watchdog_timeout` | DONE |
+| LOG-015 | d2_hard_lockup.log | synthetic | `analyze_watchdog_timeout` | DONE |
+| LOG-016 | d2_rcu_stall.log | synthetic | `analyze_watchdog_timeout` | DONE |
+| LOG-017 | d2_watchdog_serror_combined.log | synthetic | multi-tool synergy | DONE |
+| LOG-018 | d3_std_high_sunreclaim.log | android-avd | `analyze_std_hibernation_error` | DONE |
+| LOG-019 | d3_std_swap_exhausted.log | synthetic | `analyze_std_hibernation_error` | DONE |
+| LOG-020 | d3_ufs_probe_fail.log | synthetic | `check_vendor_boot_ufs_driver` | DONE |
+| LOG-021 | d3_ufs_link_startup_fail.log | synthetic | `check_vendor_boot_ufs_driver` | DONE |
+| LOG-022 | d3_pmic_ocp_display.log | synthetic | `check_pmic_rail_voltage` | DONE |
+| LOG-023 | d3_pmic_undervoltage_cpu.log | synthetic | `check_pmic_rail_voltage` | DONE |
+| LOG-024 | d3_pmic_clean_boot.log | android-avd | `check_pmic_rail_voltage` (negative) | DONE |
+| LOG-025 | d4_ambiguous_ufs_kernel.log | synthetic | supervisor routing stress test | DONE |
+| LOG-026 | d4_early_boot_healthy.log | synthetic | `parse_early_boot_uart_log` (negative) | DONE |
+| LOG-027 | d4_android_selinux_avc.log | android-avd | Phase 6 preview | DONE |
+| LOG-028 | d4_android_slow_boot.log | android-avd | `segment_boot_log` + timing baseline | DONE |
 
 **Total: 28 log files — 14 from emulators, 14 synthetic**

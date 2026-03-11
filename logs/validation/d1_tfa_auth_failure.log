@@ -1,0 +1,16 @@
+NOTICE:  BL1: v2.7(release):v2.7.0
+NOTICE:  BL1: Built : 14:23:01, Oct 31 2023
+INFO:    BL1: RAM 0x04009000 - 0x04013000
+INFO:    BL1: Loading BL2
+INFO:    Loading image id=1 at address 0x4006000
+NOTICE:  BL1: Booting BL2
+NOTICE:  BL2: v2.7(release):v2.7.0
+NOTICE:  BL2: Built : 14:23:02, Oct 31 2023
+INFO:    BL2: Loading image id=3 (BL31) at address 0x4003000
+INFO:    BL2: Verifying BL31 image signature
+INFO:    BL2: Checking BL31 certificate
+ERROR:   BL2: Failed to load image id=5
+ERROR:   Authentication of BL31 image failed
+NOTICE:  BL2: image integrity check failed: certificate hash mismatch
+ERROR:   BL2: Secure Boot verification error — ROTPK mismatch
+ERROR:   BL2: Aborting boot sequence

@@ -1,0 +1,28 @@
+[00000] platform_init()
+[00000] target_init()
+[00000] display_init(): Initializing display subsystem
+[00000] display_init(): Configuring DSI panel
+[00000] display_init(): DSI clock init done
+[00000] panel_driver_init(): Loading panel config
+ASSERT FAILED at [kernel/thread.c:423]
+thread_resume: thread 0x12ab3e40 is not in BLOCKED or SLEEPING state (state=0x4)
+
+r0 = 0x00000000
+r1 = 0x12ab3e40
+r2 = 0x00000004
+r3 = 0x000089ac
+r4 = 0xdeadbeef
+r5 = 0x00000001
+r6 = 0xf8000000
+r7 = 0x00000000
+r8 = 0x12ab3e40
+r9 = 0x00000000
+r10 = 0x12ab3d00
+r11 = 0x00000423
+r12 = 0x00000000
+sp = 0xf9ab3d00
+lr = 0xf0012345
+pc = 0xf0023456
+cpsr = 0x600001d3
+
+panic ("thread_resume called on non-blocked/sleeping thread\n");

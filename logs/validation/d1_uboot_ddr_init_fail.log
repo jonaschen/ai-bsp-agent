@@ -1,0 +1,22 @@
+U-Boot SPL 2023.04 (Oct 31 2023 - 14:23:05 +0000)
+Trying to boot from MMC1
+SPL: Loading U-Boot proper
+SPL: Jumping to U-Boot
+
+U-Boot 2023.04 (Oct 31 2023 - 14:23:05 +0000)
+
+SoC:   Qualcomm SM8350
+CPU:   Cortex-A78 @ 2.84GHz
+Model: QRD SM8350
+DRAM:  Initializing DDR subsystem...
+       Configuring LPDDR5 timing parameters
+       Running DDR PHY training sequence
+       DDR byte lane 0: training...
+       DDR byte lane 1: training...
+       DDR byte lane 2: training...
+       DDR byte lane 3: training...
+ERROR: DRAM: ddr training fail
+ERROR: PHY training timed out after 1000ms
+       DDR init failed — cannot proceed with boot
+ERROR: memory init fail on channel 0
+       Aborting U-Boot initialization

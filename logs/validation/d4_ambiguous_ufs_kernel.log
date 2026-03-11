@@ -1,0 +1,19 @@
+[    1.001234] ufshcd-qcom 1d84000.ufshc: ufshcd_pltfrm_init
+[    1.101456] ufshcd-qcom 1d84000.ufshc: ufshcd_hba_enable: Controller enable failed
+[    1.201678] ufshcd-qcom 1d84000.ufshc: ufshcd_probe_hba failed with error -110
+[    1.301890] ufshcd-qcom 1d84000.ufshc: probe of 1d84000.ufshc failed with error -110
+[    1.402012] kworker/u8:4: unable to bind to device 1d84000.ufshc
+[    1.502234] watchdog: BUG: soft lockup - CPU#1 stuck for 22s! [kworker/u8:4:234]
+[    1.602456] Modules linked in: ufshcd_core(O) ufs_qcom
+[    1.702678] CPU: 1 PID: 234 Comm: kworker/u8:4 Not tainted 5.15.131-android13-8 #1
+[    1.802890] Hardware name: Android/Virtual Device (DT)
+[    1.903012] pstate: 00400005 (nzcv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[    2.003234] pc : ufshcd_wait_for_dev_cmd+0x78/0x120
+[    2.103456] lr : ufshcd_exec_dev_cmd+0x9c/0x140
+[    2.203678] sp : ffff800013cd4e80
+[    2.303890] Call trace:
+[    2.404012]  ufshcd_wait_for_dev_cmd+0x78/0x120
+[    2.504234]  ufshcd_exec_dev_cmd+0x9c/0x140
+[    2.604456]  ufshcd_verify_dev_init+0x78/0x100
+[    2.704678]  ufshcd_probe_hba+0x2c4/0x5a0
+[    2.804890]  ufshcd_async_scan+0x78/0x100

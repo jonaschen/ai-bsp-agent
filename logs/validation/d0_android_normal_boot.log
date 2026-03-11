@@ -1,0 +1,39 @@
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x517f803d]
+[    0.000000] Linux version 5.15.131-android13-8 (android-build@build-host) (Android clang 14.0.7) #1 SMP PREEMPT
+[    0.000000] Machine model: Android Virtual Device (arm64)
+[    0.000000] earlycon: qcom_geni at MMIO 0x00000000a90000 (options '115200n8')
+[    0.000000] printk: bootconsole [qcom_geni0] enabled
+[    0.012345] smp: Bringing up secondary CPUs ...
+[    0.028901] smp: Brought up 1 node, 8 CPUs
+[    0.031234] EXT4-fs (sda4): mounted filesystem with ordered data mode. Quota mode: none.
+[    0.090122] VFS: Mounted root (ext4 filesystem) readonly on device 8:4.
+[    0.120344] devtmpfs: initialized
+[    0.201456] SELinux: Initializing.
+[    0.210567] SELinux: policy capability network_peer_controls=1 open_perms=1
+[    0.220678] SELinux: Loaded policy from /sepolicy
+[    0.501234] init: Starting service 'ueventd'...
+[    0.601345] init: Service 'ueventd' (pid 123) started
+[    0.901234] init: Parsing file /init.rc...
+[    1.001456] init: Starting service 'logd'...
+[    1.100567] init: Service 'logd' (pid 145) started
+[    1.201678] init: Starting service 'adbd'...
+[    2.001234] init: Starting service 'vold'...
+[    2.501345] init: Service 'vold' (pid 201) started
+[    3.001456] Zygote: Starting Zygote process
+[    3.101567] Zygote: Preloading classes
+[    3.501234] Zygote: Preloading resources
+[    4.001345] ActivityManager: Starting system server process 1234
+[    4.101456] ActivityManager: ActivityManagerService started
+[    4.501678] ActivityManager: Reached target Multi-User System
+[    5.001234] init: [  OK  ] Started Android Runtime
+[    5.501345] init: [  OK  ] Started System Server
+[    6.001456] Zygote: Zygote started successfully, pid=456
+[    6.501567] ActivityManager: Waiting for HOME app to be started
+[    7.001234] ActivityManager: HOME app started (com.android.launcher3)
+[    8.001345] init: Starting service 'android.hardware.audio@7.0-service'...
+[    8.501456] init: Starting service 'android.hardware.graphics.composer@2.4-service'...
+[    9.001567] init: [  OK  ] Started Hardware Audio Service
+[    9.501234] init: [  OK  ] Started Hardware Graphics Composer
+[   10.001345] ActivityManager: Boot completed in 10002ms
+[   10.001456] ActivityManager: Reporting sys.boot_completed=1
+[   10.002567] init: Service 'bootanim' stopped

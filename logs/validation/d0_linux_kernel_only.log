@@ -1,0 +1,41 @@
+SeaBIOS (version 1.15.0-1)
+iPXE (http://ipxe.org) 00:01.0 CA00 PCI2.10 PnP PMM+07F93010+07EF3010 CA00
+Booting from Hard Disk...
+
+[    0.000000] Linux version 5.15.0-91-generic (buildd@lcy02-amd64-020) (gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, GNU ld (GNU Binutils for Ubuntu) 2.38) #101-Ubuntu SMP Tue Nov 14 13:30:08 UTC 2023
+[    0.000000] Command line: BOOT_IMAGE=/vmlinuz-5.15.0 root=/dev/sda1 ro console=ttyS0,115200n8
+[    0.000000] BIOS-provided physical RAM map:
+[    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable
+[    0.000000] BIOS-e820: [mem 0x0000000000100000-0x000000007fffffff] usable
+[    0.000000] NX (Execute Disable) protection: active
+[    0.000000] SMBIOS 2.8 present.
+[    0.000000] DMI: QEMU Standard PC (Q35 + ICH9, 2009), BIOS 1.15.0-1 04/01/2014
+[    0.012345] Memory: 1952364K/2097152K available (12345K kernel code, 2345K rwdata, 4096K rodata, 1024K init, 1344K bss, 144788K reserved, 0K cma-reserved)
+[    0.023456] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=2, Nodes=1
+[    0.034567] ftrace: allocating 34456 entries in 135 pages
+[    0.090123] smp: Bringing up secondary CPUs ...
+[    0.091234] smp: Brought up 1 node, 2 CPUs
+[    0.120345] EXT4-fs (sda1): mounted filesystem with ordered data mode. Quota mode: none.
+[    0.150456] VFS: Mounted root (ext4 filesystem) readonly on device 8:1.
+[    0.180567] devtmpfs: initialized
+[    0.210678] NET: Registered PF_INET protocol family
+[    0.240789] NET: Registered PF_INET6 protocol family
+[    0.270890] cfg80211: Loading compiled-in X.509 certificates
+[    0.301234] e1000: Intel(R) PRO/1000 Network Driver
+[    0.330345] ACPI: IRQ0 used by override.
+[    0.360456] PCI: Using configuration type 1 for base access
+[    0.390567] clocksource: tsc: mask: 0xffffffffffffffff max_cycles: 0x2da5c94e4fd, max_idle_ns: 440795223 ns
+[    0.420678] Freeing unused kernel image (initmem) memory: 1024K
+[    0.450789] Write protecting the kernel read-only data: 16384k
+[    0.480890] Run /sbin/init as init process
+[    0.501234] OpenRC 0.44.10 is starting up Linux 5.15.0-91-generic (x86_64)
+[    1.001345] * Mounting /proc ... [ ok ]
+[    1.101456] * Mounting /sys ... [ ok ]
+[    1.201567] * Starting busybox syslog ... [ ok ]
+[    1.501234] * Mounting /dev/pts ... [ ok ]
+[    2.001345] * Starting networking ... [ ok ]
+[    2.501456] * Starting sshd ... [ ok ]
+[    3.001567] Welcome to Alpine Linux 3.18
+[    3.001568] Kernel 5.15.0-91-generic on an x86_64 (/dev/ttyS0)
+
+localhost login:

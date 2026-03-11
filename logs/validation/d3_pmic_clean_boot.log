@@ -1,0 +1,14 @@
+[    0.001234] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-1: L1A: set_voltage (1800000 uV)
+[    0.101456] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-2: L2A: set_voltage (1200000 uV)
+[    0.201678] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-3: L3A: set_voltage (1000000 uV)
+[    0.301890] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-4: S1A: set_voltage (912000 uV)
+[    0.402012] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-5: S2A: set_voltage (1352000 uV)
+[    0.502234] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-6: L5A: set_voltage (1800000 uV)
+[    0.602456] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-7: L8A: set_voltage (2950000 uV)
+[    0.702678] rpm-smd-regulator 627c0000.qcom,rpm-smd:qcom,rpm-smd-regulator-smd-8: L12A: set_voltage (1800000 uV)
+[    1.001234] qpnp-regulator: L1B: 1800000 uV
+[    1.101456] qpnp-regulator: L3B: 1000000 uV
+[    1.201678] qpnp-regulator: S4B: 1870000 uV
+[    2.001234] regulator: L1A enabled
+[    2.101456] regulator: S1A enabled
+[    2.201678] regulator: L5A enabled

@@ -1,0 +1,13 @@
+[    2.001234] qpnp-regulator: L5A: 1800000 uV
+[    2.101456] qpnp-regulator: L6A: 1200000 uV
+[    2.201678] qpnp-regulator: S3A: 1352000 uV
+[    3.001234] msm_drm: Initializing display subsystem
+[    3.101456] dsi_panel_lcd: Power on display panel
+[    3.201678] qpnp-regulator: vreg_lcd_vsp: 5400000 uV
+[    3.301890] qpnp-regulator: vreg_lcd_vsn: 5400000 uV
+[    3.402012] qpnp-regulator: qpnp_regulator_enable: vreg_lcd_vsp: over-current fault
+[    3.502234] qpnp-regulator: vreg_lcd_vsp OCP fault detected
+[    3.602456] dsi_panel_lcd: Display panel power-on OCP event on vreg_lcd_vsp
+[    3.702678] dsi_panel_lcd: Retrying power-on sequence (attempt 1/3)
+[    3.802890] qpnp-regulator: qpnp_regulator_enable: vreg_lcd_vsp: over-current fault
+[    3.903012] dsi_panel_lcd: Retrying power-on sequence (attempt 2/3)

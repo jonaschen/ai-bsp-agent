@@ -1,0 +1,36 @@
+NOTICE:  BL1: v2.7(release):v2.7.0
+NOTICE:  BL1: Built : 14:23:01, Oct 31 2023
+INFO:    BL1: RAM 0x04009000 - 0x04013000
+INFO:    BL1: Loading BL2
+INFO:    Loading image id=1 at address 0x4006000
+NOTICE:  BL1: Booting BL2
+NOTICE:  BL2: v2.7(release):v2.7.0
+NOTICE:  BL2: Built : 14:23:02, Oct 31 2023
+INFO:    BL2: Loading image id=3 (BL31) at address 0x4003000
+INFO:    BL2: Loading image id=4 at address 0x4005000
+INFO:    BL2: Loading image id=5 (BL33/U-Boot) at address 0x60000000
+INFO:    BL2: Booting BL31
+NOTICE:  BL31: v2.7(release):v2.7.0
+NOTICE:  BL31: Built : 14:23:03, Oct 31 2023
+INFO:    BL31: Initializing runtime services
+INFO:    BL31: Initializing GIC-600
+INFO:    BL31: GIC-600 initialized successfully
+INFO:    BL31: Configuring platform power domains
+INFO:    BL31: Initializing PMIC power sequencer
+INFO:    BL31: All power rails enabled
+INFO:    BL31: Preparing for EL3 exit to normal world
+INFO:    BL31: Booting BL33
+
+U-Boot 2023.04 (Oct 31 2023 - 14:23:05 +0000)
+
+SoC:   Qualcomm SM8350
+CPU:   Cortex-A78 @ 2.84GHz
+Model: QRD SM8350
+DRAM:  8 GiB DDR5 OK
+MMC:   eMMC 5.1: 256 GiB
+Net:   eth0: virtio-net
+Hit any key to stop autoboot:  0
+Booting Linux from MMC...
+Loading kernel image from MMC partition 1...
+Loading ramdisk from MMC partition 2...
+Booting the OS...

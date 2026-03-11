@@ -1,0 +1,36 @@
+[   42.001234] sysrq: Trigger a crash
+[   42.001789] BUG: kernel NULL pointer dereference, address: 0000000000000000
+[   42.002123] #PF: supervisor write access in kernel mode
+[   42.002456] #PF: error_code(0x0002) - not-present page
+[   42.002789] PGD 0 P4D 0
+[   42.003012] Oops: 0002 [#1] SMP PTI
+[   42.003234] CPU: 0 PID: 1234 Comm: bash Not tainted 5.15.0-91-generic #101-Ubuntu
+[   42.003567] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS 1.15.0-1 04/01/2014
+[   42.003890] RIP: 0010:sysrq_handle_crash+0x30/0x40
+[   42.004123] Code: c6 05 31 91 26 02 01 e8 df 0a 00 00 48 c7 04 25 00 00 00 00 00 00 00 00 0f 0b 66 90 66 2e 0f 1f 84 00 00 00 00 00 0f 1f 44 00 <48> c7 04 25 00 00 00 00 00 00 00 00 0f 0b
+[   42.004789] RSP: 0018:ffffc90000597d68 EFLAGS: 00010246
+[   42.005012] RAX: 0000000000000001 RBX: ffffffff83c17fa0 RCX: 0000000000000000
+[   42.005345] RDX: 0000000000000000 RSI: ffff888003c1c480 RDI: 0000000000000063
+[   42.005678] RBP: ffffc90000597d68 R08: 00000000000e56c0 R09: 0000000000000001
+[   42.006012] R10: 0000000000001580 R11: 0000000000000001 R12: ffffffff83c17fa0
+[   42.006345] R13: 0000000000000063 R14: 0000000000000002 R15: 0000000000000000
+[   42.006678] FS:  00007f8c3ca18740(0000) GS:ffff888017a00000(0000) knlGS:0000000000000000
+[   42.007012] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[   42.007234] CR2: 0000000000000000 CR3: 0000000002c24001 CR4: 00000000003706e0
+[   42.007567] Call Trace:
+[   42.007678]  <TASK>
+[   42.007789]  __handle_sysrq+0x83/0x160
+[   42.007890]  write_sysrq_trigger+0x2b/0x40
+[   42.008012]  proc_reg_write+0x55/0xa0
+[   42.008123]  vfs_write+0xb5/0x2a0
+[   42.008234]  ksys_write+0x6f/0xf0
+[   42.008345]  do_syscall_64+0x58/0xc0
+[   42.008456]  entry_SYSCALL_64_after_hwframe+0x72/0xdc
+[   42.008567]  </TASK>
+[   42.008678] Modules linked in: snd_hda_codec_generic ledtrig_audio snd_hda_intel snd_intel_dspcfg virtio_net net_failover failover
+[   42.009012] CR2: 0000000000000000
+[   42.009234] ---[ end trace abcdef0123456789 ]---
+[   42.009456] Kernel panic - not syncing: Fatal exception
+[   42.009789] Shutting down cpus with NMI
+[   42.010012] Kernel Offset: 0x36400000 from 0xffffffff81000000 (relocation range: 0xffffffff80000000-0xffffffffbfffffff)
+[   42.010456] ---[ end Kernel panic - not syncing: Fatal exception ]---

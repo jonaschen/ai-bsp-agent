@@ -1,0 +1,27 @@
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x517f803d]
+[    0.000000] Linux version 5.15.131-android13-8 (android-build@build-host) (Android clang 14.0.7) #1 SMP PREEMPT
+[    0.000000] Machine model: Android Virtual Device (arm64)
+[    0.012345] smp: Brought up 1 node, 8 CPUs
+[    0.090122] SELinux: Initializing.
+[    0.200123] SELinux: Loaded policy from /sepolicy
+[    0.400456] init: Parsing file /init.rc...
+[    0.800789] init: Starting service 'logd'...
+[    2.001234] init: Starting service 'adbd'...
+[    5.001456] Zygote: Starting Zygote process
+[    5.501678] Zygote: Preloading classes (slow — RAM limited)
+[   15.001890] Zygote: Preloading resources
+[   25.002012] ActivityManager: Starting system server process 1234
+[   35.002234] ActivityManager: ActivityManagerService started
+[   45.002456] ActivityManager: Waiting for HOME app to be started
+[   60.002678] init: [  OK  ] Started Android Runtime
+[   75.002890] Zygote: Zygote started successfully, pid=456
+[   90.003012] ActivityManager: boot_progress_start
+[  100.003234] ActivityManager: boot_progress_ams_ready
+[  110.003456] ActivityManager: boot_progress_system_run
+[  120.003678] ActivityManager: boot_progress_preload_start
+[  130.003890] ActivityManager: boot_progress_preload_end
+[  135.004012] ActivityManager: HOME app started (com.android.launcher3)
+[  145.004234] ActivityManager: Waiting for sys.boot_completed
+[  155.004456] ActivityManager: Boot completed in 155234ms
+[  155.004678] ActivityManager: Reporting sys.boot_completed=1
+[  155.004890] init: Service 'bootanim' stopped

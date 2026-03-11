@@ -1,0 +1,17 @@
+[  185.001234] watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [kworker/0:1:123]
+[  185.001456] Modules linked in: sdhci_msm(O) mmc_core
+[  185.001678] CPU: 0 PID: 123 Comm: kworker/0:1 Not tainted 5.15.131-android13-8 #1
+[  185.001890] Hardware name: Android/Virtual Device (DT)
+[  185.002012] pstate: 00400005 (nzcv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[  185.002234] pc : sdhci_msm_check_busy+0x78/0xb0
+[  185.002456] lr : sdhci_msm_execute_tuning+0x1c4/0x300
+[  185.002678] sp : ffff800012ab3e90
+[  185.002890] Call trace:
+[  185.003012]  sdhci_msm_check_busy+0x78/0xb0
+[  185.003234]  sdhci_msm_execute_tuning+0x1c4/0x300
+[  185.003456]  sdhci_execute_tuning+0x88/0x140
+[  185.003678]  mmc_execute_tuning+0x3c/0x80
+[  185.003890]  mmc_init_card+0x360/0x520
+[  185.004012]  mmc_attach_mmc+0x78/0x100
+[  185.004234]  mmc_rescan+0x240/0x340
+[  185.004456]  process_one_work+0x1e8/0x390

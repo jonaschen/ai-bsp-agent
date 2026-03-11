@@ -1,0 +1,10 @@
+[  301.100451] PM: Syncing filesystems ... done.
+[  301.200123] PM: Preparing system for sleep (hibernation)
+[  301.300456] PM: Freezing user space processes
+[  301.400789] PM: Freezing remaining freezable tasks
+[  301.500122] PM: Suspending devices
+[  301.600456] PM: Creating hibernation image
+[  301.700789] PM: Error -12 creating hibernation image
+[  301.800123] PM: Restoring freed pages
+[  301.900456] PM: resume of devices complete
+[  302.000789] PM: Finishing wakeup.

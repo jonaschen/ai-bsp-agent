@@ -1,0 +1,10 @@
+[  456.100451] PM: Syncing filesystems ... done.
+[  456.200123] PM: Preparing system for sleep (hibernation)
+[  456.300456] PM: Freezing user space processes
+[  456.400789] PM: Freezing remaining freezable tasks
+[  456.500122] PM: Suspending devices
+[  456.600456] PM: Creating hibernation image
+[  456.700789] PM: Error -12 creating hibernation image
+[  456.800123] PM: Restoring freed pages
+[  456.900456] PM: resume of devices complete
+[  457.000789] PM: Finishing wakeup.

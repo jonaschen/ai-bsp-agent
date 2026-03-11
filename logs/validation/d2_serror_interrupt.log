@@ -1,0 +1,35 @@
+[  312.001234] SError Interrupt on CPU 3
+[  312.001456] ESR_EL1 = 0xBE000210
+[  312.001678] FAR_EL1 = 0x0000000000000000
+[  312.001890] Internal error: SError Interrupt: 96000210 [#1] PREEMPT SMP
+[  312.002012] arm64: taking pending SError interrupt
+[  312.002234] Modules linked in: vendor_cma_drv(O) ion_system_heap
+[  312.002456] CPU: 3 PID: 789 Comm: ion_alloc Not tainted 5.15.131-android13-8 #1
+[  312.002678] Hardware name: Android/Virtual Device (DT)
+[  312.002890] pstate: 20400009 (nzCv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[  312.003012] pc : __flush_dcache_area+0x48/0xa0
+[  312.003234] lr : ion_heap_map_kernel+0xb4/0x140
+[  312.003456] sp : ffff800016ab3c80
+[  312.003678] x29: ffff800016ab3c80 x28: ffff0000fc000000 x27: 0000000000004000
+[  312.003890] Call trace:
+[  312.004012]  __flush_dcache_area+0x48/0xa0
+[  312.004234]  dcache_poc+0x34/0x60
+[  312.004456]  ion_heap_map_kernel+0xb4/0x140
+[  312.004678]  ion_alloc+0x1c4/0x2a0
+[  312.004890]  ion_ioctl+0x78/0x100
+[  312.005012]  do_vfs_ioctl+0x98/0x700
+[  312.005234]  ksys_ioctl+0x74/0xa0
+[  312.005456]  __arm64_sys_ioctl+0x24/0x30
+[  312.005678]  invoke_syscall+0x48/0x110
+[  312.005890] cache maintenance: clean+invalidate PoC region 0xffff0000fc000000 size 0x4000
+[  312.006012] Point of Coherency flush failed on CPU 3
+[  312.006234] Kernel panic - not syncing: Asynchronous SError Interrupt
+[  312.006456] CPU: 3 PID: 789 Comm: ion_alloc
+[  312.006678] Call trace:
+[  312.006890]  dump_backtrace+0x0/0x1d4
+[  312.007012]  show_stack+0x18/0x24
+[  312.007234]  dump_stack_lvl+0x68/0x84
+[  312.007456]  panic+0x180/0x390
+[  312.007678]  arm64_serror_panic+0x78/0xa0
+[  312.007890]  do_serror+0x44/0x60
+[  312.008012]  el1h_64_error_handler+0x30/0x50

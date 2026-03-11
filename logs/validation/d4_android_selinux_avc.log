@@ -1,0 +1,20 @@
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x517f803d]
+[    0.000000] Linux version 5.15.131-android13-8 (android-build@build-host) (Android clang 14.0.7) #1 SMP PREEMPT
+[    0.012345] smp: Brought up 1 node, 8 CPUs
+[    0.090122] SELinux: Initializing.
+[    0.200123] SELinux: Loaded policy from /sepolicy
+[    0.400456] init: Parsing file /init.rc...
+[    0.800789] init: Starting service 'logd'...
+[    1.001234] init: Starting service 'adbd'...
+[    2.001456] Zygote: Starting Zygote process
+[    3.001678] ActivityManager: Starting system server process 1234
+[    4.001890] ActivityManager: ActivityManagerService started
+[    5.002012] init: [  OK  ] Started Android Runtime
+[    6.002234] Zygote: Zygote started successfully, pid=456
+[    7.002456] ActivityManager: Boot completed in 7001ms
+[    7.002678] ActivityManager: Reporting sys.boot_completed=1
+[    7.100890] audit: type=1400 audit(1.000:1): avc:  denied  { read } for  pid=1234 comm="zygote" name="maps" dev="proc" ino=12345 scontext=u:r:zygote:s0 tcontext=u:object_r:proc_pid_map:s0 tclass=file permissive=0
+[    7.201012] audit: type=1400 audit(1.000:2): avc:  denied  { open } for  pid=1235 comm="system_server" name="attr" dev="proc" ino=12346 scontext=u:r:system_server:s0 tcontext=u:object_r:proc_security:s0 tclass=file permissive=0
+[    7.301234] audit: type=1400 audit(1.000:3): avc:  denied  { read } for  pid=1236 comm="surfaceflinger" name="gpu_fault" dev="sysfs" ino=56789 scontext=u:r:surfaceflinger:s0 tcontext=u:object_r:sysfs_gpu:s0 tclass=file permissive=0
+[    8.001456] init: [  OK  ] Started System Services
+[    8.501678] ActivityManager: HOME app started (com.android.launcher3)
