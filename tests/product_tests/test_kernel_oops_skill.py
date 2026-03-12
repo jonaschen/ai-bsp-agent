@@ -172,6 +172,39 @@ class TestRegisterExtraction:
         # either None or extracted from the virtual address description
         assert out.far_hex is None or isinstance(out.far_hex, str)
 
+    def test_far_extracted_from_virtual_address_null_ptr(self):
+        # "at virtual address 0000000000000001" should populate far_hex
+        log = (
+            "[    4.123456] Unable to handle kernel NULL pointer dereference "
+            "at virtual address 0000000000000001\n"
+            "[    4.234567] Mem abort info:\n"
+            "[    4.345678]   ESR = 0x0000000096000044\n"
+            "[    5.445678] Internal error: Oops: 96000044 [#1] PREEMPT SMP\n"
+            "[    5.667890] CPU: 0 PID: 123 Comm: kworker/0:1 Not tainted 6.6.14-0-virt\n"
+            "[    5.914567] Call trace:\n"
+            "[    5.915678]  cmd_crash+0x20/0x30\n"
+        )
+        out = extract_kernel_oops_log(log)
+        assert out.oops_detected is True
+        assert out.far_hex is not None
+        assert "1" in out.far_hex
+
+    def test_far_extracted_from_paging_request_virtual_address(self):
+        # "at virtual address ffff800012345678" should populate far_hex
+        log = (
+            "[    6.123456] Unable to handle kernel paging request "
+            "at virtual address ffff800012345678\n"
+            "[    6.345678]   ESR = 0x000000009600004f\n"
+            "[    6.905678] Internal error: Oops: 9600004f [#1] PREEMPT SMP\n"
+            "[    6.907890] CPU: 1 PID: 456 Comm: kswapd0 Not tainted 6.6.14\n"
+            "[    6.916789] Call trace:\n"
+            "[    6.917890]  mem_cgroup_migrate+0x44/0xd0\n"
+        )
+        out = extract_kernel_oops_log(log)
+        assert out.oops_detected is True
+        assert out.far_hex is not None
+        assert "ffff800012345678" in out.far_hex.lower()
+
     def test_pc_symbol_extracted(self):
         out = extract_kernel_oops_log(NULL_PTR_OOPS)
         assert out.pc_symbol is not None

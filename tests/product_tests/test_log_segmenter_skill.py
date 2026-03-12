@@ -191,10 +191,39 @@ class TestUnknownDetection:
 
 class TestStagePriority:
     def test_early_boot_beats_kernel_ts(self):
-        # Mixing TF-A markers with kernel timestamps → early_boot wins only if
-        # there are no kernel timestamps. Pure early boot log (no brackets):
+        # Pure early boot log (TF-A markers, no kernel timestamps):
         pure_early = "NOTICE:  BL2: v2.9\nAuthentication failed\n"
         out = segment_boot_log(pure_early)
+        assert out.detected_stage == "early_boot"
+
+    def test_early_boot_wins_even_with_kernel_timestamps(self):
+        # Mixed log: TF-A markers followed by kernel output — early_boot wins
+        mixed = (
+            "NOTICE:  BL1: v2.7(release)\n"
+            "NOTICE:  BL2: v2.7(release)\n"
+            "[    0.000000] Booting Linux on physical CPU 0x0000000000\n"
+            "[    0.012345] random: crng init done\n"
+        )
+        out = segment_boot_log(mixed)
+        assert out.detected_stage == "early_boot"
+
+    def test_lk_welcome_banner_detected_as_early_boot(self):
+        # LK banner "welcome to lk/MP" should classify as early_boot
+        lk_log = (
+            "cntpct_per_ms: 62500.000000000\n"
+            "welcome to lk/MP\n"
+            "boot args 0x0 0x0 0x0 0x0\n"
+            "INIT: cpu 0, calling hook 0xffff0001 (version) at level 0x3fff, flags 0x1\n"
+            "entering main console loop\n"
+            "] \n"
+        )
+        out = segment_boot_log(lk_log)
+        assert out.detected_stage == "early_boot"
+
+    def test_lk_init_hook_detected_as_early_boot(self):
+        # LK INIT: cpu hook line should be enough to classify as early_boot
+        lk_log = "INIT: cpu 0, calling hook 0xffff0001 (vm) at level 0x4fff, flags 0x1\n"
+        out = segment_boot_log(lk_log)
         assert out.detected_stage == "early_boot"
 
     def test_kernel_ts_without_android_markers_is_kernel_init(self):

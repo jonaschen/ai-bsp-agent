@@ -136,7 +136,7 @@ _HANDOFF_PATTERNS: list[tuple[str, re.Pattern]] = [
 
 # Error classification patterns
 _AUTH_FAIL_RE = re.compile(
-    r"Authentication (?:fail|error)|"
+    r"Authentication.*(?:fail|error)|"
     r"Secure Boot.*fail|"
     r"BL\d+.*auth.*fail|"
     r"image integrity check.*fail|"
@@ -166,9 +166,9 @@ _DDR_INIT_RE = re.compile(
 )
 
 _PMIC_EARLY_RE = re.compile(
-    r"PMIC.*(?:fail|error|not respond)|"
+    r"PMIC.*(?:fail|error|not respond|not ready)|"
     r"VDD.*not ready|"
-    r"regulator.*fail.*early|"
+    r"regulator.*(?:not ready|fail.*early)|"
     r"power.*sequence.*fail",
     re.IGNORECASE,
 )
@@ -411,10 +411,13 @@ def analyze_lk_panic(uart_log_snippet: str) -> LKPanicOutput:
         line.strip() for line in _REGISTER_LINE_RE.findall(uart_log_snippet)
     ]
     # findall with groups returns strings — re-extract with finditer for full lines
+    # Supports both:
+    #   "x0 = 0xdeadbeef" (LK ARM32 / standard style)
+    #   "x0  0x               1" (LK AArch64 space-padded style, one+ spaces)
     register_lines = [
         m.group().strip()
         for m in re.finditer(
-            r"^\s*(?:r\d+|sp|lr|pc|cpsr|x\d+|elr|spsr)\s*(?:=|:)\s*0x[0-9a-fA-F]+[^\n]*",
+            r"^\s*(?:r\d+|sp|lr|pc|cpsr|x\d+|elr|spsr)\s*(?:[=:]\s*| +)0x\s*[0-9a-fA-F]+[^\n]*",
             uart_log_snippet,
             re.MULTILINE | re.IGNORECASE,
         )
@@ -506,7 +509,8 @@ def analyze_lk_panic(uart_log_snippet: str) -> LKPanicOutput:
             "Enable verbose LK logging (set LK_DEBUGLEVEL=2) and capture "
             "the full UART output from reset."
         )
-        confidence = 0.55
+        # Raise confidence when register state was captured — the panic is real
+        confidence = 0.75 if register_lines else 0.55
 
     else:
         # --- User extension patterns ---

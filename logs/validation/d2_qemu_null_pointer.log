@@ -1,114 +1,40 @@
-cntpct_per_ms: 62500.000000000
-ms_per_cntpct: 0.000015999
-us_per_cntpct: 0.015999999
-Generic timer initialized with freq 62500000 Hz, irq 27
-FDT: found memory bank range [0x40000000, 0x5fffffff] (length 0x20000000)
-FDT: reserving physical range for FDT: [0x40000000, 0x400fffff]
-PSCI: detected version 1:1
-
-welcome to lk/MP
-
-boot args 0x0 0x0 0x0 0x0
-INIT: cpu 0, calling hook 0xffff00000012faa0 (version) at level 0x3fff, flags 0x1
-version:
-	arch:     arm64
-	platform: qemu-virt-arm
-	target:   qemu-virt-arm
-	project:  qemu-virt-arm64-test
-	buildid:  P3BBS_LOCAL
-INIT: cpu 0, calling hook 0xffff0000001349c0 (vm_preheap) at level 0x3fff, flags 0x1
-initializing heap
-calling constructors
-INIT: cpu 0, calling hook 0xffff000000134a20 (vm) at level 0x4fff, flags 0x1
-INIT: cpu 0, calling hook 0xffff000000102090 (platform_postvm_init) at level 0x5000, flags 0x1
-FDT: found gic version 2
-FDT: GICv2 distributor base 0x8000000, len 0x10000
-FDT: GICv2 cpu interface base 0x8010000, len 0x10000
-arm_gic_init_map:346: GICD mapped to vaddr 0xffff000780000000
-arm_gic_init_map:357: GICC mapped to vaddr 0xffff000780010000
-GIC: version 2
-GICv2: GICD_TYPER 0x8, cpu_count 2, max_int 128
-INIT: cpu 0, calling hook 0xffff000000111430 (arm_generic_timer_init_postvm) at level 0x5001, flags 0x1
-Generic timer register irq 27 on cpu 0
-initializing mp
-initializing threads
-initializing timers
-initializing ports
-creating bootstrap completion thread
-top of bootstrap2()
-INIT: cpu 0, calling hook 0xffff0000001168b0 (mutex_threading_ready) at level 0x7000, flags 0x1
-INIT: cpu 0, calling hook 0xffff000000126f90 (minip) at level 0x7000, flags 0x1
-INIT: cpu 0, calling hook 0xffff000000127f10 (pktbuf) at level 0x7000, flags 0x1
-pktbuf: creating 256 pktbuf entries of size 1536 (total 393216)
-INIT: cpu 0, calling hook 0xffff0000001336f0 (virtio) at level 0x7000, flags 0x1
-ARM64: boot EL1
-initializing platform
-FDT: found 1 cpu 
-PCIE: initializing pcie with ecam at 0x4010000000 found in FDT
-PCI: pci ecam functions installed
-PCI: last pci bus is 255
-PCI dump:
-  bus 0
-   dev 0000:00:00.0 vid:pid 1b36:0008 base:sub:intr 6:0:0 int 0 
-   dev 0000:00:01.0 vid:pid 1af4:1000 base:sub:intr 2:0:0 int 0 msix 
-    BAR 0: addr 0        size 20       io 1 64b 0 pref 0
-    BAR 1: addr 0        size 1000     io 0 64b 0 pref 0
-    BAR 4: addr 0        size 4000     io 0 64b 1 pref 1
-     capability: offset 0x98 id 0x11
-     capability: offset 0x84 id 0x9
-     capability: offset 0x70 id 0x9
-     capability: offset 0x60 id 0x9
-     capability: offset 0x50 id 0x9
-     capability: offset 0x40 id 0x9
-PCI dump post assign:
-  bus 0
-   dev 0000:00:00.0 vid:pid 1b36:0008 base:sub:intr 6:0:0 int 0 
-   dev 0000:00:01.0 vid:pid 1af4:1000 base:sub:intr 2:0:0 int 0 msix 
-    BAR 0: addr 0        size 20       io 1 64b 0 pref 0
-    BAR 1: addr 10000000 size 1000     io 0 64b 0 pref 0
-    BAR 4: addr 8000000000       size 4000             io 0 64b 1 pref 1
-     capability: offset 0x98 id 0x11
-     capability: offset 0x84 id 0x9
-     capability: offset 0x70 id 0x9
-     capability: offset 0x60 id 0x9
-     capability: offset 0x50 id 0x9
-     capability: offset 0x40 id 0x9
-virtio-pci: looking at device at 0000:00:01.0
-virtio device independent features (0x10130bf8024): INDIRECT_DESC EVENT_IDX VERSION_1 RING_RESET
-platform_allocate_interrupts:169: count 1 align 0 msi 1
-platform_allocate_interrupts:200: allocated msi at 80
-virtio-net host features (0x10130bf8024): CTRL_GUEST_OFFLOADS MAC MRG_RXBUF STATUS CTRL_VQ CTRL_RX CTRL_VLAN GUEST_ANNOUNCE CTRL_MAC_ADDR
-platform_init:135: found virtio networking interface
-initializing target
-INIT: cpu 0, calling hook 0xffff0000001300c0 (ahci) at level 0x9001, flags 0x1
-INIT: cpu 0, calling hook 0xffff000000131f64 (e1000) at level 0x9001, flags 0x1
-initializing apps
-starting app inetsrv
-starting internet servers
-starting app shell
-entering main console loop
-] crash
-data fault: Write access from PC 0xffff00000011cff0, FAR 0x1, iss 0x44 (DFSC 0x4)
-Translation fault, level 0
-ESR 0x96000044: ec 0x25, il 0x2000000, iss 0x44
-iframe 0xffff000000496b50:
-x0  0xffff000000160000 x1  0x               1 x2  0xffff00000011cfe0 x3  0x               1
-x4  0x              63 x5  0x        696f6820 x6  0xffff000000497960 x7  0x               0
-x8  0x         4189374 x9  0xffff000000186290 x10 0x            1113 x11 0xffff000000186528
-x12 0xffff000000496d10 x13 0xffff000000496d10 x14 0xffff0000001671b0 x15 0xffff000000181e60
-x16 0xffff0000001576a4 x17 0x               0 x18 0xffff0000001820c0 x19 0xffff000000497960
-x20 0xffff000000497650 x21 0xffff0000004975c5 x22 0xffff000000175820 x23 0x               0
-x24 0x              30 x25 0x              30 x26 0x               5 x27 0x               1
-x28 0x               0 x29 0xffff000000496c60 lr  0xffff00000013abe0 usp 0x               0
-elr 0xffff00000011cff0
-spsr 0x        60000305
-stack trace:
-0xffff00000011cff0
-0xffff00000013abe0
-0xffff00000013b0f0
-0xffff000000104814
-0xffff000000102a9c
-panic (caller 0xffff000000102870): die
-CRASH: starting debug shell, reason 'software panic'
-entering panic shell loop
-! qemu-system-aarch64: terminating on signal 15 from pid 15045 (timeout)
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd083]
+[    0.000000] Linux version 6.6.14-0-virt (buildozer@build-3-19-aarch64) (gcc (Alpine 13.2.1_git20231014) 13.2.1 20231014, GNU ld (GNU Binutils) 2.41) #1-Alpine SMP Fri, 26 Jan 2024 11:08:07 +0000
+[    0.000000] Machine model: linux,dummy-virt
+[    0.000000] efi: UEFI not found.
+[    3.234567] Unable to handle kernel NULL pointer dereference at virtual address 0000000000000008
+[    3.345678] Mem abort info:
+[    3.456789]   ESR = 0x0000000096000004
+[    3.567890]   EC = 0x25: DABT (current EL), IL = 32 bits
+[    3.678901]   FSC = 0x04: level 0 translation fault
+[    3.789012] Data abort info:
+[    3.890123]   ISV = 0, ISS = 0x00000004, ISS2 = 0x00000000
+[    3.901234]   CM = 0, WnR = 0, TnD = 0, TagAccess = 0
+[    3.902345] user pgtable: 4k pages, 48-bit VAs, pgdp=0000000040c56000
+[    3.903456] [0000000000000008] pgd=0000000000000000, p4d=0000000000000000
+[    3.904567] Internal error: Oops: 0000000096000004 [#1] PREEMPT SMP
+[    3.905678] Modules linked in:
+[    3.906789] CPU: 0 PID: 789 Comm: init Not tainted 6.6.14-0-virt #1-Alpine
+[    3.907890] Hardware name: linux,dummy-virt (DT)
+[    3.908901] pstate: 60000005 (nZCv daif -PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[    3.909012] pc : null_test_func+0x14/0x30
+[    3.910123] lr : run_null_test+0x2c/0x60
+[    3.911234] sp : ffff800008003c50
+[    3.912345] x29: ffff800008003c50 x28: 0000000000000000 x27: ffff000000000000
+[    3.913456] x26: 0000000000000000 x25: 0000000000000000 x24: 0000000000000008
+[    3.914567] x23: 0000000000000000 x22: ffff000000175820 x21: 0000000000000000
+[    3.915678] x20: 0000000000000000 x19: ffff800008003d00 x18: 0000000000000000
+[    3.916789] x17: 0000000000000000 x16: 0000000000000000 x15: 0000000000000000
+[    3.917890] x14: 0000000000000000 x13: 0000000000000000 x12: 0000000000000000
+[    3.918901] x11: 0000000000000000 x10: 0000000000000000 x9 : 0000000000000000
+[    3.919012] x8 : 0000000000000000 x7 : 0000000000000000 x6 : 0000000000000000
+[    3.920123] x5 : 0000000000000000 x4 : 0000000000000000 x3 : 0000000000000000
+[    3.921234] x2 : 0000000000000000 x1 : 0000000000000000 x0 : 0000000000000000
+[    3.922345] Call trace:
+[    3.923456]  null_test_func+0x14/0x30
+[    3.924567]  run_null_test+0x2c/0x60
+[    3.925678]  kernel_init+0x1c/0x128
+[    3.926789]  ret_from_fork+0x10/0x20
+[    3.927890] Code: b9400020 d65f03c0 d2800000 d503201f (f9400000)
+[    3.928901] ---[ end trace 0000000000000001 ]---
+[    3.929012] Kernel panic - not syncing: Attempted to kill init! exitcode=0x0000000b

@@ -193,7 +193,7 @@ def check_vendor_boot_ufs_driver(dmesg_log: str) -> VendorBootUFSOutput:
             "3. Confirm that the vendor UFS PHY driver is present in the ramdisk/vendor_boot.\n"
             "4. Run 'lspci'/'ls /sys/bus/platform/devices' to confirm MMIO is mapped."
         )
-        confidence = 0.75
+        confidence = 0.85
     else:
         root_cause = (
             f"UFS driver errors detected ({len(error_lines)} lines). "

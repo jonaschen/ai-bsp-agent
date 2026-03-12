@@ -71,6 +71,8 @@ _EARLY_BOOT_MARKERS: dict[str, re.Pattern] = {
     "tf_a_generic":  re.compile(r"Booting Trusted Firmware|TF-A\s+v\d", re.IGNORECASE),
     "lk_banner":     re.compile(r"\[0+\]\s+(?:LK|target_init|platform_init)", re.IGNORECASE),
     "lk_version":    re.compile(r"LK version:|LKVersion", re.IGNORECASE),
+    "lk_welcome":    re.compile(r"welcome to lk", re.IGNORECASE),
+    "lk_init_hook":  re.compile(r"INIT:\s+cpu\s+\d+,\s+calling hook", re.IGNORECASE),
     "uboot_banner":  re.compile(r"U-Boot\s+\d{4}\.\d{2}"),
     "uefi_banner":   re.compile(r"UEFI firmware\s+|EDK II", re.IGNORECASE),
     "qcom_xbl":      re.compile(r"XBL CORE\s+Version|SBL1\s+build"),
@@ -131,7 +133,9 @@ def segment_boot_log(raw_log: str) -> BootLogSegmenterOutput:
     early_indicators: list[str] = [
         key for key, pat in _EARLY_BOOT_MARKERS.items() if pat.search(raw_log)
     ]
-    is_early_boot = bool(early_indicators) and not has_kernel_ts
+    # Early boot wins even when kernel timestamps are also present — the log
+    # may span TF-A/LK through kernel, but the first stage is still early_boot.
+    is_early_boot = bool(early_indicators)
 
     # --- Android init detection (kernel timestamps + Android markers) ---
     android_indicators: list[str] = [

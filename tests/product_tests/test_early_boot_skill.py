@@ -125,6 +125,18 @@ class TestParseEarlyBootUARTLog:
         assert out.failure_detected is True
         assert out.error_type == "auth_failure"
 
+    def test_auth_failure_of_image_format(self):
+        # Real TF-A format: "Authentication of BL31 image failed"
+        log = (
+            "NOTICE:  BL1: v2.7\n"
+            "INFO:    BL2: Verifying image id=5\n"
+            "ERROR:   BL2: Failed to load image id=5 (-2)\n"
+            "ERROR:   Authentication of BL31 image failed\n"
+            "ERROR:   BL2: Failed to boot next image. Aborting.\n"
+        )
+        out = parse_early_boot_uart_log(log)
+        assert out.error_type == "auth_failure"
+
     def test_auth_failure_confidence(self):
         out = parse_early_boot_uart_log(AUTH_FAIL_LOG)
         assert out.confidence >= 0.90
@@ -159,6 +171,18 @@ class TestParseEarlyBootUARTLog:
         out = parse_early_boot_uart_log(PMIC_FAIL_LOG)
         assert out.failure_detected is True
         assert out.error_type == "pmic_failure"
+
+    def test_pmic_regulator_not_ready_format(self):
+        # Real TF-A format: "PMIC: regulator not ready"
+        log = (
+            "NOTICE:  BL1: v2.7\n"
+            "INFO:    BL31: Initializing power domains\n"
+            "ERROR:   BL31: PMIC: regulator not ready\n"
+            "ERROR:   BL31: Failed to enable vdd_gpu rail, status=-1\n"
+        )
+        out = parse_early_boot_uart_log(log)
+        assert out.error_type == "pmic_failure"
+        assert out.confidence >= 0.75
 
     # --- Generic error ---
     def test_generic_error_detected(self):
@@ -302,6 +326,23 @@ class TestAnalyzeLKPanic:
         out = analyze_lk_panic(AARCH64_REG_LOG)
         assert len(out.register_dump) >= 1
         assert any("x0" in line or "elr" in line or "sp" in line for line in out.register_dump)
+
+    def test_lk_aarch64_space_delimited_registers(self):
+        # LK AArch64 panic: registers with spaces (no = or :), multiple per line
+        log = (
+            "data fault: Write access from PC 0xffff00000011cff0, FAR 0x1, iss 0x44\n"
+            "ESR 0x96000044: ec 0x25, il 0x2000000, iss 0x44\n"
+            "iframe 0xffff000000496b50:\n"
+            "x0  0xffff000000160000 x1  0x               1 x2  0xffff00000011cfe0 x3  0x               1\n"
+            "x4  0x              63 x5  0x        696f6820 x6  0xffff000000497960 x7  0x               0\n"
+            "x29 0xffff000000496c60 lr  0xffff00000013abe0 usp 0x               0\n"
+            "elr 0xffff00000011cff0\n"
+            "spsr 0x        60000305\n"
+            "panic (caller 0xffff000000102870): die\n"
+        )
+        out = analyze_lk_panic(log)
+        assert out.panic_detected is True
+        assert len(out.register_dump) >= 4
 
     def test_register_dump_capped_at_20(self):
         # Generate a log with 30 register lines

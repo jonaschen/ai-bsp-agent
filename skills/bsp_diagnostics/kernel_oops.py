@@ -102,6 +102,11 @@ _KERNEL_VERSION_RE = re.compile(
 # Register extraction
 _ESR_RE = re.compile(r"ESR(?:_EL1)?\s*[=:]\s*(0x[0-9a-fA-F]+)", re.IGNORECASE)
 _FAR_RE = re.compile(r"FAR_EL1\s*[=:]\s*(0x[0-9a-fA-F]+)", re.IGNORECASE)
+# Fallback: extract FAR from the virtual address in the Oops trigger line
+_FAR_VIRTUAL_ADDR_RE = re.compile(
+    r"(?:NULL pointer dereference|paging request)\s+at\s+(?:virtual address\s+)?((?:0x)?[0-9a-fA-F]{4,})",
+    re.IGNORECASE,
+)
 _TS_PREFIX = r"(?:\[\s*\d+\.\d+\]\s*)?"  # optional kernel timestamp
 
 _PC_RE = re.compile(rf"^{_TS_PREFIX}\s*pc\s*:\s*(\S+)", re.MULTILINE)
@@ -223,6 +228,12 @@ def extract_kernel_oops_log(dmesg_log: str) -> KernelOopsOutput:
     far_match = _FAR_RE.search(dmesg_log)
     if far_match:
         far_hex = far_match.group(1)
+    else:
+        # Fallback: extract virtual address from the Oops trigger line
+        va_match = _FAR_VIRTUAL_ADDR_RE.search(dmesg_log)
+        if va_match:
+            addr = va_match.group(1)
+            far_hex = addr if addr.startswith("0x") else f"0x{addr}"
 
     # --- pc / lr symbols ---
     pc_symbol: Optional[str] = None

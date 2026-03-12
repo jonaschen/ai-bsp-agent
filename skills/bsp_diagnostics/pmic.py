@@ -289,7 +289,7 @@ def check_pmic_rail_voltage(dmesg_log: str, logcat_log: str = "") -> PMICVoltage
             "4. Check for battery aging or high ESR that reduces peak current delivery.\n"
             "5. Inspect regulator sequencing: confirm the rail is stable before its consumer is enabled."
         )
-        confidence = 0.78
+        confidence = 0.82
     else:
         rail_names = ", ".join(r.name for r in rails[:10])
         root_cause = (
