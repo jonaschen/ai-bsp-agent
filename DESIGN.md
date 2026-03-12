@@ -317,13 +317,57 @@ All pieces of the v6 architecture are in place and tested (107 product tests pas
 | 24 | Pattern fixes from validation | FAR fallback extraction (`_FAR_VIRTUAL_ADDR_RE`); LK AArch64 space-padded register format; TF-A auth wildcard; PMIC `not ready`; UFS probe 0.85 confidence; PMIC undervoltage 0.82 confidence; LOG-010 fixture corrected to AArch64 Linux kernel Oops |
 | 25 | MCP server | `mcp_server/server.py` — all 13 skills exposed via stdio MCP; `bsp-diagnostics-mcp` entry point (`pip install -e .`) |
 
-### Phase 6+ — Planned
+### Phase 6 — Android Init Skills ✓ DONE
 
-| # | Item | Route | Notes |
+**425 product tests passing.**
+
+| # | Item | Route | Description |
 |---|---|---|---|
-| 26 | Skill: `analyze_selinux_denial` | `android_init_advisor` | Parse SELinux AVC denial messages |
-| 27 | Skill: `check_android_init_rc` | `android_init_advisor` | Detect init.rc service failures |
-| 28 | Supervisor: `android_init_advisor` route | — | Add triage prompt token + `ROUTE_TOOLS` entry; trigger: SELinux AVC, `[FAILED]`, init.rc keywords |
+| 26 | Skill: `analyze_selinux_denial` | `android_init_advisor` | Parse `avc: denied` lines from dmesg + logcat; extracts permission, comm, scontext/tcontext/tclass, permissive flag; deduplicates; counts enforcing vs permissive-mode denials — 53 tests (shared file) |
+| 27 | Skill: `check_android_init_rc` | `android_init_advisor` | Parses `init: Command ... failed` lines (rc_file, rc_line, reason) and `Service ... exited with status N` (N≠0) — 53 tests (shared file) |
+| 28 | Supervisor: `android_init_advisor` route | — | `_is_android_init_log()` short-circuit (pure regex, no LLM) for AVC/init-fail markers; LLM fallback token added; 4 new supervisor tests |
+| 29 | VALID_CATEGORIES extension | — | `analyze_selinux_denial` → `avc_denied`; `check_android_init_rc` → `command_failure`, `service_crash` |
+| 30 | Knowledge base: `docs/android-init.md` | — | SELinux TE reference, init.rc lifecycle, triage decision tree, emulator gaps |
+
+### Phase 7 — Subsystem Diagnostics (PLANNED)
+
+Log-only variants. All file paths become `_content: str` inputs — no filesystem access.
+
+| # | Item | Route | Description |
+|---|---|---|---|
+| 31 | Skill: `check_clock_dependencies` | `kernel_pathologist` | CCF probe-defer errors; detects `deferred_probe_pending`, `clk_get failed`, missing parent clock |
+| 32 | Skill: `diagnose_vfs_mount_failure` | `kernel_pathologist` | VFS mount errors (`mount_nodev`, `-EINVAL`, `-ENODEV`); fstab cross-reference from content string |
+| 33 | Skill: `analyze_firmware_load_error` | `kernel_pathologist` | Firmware request failures (`request_firmware` timeout, path not found) |
+| 34 | Skill: `analyze_early_oom_killer` | `hardware_advisor` | Early OOM kill events before userspace is stable; extracts victim process, score, memory pressure |
+| — | `docs/subsystem-boot.md` | — | CCF probe-defer patterns, VFS error codes, firmware search path logic |
+
+### Phase 8 — Stateful Workspace Skills (PLANNED — infrastructure decision required)
+
+New supervisor route: `source_analyst`. Trigger: regression/commit/DTS-change keywords.
+
+**Before coding:** Agree on workspace access model. Recommended: Option A — file path inputs; `resolve_oops_symbols` calls `addr2line` via subprocess.
+
+| # | Item | Route | Description |
+|---|---|---|---|
+| 35 | Skill: `resolve_oops_symbols` | `source_analyst` | Resolves hex call-trace addresses to file:line via `addr2line`; depends on Phase 5 `extract_kernel_oops_log` output |
+| 36 | Skill: `compare_device_tree_nodes` | `source_analyst` | Diff two DTS node content strings; highlights added/removed properties |
+| 37 | Skill: `diff_kernel_configs` | `source_analyst` | Diff two kernel `.config` content strings; identifies CONFIG changes |
+| 38 | Skill: `validate_gpio_pinctrl_conflict` | `source_analyst` | Detects duplicate GPIO/pinctrl assignments from DTS content |
+| — | `docs/workspace-analysis.md` | — | DTS node naming conventions, CONFIG flag impact reference |
+
+### Phase 9a — SoC Errata Lookup (PLANNED)
+
+| # | Item | Description |
+|---|---|---|
+| 39 | Skill: `check_soc_errata_tracker` | Static dict keyed by `(ip_block, soc_revision)`; covers Qualcomm SM8x50, MTK MT6xxx, Samsung Exynos; ~12 tests |
+
+### Phase 9b — ARM TRM RAG (DEFERRED)
+
+Requires vector DB + embedding pipeline. Start only after Phase 9a is validated in real use.
+
+### Phase 10 — Governed Actions (DEFERRED)
+
+`generate_patch_and_build` with HITL blocking approval gate. Start only after Phases 4–7 are validated on real BSP logs.
 
 ---
 
