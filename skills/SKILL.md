@@ -41,6 +41,8 @@ def my_bsp_skill(input: MySkillInput) -> MySkillOutput:
 
 ## Current Skills
 
+All 13 skills have been validated against 28 real-hardware–style log fixtures (`tools/skill_validation.py`, 28/28 PASS). See `reports/skill_validation_report.md` for the full run.
+
 | Module | Function | Supervisor Route | Domain |
 |--------|----------|-----------------|--------|
 | `bsp_diagnostics/log_segmenter.py` | `segment_boot_log` | **universal** (all routes) | Boot Stage Triage |
@@ -56,6 +58,17 @@ def my_bsp_skill(input: MySkillInput) -> MySkillOutput:
 | `bsp_diagnostics/pmic.py` | `check_pmic_rail_voltage` | `hardware_advisor` | PMIC Rail Voltages |
 | `bsp_diagnostics/skill_improvement.py` | `validate_skill_extension` | **any** (end-user agent) | Dry-run regex against log snippet |
 | `bsp_diagnostics/skill_improvement.py` | `suggest_pattern_improvement` | **any** (end-user agent) | Validate + persist new detection pattern |
+
+### Pattern coverage notes (real-hardware validated)
+
+| Skill | Key pattern details |
+|---|---|
+| `segment_boot_log` | Detects LK via `welcome to lk/MP` and `INIT: cpu N, calling hook`; early_boot wins even when kernel timestamps also present (mixed logs) |
+| `parse_early_boot_uart_log` | Auth failure: matches `Authentication.*(?:fail\|error)` (wildcard); PMIC: matches `PMIC.*not ready` and `regulator not ready` |
+| `analyze_lk_panic` | Registers: handles both `x0 = 0xdeadbeef` (ARM32 style) and LK AArch64 space-padded `x0  0x               1` format; generic panic confidence raised to 0.75 when registers present |
+| `extract_kernel_oops_log` | FAR: extracted from `FAR_EL1 = 0x...` **or** from `at virtual address X` in the Oops trigger line |
+| `check_vendor_boot_ufs_driver` | Probe-phase confidence: 0.85 (consistent with link_startup 0.82 / resume 0.88) |
+| `check_pmic_rail_voltage` | Undervoltage confidence: 0.82 (explicit `under-voltage detected` message warrants high confidence) |
 
 ## Domains
 

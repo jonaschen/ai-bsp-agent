@@ -155,16 +155,16 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 
 ## Domain 2 — Kernel Pathologist (`extract_kernel_oops_log`, `decode_esr_el1`, `decode_aarch64_exception`, `check_cache_coherency_panic`, `analyze_watchdog_timeout`)
 
-### LOG-010 — x86_64 kernel NULL pointer dereference (QEMU)
+### LOG-010 — AArch64 kernel NULL pointer dereference (QEMU — Linux kernel)
 
 | Field | Value |
 |---|---|
 | **File** | `logs/validation/d2_qemu_null_pointer.log` |
-| **Source** | `aarch64-qemu` — real LK AArch64 `crash` command (FAR=0x1, ESR=0x96000044, level-0 translation fault); captures real AArch64 register state from QEMU `cortex-a53` |
+| **Source** | `aarch64-qemu` — Alpine Linux 6.6 aarch64 kernel boot (QEMU `virt`/`cortex-a72`) with injected AArch64 NULL pointer dereference (ESR `0x96000004`, level-0 translation fault, `virtual address 0x8`) |
 | **Skills validated** | `extract_kernel_oops_log` |
-| **Content** | Alpine kernel Oops triggered by sysrq crash. Contains `BUG: kernel NULL pointer dereference` or `Oops: general protection fault` with RIP, RSP, call trace. |
-| **Expected outcome** | `oops_type: "generic_oops"` (x86 format), `faulting_process` and `faulting_pid` populated, `call_trace` non-empty, `esr_el1_hex` null (x86 has no ESR), confidence ≥ 0.75. |
-| **Validation focus** | Skill must not crash on x86 Oops format (no ESR_EL1). Confirms graceful degradation when AArch64-specific fields are absent. |
+| **Content** | Linux kernel Oops: `Unable to handle kernel NULL pointer dereference at virtual address 0000000000000008`, followed by `Internal error: Oops: 0000000096000004 [#1] PREEMPT SMP`, AArch64 register dump (x0–x29), and call trace. |
+| **Expected outcome** | `oops_type: "null_pointer"`, `faulting_process: "init"`, `faulting_pid: 789`, `call_trace` non-empty, `esr_el1_hex` populated (`0x...96000004`), confidence ≥ 0.75. |
+| **Validation focus** | Confirms `extract_kernel_oops_log` detects a Linux kernel NULL pointer Oops on AArch64 and extracts ESR + call trace correctly. |
 | **Status** | DONE |
 
 ---
@@ -438,7 +438,7 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | LOG-007 | d1_tfa_pmic_failure.log | aarch64-qemu | `parse_early_boot_uart_log` | DONE |
 | LOG-008 | d1_lk_assert_arm32.log | aarch64-qemu (LK) | `analyze_lk_panic` | DONE |
 | LOG-009 | d1_lk_panic_aarch64.log | aarch64-qemu (LK) | `analyze_lk_panic` | DONE |
-| LOG-010 | d2_qemu_null_pointer.log | linux-qemu | `extract_kernel_oops_log` | DONE |
+| LOG-010 | d2_qemu_null_pointer.log | aarch64-qemu | `extract_kernel_oops_log` | DONE |
 | LOG-011 | d2_aarch64_null_ptr.log | aarch64-qemu | `extract_kernel_oops_log` + `decode_aarch64_exception` | DONE |
 | LOG-012 | d2_aarch64_paging_request.log | aarch64-qemu | `extract_kernel_oops_log` + `decode_aarch64_exception` | DONE |
 | LOG-013 | d2_serror_interrupt.log | aarch64-qemu | `decode_esr_el1` + `check_cache_coherency_panic` | DONE |
@@ -458,4 +458,4 @@ validate the 11 BSP diagnostic skills against realistic inputs.
 | LOG-027 | d4_android_selinux_avc.log | android-avd | Phase 6 preview | DONE |
 | LOG-028 | d4_android_slow_boot.log | android-avd | `segment_boot_log` + timing baseline | DONE |
 
-**Total: 28 log files — 24 from AArch64 QEMU emulators (LK or Alpine Linux aarch64), 4 from Android AVD**
+**Total: 28 log files — 24 from AArch64 QEMU emulators (LK or Alpine Linux aarch64), 4 from Android AVD. All 28 validated by `tools/skill_validation.py` (28/28 PASS).**

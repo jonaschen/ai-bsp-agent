@@ -113,7 +113,7 @@ sdkmanager --list_installed --sdk_root=$HOME/android-sdk
 | `socat` | `socat` (apt) | QEMU monitor socket commands |
 | `adb` | `android-tools-adb` (apt) or SDK platform-tools | Android log capture |
 | `avdmanager` | Android cmdline-tools | AVD lifecycle management |
-| Python | `python3` ≥ 3.10 | `cli.py`, `tools/validate_logs.py` |
+| Python | `python3` ≥ 3.10 | `cli.py`, `tools/skill_validation.py` |
 
 ---
 
@@ -235,7 +235,11 @@ SELinux AVC denial samples for Phase 6 (`android_init_advisor`).
 | `run-android-emulator.sh` | `normal` | Android AVD | `segment_boot_log` (android_init) | LOG-001, LOG-028 |
 | `run-android-emulator.sh` | `selinux` | Android AVD | Phase 6 (`analyze_selinux_denial`) | LOG-027 |
 | `run-android-emulator.sh` | `slow` | Android AVD | `segment_boot_log` (timing baseline) | LOG-028 |
-| `run-android-emulator.sh` | `panic` | Android AVD | `extract_kernel_oops_log` (`last_kmsg` post-panic) | LOG-010 |
+
+> **Note:** `d2_qemu_null_pointer.log` (LOG-010) is an AArch64 Linux kernel null pointer Oops
+> (Alpine 6.6 guest, `linux-panic` scenario). An older version of this fixture contained
+> LK output by mistake; it was replaced with a proper kernel Oops log during Phase 5.5
+> validation. All LOG-010 references now describe the AArch64 Linux kernel Oops.
 
 All logs referenced above are enumerated in `LOG_PENDING_LIST.md`.
 
@@ -276,7 +280,7 @@ cd emulator_scripts
 ./collect-logs.sh ./logs/android ./logs/linux ./logs/normalized
 
 # 5. Validate each log file against its expected skill output
-python tools/validate_logs.py
+python tools/skill_validation.py
 
 # 6. Feed a specific log to the agent
 source venv/bin/activate

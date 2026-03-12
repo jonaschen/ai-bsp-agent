@@ -1,4 +1,4 @@
-# Software Design Document — Android BSP Diagnostic Expert (v6)
+# Software Design Document — Android BSP Diagnostic Expert (v6.3)
 
 ## Overview
 
@@ -44,6 +44,12 @@ classDiagram
         +dispatch_tool(tool_name, tool_input) dict
     }
 
+    class SkillExtensionSystem {
+        +load_extensions(skill_name) list[dict]
+        +write_extension(skill_name, pattern, category, description)
+        +BSP_EXTENSIONS_PATH: str
+    }
+
     class LogSegmenterSkill {
         +segment_boot_log(raw_log) BootLogSegmenterOutput
     }
@@ -65,6 +71,11 @@ classDiagram
         +decode_esr_el1(hex_value) ESREL1Output
         +decode_aarch64_exception(esr_val, far_val) AArch64ExceptionOutput
         +check_cache_coherency_panic(panic_log) CacheCoherencyOutput
+    }
+
+    class SkillImprovementSkill {
+        +validate_skill_extension(...) ValidationOutput
+        +suggest_pattern_improvement(...) ImprovementOutput
     }
 
     class CaseFile {
@@ -106,6 +117,8 @@ classDiagram
     SkillRegistry --> KernelOopsSkill : delegates to
     SkillRegistry --> STDHibernationSkill : delegates to
     SkillRegistry --> AArch64ExceptionsSkill : delegates to
+    SkillRegistry --> SkillImprovementSkill : delegates to
+    SkillImprovementSkill --> SkillExtensionSystem : reads/writes
 ```
 
 ### End-to-End Sequence Diagram
@@ -127,7 +140,7 @@ sequenceDiagram
 
     BSPDiagnosticAgent->>SupervisorAgent: route(AgentState)
 
-    alt early boot markers detected (no kernel timestamp)
+    alt early boot markers detected (TF-A/LK/U-Boot/UEFI/XBL)
         Note over SupervisorAgent: _is_early_boot_log() — pure regex, no LLM call
         SupervisorAgent-->>BSPDiagnosticAgent: "early_boot_advisor"
     else kernel timestamp present
@@ -167,7 +180,7 @@ sequenceDiagram
 ### 2. `SupervisorAgent` (`product/bsp_agent/agents/supervisor.py`)
 - **Role**: Fast triage router. Reads the log, detects the boot domain, and routes to one of four specialist destinations.
 - **Routes**: `early_boot_advisor` (TF-A/LK/U-Boot UART logs), `kernel_pathologist` (panics, null-pointers, oops), `hardware_advisor` (STD, watchdog, power management), `clarify_needed` (invalid or insufficient log).
-- **Early boot short-circuit**: `_is_early_boot_log()` runs first — if TF-A/LK/U-Boot markers are present and there is no kernel timestamp, routes to `early_boot_advisor` via pure regex, with zero LLM calls.
+- **Early boot short-circuit**: `_is_early_boot_log()` runs first — if TF-A/LK/U-Boot/LK markers are present (including `welcome to lk` and `INIT: cpu N, calling hook`), routes to `early_boot_advisor` via pure regex with zero LLM calls. Early boot wins even when kernel timestamps are also present (mixed logs).
 - **Kernel/hardware routing**: `validate_input()` checks for kernel timestamp pattern; if present, delegates to Claude Haiku (max_tokens=16) for a single routing token.
 - **Log chunking**: Extracts the Event Horizon (±10 s around detected failure timestamp) when logs exceed 50 MB. Falls back to last 5 000 lines.
 - **Short-circuit**: If `validate_input()` fails (no kernel timestamp, no early boot markers), returns `clarify_needed` without calling the LLM.
@@ -181,6 +194,13 @@ sequenceDiagram
 - Pure Python functions — no side effects, no LLM calls, no global state.
 - Every skill has strict Pydantic `Input` / `Output` schemas.
 - Every skill has a corresponding isolated `pytest` in `tests/product_tests/` — no LLM invoked.
+- 9 skills include a user-extension hook: if built-in patterns yield no detection, the skill checks `~/.bsp-diagnostics/skill_extensions.json` for user-added patterns (confidence=0.60, `[user pattern]` prefix in `root_cause`).
+
+### 5a. Skill Extension System (`skills/extensions.py`)
+- Reads and writes `~/.bsp-diagnostics/skill_extensions.json` (user-local, never committed to the repo).
+- `BSP_EXTENSIONS_PATH` env var overrides the path (used in tests for isolation).
+- Extension file schema: `{ version, skills: { <skill_name>: { patterns: [{ match, category, description, added }] } } }`
+- `validate_skill_extension` (dry-run, pure) and `suggest_pattern_improvement` (validates 4 gates then writes) are registered as universal tools available in all routes.
 
 ### 5. Product Schemas (`product/schemas/__init__.py`)
 - `CaseFile` / `LogPayload` (`dmesg_content`, `meminfo_content`, `logcat_content`) — core input.
@@ -197,15 +217,15 @@ sequenceDiagram
 
 | Skill | Function | Logic |
 |---|---|---|
-| `log_segmenter.py` | `segment_boot_log` | Checks for `_EARLY_BOOT_MARKERS` (TF-A/LK/U-Boot/UEFI/XBL) vs kernel timestamp pattern vs Android init markers. Priority: `early_boot` > `android_init` > `kernel_init` > `unknown`. Returns `suggested_route`, `first_error_line`, `confidence` |
+| `log_segmenter.py` | `segment_boot_log` | Checks for `_EARLY_BOOT_MARKERS` (TF-A/LK/U-Boot/UEFI/XBL + `welcome to lk` / `INIT: cpu N, calling hook`) vs kernel timestamp vs Android init markers. Priority: `early_boot` > `android_init` > `kernel_init` > `unknown`. Early boot wins even when kernel timestamps are also present. Returns `suggested_route`, `first_error_line`, `confidence` |
 
 ### Domain 0: Early Boot (Pre-Kernel)
 **Supervisor route:** `early_boot_advisor` (bypasses LLM — pure regex detection)
 
 | Skill | Function | Logic |
 |---|---|---|
-| `early_boot.py` | `parse_early_boot_uart_log` | Stage detection via `_BL_STAGE_PATTERNS` (BL1→BL33→U-Boot→XBL→UEFI); error classification: auth_failure > image_load_failure > ddr_init_failure > pmic_failure > generic_error; extracts last successful handoff step |
-| `early_boot.py` | `analyze_lk_panic` | Detects `ASSERT FAILED at [file:line]`; classifies: assert > ddr_failure > image_load > pmic_failure > generic; extracts ARM32/AArch64 register dump; capped at 20 lines |
+| `early_boot.py` | `parse_early_boot_uart_log` | Stage detection via `_BL_STAGE_PATTERNS` (BL1→BL33→U-Boot→XBL→UEFI); error classification: auth_failure > image_load_failure > ddr_init_failure > pmic_failure > generic_error; auth pattern uses `Authentication.*(?:fail\|error)` wildcard; PMIC pattern covers `not ready`; extracts last successful handoff step |
+| `early_boot.py` | `analyze_lk_panic` | Detects `ASSERT FAILED at [file:line]`; classifies: assert > ddr_failure > image_load > pmic_failure > generic; extracts ARM32 and LK AArch64 space-padded register dump (`x0  0x               1` format); confidence raised to 0.75 when registers present; capped at 20 lines |
 
 ### Domain 1: Suspend-to-Disk (STD) & Power Management
 **Supervisor route:** `hardware_advisor`
@@ -221,7 +241,7 @@ sequenceDiagram
 
 | Skill | Function | Logic |
 |---|---|---|
-| `kernel_oops.py` | `extract_kernel_oops_log` | Detects `null_pointer` / `paging_request` / `kernel_bug` / `generic_oops`; extracts process, PID, CPU, ESR_EL1 hex, FAR_EL1 hex, pc/lr symbols, call trace (<=32 entries); timestamp-aware regex |
+| `kernel_oops.py` | `extract_kernel_oops_log` | Detects `null_pointer` / `paging_request` / `kernel_bug` / `generic_oops`; extracts process, PID, CPU, ESR_EL1 hex, FAR_EL1 hex (with fallback `_FAR_VIRTUAL_ADDR_RE` from "at virtual address X" when no explicit `FAR_EL1 =` line), pc/lr symbols, call trace (<=32 entries); timestamp-aware regex |
 | `aarch64_exceptions.py` | `decode_esr_el1` | Decodes ESR_EL1 bits [31:26] (EC), [25] (IL), [24:0] (ISS/DFSC/IFSC) against ARM DDI0487 tables |
 | `aarch64_exceptions.py` | `decode_aarch64_exception` | Decodes ESR_EL1 + FAR_EL1 together; infers exception level (EL0/EL1) from EC bits; classifies FAR as kernel vs. user-space address via bit-63 heuristic |
 | `aarch64_exceptions.py` | `check_cache_coherency_panic` | Regex scan for SError indicators, ARM64 SError messages, ESR_EL1 with EC=0x2F; confidence scales with indicator count |
@@ -275,7 +295,7 @@ All pieces of the v6 architecture are in place and tested (107 product tests pas
 
 ### Phase 5 — Kernel Oops & FAR Decoding ✓ DONE
 
-**347 product tests passing.**
+**347 product tests passing** (before Phase 5.5).
 
 | # | Item | Route | Description |
 |---|---|---|---|
@@ -284,13 +304,26 @@ All pieces of the v6 architecture are in place and tested (107 product tests pas
 | 18 | Multi-tool synergy integration test | — | Watchdog + SError fixture; Brain invokes `analyze_watchdog_timeout` + `decode_esr_el1` in one session — 6 tests |
 | 19 | Knowledge base: FAR_EL1 documentation | — | Added full FAR_EL1 section to `docs/aarch64-exceptions.md` (EL table, VA split, common patterns, decode_aarch64_exception usage) |
 
+### Phase 5.5 — Skill Extension System + Validation ✓ DONE
+
+**369 product tests passing. 28/28 log fixtures validated (tools/skill_validation.py).**
+
+| # | Item | Description |
+|---|---|---|
+| 20 | Skill Extension System | `skills/extensions.py` — loader/writer for `~/.bsp-diagnostics/skill_extensions.json`; `BSP_EXTENSIONS_PATH` env var for test isolation |
+| 21 | `validate_skill_extension` + `suggest_pattern_improvement` | `skills/bsp_diagnostics/skill_improvement.py` — dry-run + 4-gate validated persistence; 14 tests |
+| 22 | Extension hooks in 9 skills | `early_boot.py` (×2), `watchdog.py`, `kernel_oops.py`, `vendor_boot.py`, `std_hibernation.py`, `pmic.py`, `aarch64_exceptions.py`, `log_segmenter.py` — 6-line hook at no-detection return path |
+| 23 | Real-world log validation corpus | 28-log fixture corpus in `logs/validation/`; `tools/skill_validation.py` deterministic validator; `reports/skill_validation_report.md` — 28/28 PASS |
+| 24 | Pattern fixes from validation | FAR fallback extraction (`_FAR_VIRTUAL_ADDR_RE`); LK AArch64 space-padded register format; TF-A auth wildcard; PMIC `not ready`; UFS probe 0.85 confidence; PMIC undervoltage 0.82 confidence; LOG-010 fixture corrected to AArch64 Linux kernel Oops |
+| 25 | MCP server | `mcp_server/server.py` — all 13 skills exposed via stdio MCP; `bsp-diagnostics-mcp` entry point (`pip install -e .`) |
+
 ### Phase 6+ — Planned
 
 | # | Item | Route | Notes |
 |---|---|---|---|
-| 20 | Real-world log validation | — | Run against actual BSP logs; tune thresholds; document edge cases |
-| 21 | Skill: `analyze_selinux_denial` | `android_init_advisor` | Parse SELinux denial messages |
-| 22 | Skill: `check_android_init_rc` | `android_init_advisor` | Detect init.rc service failures |
+| 26 | Skill: `analyze_selinux_denial` | `android_init_advisor` | Parse SELinux AVC denial messages |
+| 27 | Skill: `check_android_init_rc` | `android_init_advisor` | Detect init.rc service failures |
+| 28 | Supervisor: `android_init_advisor` route | — | Add triage prompt token + `ROUTE_TOOLS` entry; trigger: SELinux AVC, `[FAILED]`, init.rc keywords |
 
 ---
 

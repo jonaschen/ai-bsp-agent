@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Version:** v6.2 (Phase 5 — Kernel Oops & FAR Decoding)
+> **Version:** v6.3 (Phase 5.5 — Skill Extension System + 28/28 Validated)
 > **Status:** Research Prototype / Serious AI Systems Engineering
 
 ## Project Overview
@@ -122,9 +122,15 @@ Markdown files in `docs/` with YAML frontmatter scoping each document to a super
 │       ├── aarch64_exceptions.py    # decode_esr_el1, decode_aarch64_exception, check_cache_coherency_panic
 │       ├── vendor_boot.py           # check_vendor_boot_ufs_driver
 │       ├── watchdog.py              # analyze_watchdog_timeout
-│       └── pmic.py                  # check_pmic_rail_voltage
+│       ├── pmic.py                  # check_pmic_rail_voltage
+│       └── skill_improvement.py     # validate_skill_extension, suggest_pattern_improvement
+├── skills/extensions.py             # Extension loader/writer (~/.bsp-diagnostics/skill_extensions.json)
+├── logs/validation/                 # 28 real-hardware-style log fixtures (validated 28/28 PASS)
+├── reports/                         # skill_validation_report.md — latest validation run
+└── tools/
+    └── skill_validation.py          # Deterministic 28-log validator (no LLM)
 ├── tests/
-│   └── product_tests/               # Isolated pytest suite (no LLM calls) — 347 tests.
+│   └── product_tests/               # Isolated pytest suite (no LLM calls) — 369 tests.
 │       ├── test_integration.py      # End-to-end pipeline (mocked Anthropic client) — 4 scenarios.
 │       └── fixtures/                # Golden-set log files and expected output JSON.
 └── studio/                          # Legacy factory code (deprecated — do not modify).
@@ -208,10 +214,10 @@ Or, without a package install (replace `/path/to/ai-bsp-agent` with your clone p
 }
 ```
 
-After registration, all 11 skills (`segment_boot_log`, `extract_kernel_oops_log`,
-`decode_esr_el1`, `analyze_watchdog_timeout`, etc.) appear in Claude's tool list.
-No `ANTHROPIC_API_KEY` is required for the MCP server itself — the skills are
-pure deterministic Python functions.
+After registration, all 13 skills (`segment_boot_log`, `extract_kernel_oops_log`,
+`decode_esr_el1`, `analyze_watchdog_timeout`, `validate_skill_extension`, etc.)
+appear in Claude's tool list. No `ANTHROPIC_API_KEY` is required for the MCP
+server itself — the skills are pure deterministic Python functions.
 
 ---
 
@@ -289,69 +295,35 @@ analysis) or `cli.py` (BSP diagnostic agent with MCP skills).
 
 ---
 
-## Real-World Log Validation (Item #20)
+## Log Validation
 
-The skills were authored from documentation and synthetic test logs. Running against real hardware logs is the next critical step. Here is the recommended workflow.
-
-### Step 1 — Run the agent on a known failure
-
-Use a log where you already know the root cause. Compare the agent's output to your actual diagnosis and note every discrepancy.
+The 28 emulator-generated log fixtures in `logs/validation/` have been validated against their expected skill outputs. All 28 pass.
 
 ```bash
-python cli.py --dmesg /path/to/real_dmesg.txt \
-              --meminfo /path/to/real_meminfo.txt \
-              --query "Describe the failure you observed" \
-              --output result.json
+# Run the deterministic skill validator (no LLM required)
+source venv/bin/activate && python tools/skill_validation.py
+# → Summary: 28 PASS, 0 PARTIAL, 0 FAIL
+# → Full report: reports/skill_validation_report.md
 ```
 
-For each run, evaluate:
-- Was the **supervisor route** correct (`hardware_advisor` vs `kernel_pathologist`)?
-- Did the agent call the **right skill**?
-- Was the **root_cause** accurate?
-- Was the **confidence** realistic?
-- Were the **sop_steps** actionable?
+See `LOG_PENDING_LIST.md` for the description and expected outcome of each log file, and `docs/emulator-spec.md` for how each log was generated.
 
-### Step 2 — Known gaps to watch for
+### Emulator gaps (requires real hardware or `suggest_pattern_improvement`)
 
-**Supervisor routing errors** (most damaging — wrong toolset offered):
-- A UFS resume failure with a co-occurring kernel oops may be misrouted to `kernel_pathologist`
-- A watchdog lockup during suspend may be misrouted to `hardware_advisor` if the panic message is ambiguous
-- Mixed logs (early UART output followed by kernel dmesg) may confuse stage detection in `segment_boot_log`
+The emulator logs train on standard open-source formats. The following patterns require user extension when deploying on real BSP hardware:
 
-**Skill false negatives** (most likely per skill):
-
-| Skill | Likely gap |
+| Skill | Known gap on real hardware |
 |---|---|
-| `segment_boot_log` | Mixed UART+kernel logs; logs with non-standard kernel timestamp formats |
-| `parse_early_boot_uart_log` | Vendor-specific TF-A error strings not matching standard patterns |
+| `segment_boot_log` | LK shell prompts from non-QEMU targets; vendor-specific pre-kernel banners |
+| `parse_early_boot_uart_log` | Qualcomm DDR PHY training output; Samsung PMIC error codes |
 | `analyze_lk_panic` | LK assert formats differ across Qualcomm SoC generations |
-| `extract_kernel_oops_log` | Vendor kernels may omit `FAR_EL1` or use non-standard Oops headers |
-| `decode_aarch64_exception` | FAR classification uses bit-63 heuristic — VA_BITS < 48 configs may differ |
-| `analyze_watchdog_timeout` | Vendor kernels use non-standard formats (e.g., Qualcomm: `[0: kworker:1234] BUG: soft lockup`) |
-| `check_pmic_rail_voltage` | Vendor-specific voltage log formats not yet covered |
-| `check_vendor_boot_ufs_driver` | MTK (`ufs-mediatek`) and Exynos (`ufshcd-exynos`) driver prefixes not fully covered |
+| `extract_kernel_oops_log` | GKI 4.14 / 5.10 Oops headers differ from 6.6 LTS format |
+| `analyze_watchdog_timeout` | Qualcomm vendor format: `[0: kworker:1234] BUG: soft lockup` |
+| `check_pmic_rail_voltage` | MediaTek / Samsung PMIC rail names not yet covered |
+| `check_vendor_boot_ufs_driver` | MTK (`ufs-mediatek`) and Exynos (`ufshcd-exynos`) driver prefixes |
 | `analyze_std_hibernation_error` | 10% SUnreclaim threshold may need lowering for 512 MB devices |
 
-### Step 3 — Deciding what to fix
-
-For each discrepancy found, choose the right fix:
-
-| Discrepancy | Fix |
-|---|---|
-| Agent had all the information but reasoned poorly | Add/improve `docs/` knowledge base |
-| Skill missed a real log pattern | Fix the skill's regex or detection logic |
-| A new failure class with no existing skill | Add a new skill (see workflow below) |
-| Supervisor routed to the wrong domain | Improve supervisor prompt or add routing keywords |
-
-### Step 4 — Knowledge base docs to add
-
-These docs give the Brain context to write better `root_cause_summary` and `sop_steps`:
-
-| File | Scope | Trigger keywords |
-|---|---|---|
-| `docs/ufs-driver.md` | UFS link startup, ufshcd error codes, PHY power sequencing | `hardware_advisor` |
-| `docs/watchdog-lockup.md` | Soft/hard lockup anatomy, call trace reading, CONFIG_LOCKUP_DETECTOR | `kernel_pathologist` |
-| `docs/pmic-rails.md` | Qualcomm/MTK PMIC rail naming conventions, OCP behavior, UVLO thresholds | `hardware_advisor` |
+Use `validate_skill_extension` + `suggest_pattern_improvement` to extend any skill for your hardware — see `docs/skill-extension-guide.md`.
 
 ---
 
