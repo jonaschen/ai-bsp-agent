@@ -91,6 +91,10 @@ Pure Python functions in `skills/bsp_diagnostics/`. Each skill:
 | `skills/bsp_diagnostics/skill_improvement.py` | `suggest_pattern_improvement(...)` | **universal** | Persist user pattern |
 | `skills/bsp_diagnostics/android_init.py` | `analyze_selinux_denial(logcat_log)` | `android_init_advisor` | SELinux AVC Denial Parser |
 | `skills/bsp_diagnostics/android_init.py` | `check_android_init_rc(dmesg_log)` | `android_init_advisor` | Init.rc Command / Service Failure |
+| `skills/bsp_diagnostics/subsystems.py` | `check_clock_dependencies(dmesg_log)` | `kernel_pathologist` | CCF Probe-Defer / clk_get Failure |
+| `skills/bsp_diagnostics/subsystems.py` | `diagnose_vfs_mount_failure(dmesg_log)` | `kernel_pathologist` | VFS Root Mount Error |
+| `skills/bsp_diagnostics/subsystems.py` | `analyze_firmware_load_error(dmesg_log)` | `kernel_pathologist` | Firmware request_firmware Failure |
+| `skills/bsp_diagnostics/subsystems.py` | `analyze_early_oom_killer(dmesg_log)` | `hardware_advisor` | Early OOM Kill Events |
 
 ### Layer 3: The Knowledge Base
 - `skills/SKILL.md` — Skill Registry index and authoring contract.
@@ -206,15 +210,17 @@ New supervisor route: `android_init_advisor`. **425 product tests passing.**
 | `skill_improvement.py` | VALID_CATEGORIES extended: `analyze_selinux_denial` → `avc_denied`; `check_android_init_rc` → `command_failure`, `service_crash` |
 | `docs/android-init.md` | SELinux type enforcement, init.rc lifecycle, triage decision tree, emulator gaps |
 
-### Phase 7 — Subsystem Diagnostics (PLANNED)
+### Phase 7 — Subsystem Diagnostics (DONE) ✓
 
-Log-only variants. `fstab_path` input becomes `fstab_content: str` — no filesystem access required.
+**480 product tests passing.**
 
 | Deliverable | Detail |
 |---|---|
-| `skills/bsp_diagnostics/subsystems.py` | `check_clock_dependencies`, `diagnose_vfs_mount_failure`, `analyze_firmware_load_error`, `analyze_early_oom_killer` |
-| `tests/product_tests/test_subsystems_skill.py` | ~24 tests |
-| `docs/subsystem-boot.md` | CCF probe defer patterns, VFS mount error codes, firmware search paths |
+| `skills/bsp_diagnostics/subsystems.py` | `check_clock_dependencies`, `diagnose_vfs_mount_failure`, `analyze_firmware_load_error`, `analyze_early_oom_killer` — 55 tests |
+| `tests/product_tests/test_subsystems_skill.py` | 55 tests covering probe-defer, clk_get failure, VFS errno, firmware missing/timeout, OOM victim extraction |
+| Registry update | 4 new tools in `TOOL_DEFINITIONS`, `_DISPATCH_TABLE`; clk/vfs/firmware added to `kernel_pathologist`; OOM added to `hardware_advisor` |
+| `skill_improvement.py` VALID_CATEGORIES | `check_clock_dependencies` → `probe_defer`, `clk_get_failure`; `diagnose_vfs_mount_failure` → `mount_failure`; `analyze_firmware_load_error` → `firmware_missing`, `firmware_timeout`; `analyze_early_oom_killer` → `oom_kill` |
+| `docs/subsystem-boot.md` | CCF probe-defer debug, VFS errno table, firmware search paths, early OOM oom_score_adj reference |
 
 ### Phase 8 — Stateful Workspace Skills (PLANNED — infrastructure decision required)
 

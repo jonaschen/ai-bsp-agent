@@ -63,6 +63,18 @@ VALID_CATEGORIES: dict[str, set[str]] = {
     "check_android_init_rc": {
         "command_failure", "service_crash",
     },
+    "check_clock_dependencies": {
+        "probe_defer", "clk_get_failure",
+    },
+    "diagnose_vfs_mount_failure": {
+        "mount_failure",
+    },
+    "analyze_firmware_load_error": {
+        "firmware_missing", "firmware_timeout",
+    },
+    "analyze_early_oom_killer": {
+        "oom_kill",
+    },
 }
 
 

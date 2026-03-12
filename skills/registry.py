@@ -59,6 +59,16 @@ from skills.bsp_diagnostics.android_init import (
     analyze_selinux_denial,
     check_android_init_rc,
 )
+from skills.bsp_diagnostics.subsystems import (
+    ClockDepsInput,
+    VFSMountInput,
+    FirmwareLoadInput,
+    EarlyOOMInput,
+    check_clock_dependencies,
+    diagnose_vfs_mount_failure,
+    analyze_firmware_load_error,
+    analyze_early_oom_killer,
+)
 
 
 def _pydantic_to_input_schema(model_cls) -> dict:
@@ -224,6 +234,50 @@ TOOL_DEFINITIONS: list[dict] = [
         "input_schema": _pydantic_to_input_schema(AndroidInitRCInput),
     },
     {
+        "name": "check_clock_dependencies",
+        "description": (
+            "Detect kernel CCF (Common Clock Framework) probe-defer failures and "
+            "clk_get errors from dmesg. Extracts the names of platform devices stuck "
+            "in deferred probe (EPROBE_DEFER = -517) and the missing clock signals "
+            "that caused the deferral. Use when a peripheral driver fails to probe "
+            "at boot and 'deferred_probe_pending' or 'clk_get failed' appears in dmesg."
+        ),
+        "input_schema": _pydantic_to_input_schema(ClockDepsInput),
+    },
+    {
+        "name": "diagnose_vfs_mount_failure",
+        "description": (
+            "Detect VFS root filesystem mount failures from dmesg. Parses "
+            "'VFS: Cannot open root device' messages and extracts the block device "
+            "name and errno. Also identifies filesystem-level errors (EXT4, FAT) "
+            "that precede the VFS failure. Use when the device panics with "
+            "'VFS: Unable to mount root fs' or the kernel cannot find the root partition."
+        ),
+        "input_schema": _pydantic_to_input_schema(VFSMountInput),
+    },
+    {
+        "name": "analyze_firmware_load_error",
+        "description": (
+            "Detect firmware file load failures from dmesg. Parses "
+            "'Direct firmware load for X failed' and 'request_firmware timed out' "
+            "messages. Extracts the firmware file names and driver names that "
+            "reported the failure. Use when a peripheral (WiFi, camera, modem) "
+            "fails to initialise and dmesg shows firmware request errors."
+        ),
+        "input_schema": _pydantic_to_input_schema(FirmwareLoadInput),
+    },
+    {
+        "name": "analyze_early_oom_killer",
+        "description": (
+            "Detect early OOM kill events from dmesg. Parses "
+            "'Out of memory: Killed process N (name)' lines and extracts the "
+            "victim process name, PID, oom_score_adj, and memory footprint. "
+            "Use when a device crashes or becomes unstable early in boot and "
+            "dmesg contains OOM killer messages."
+        ),
+        "input_schema": _pydantic_to_input_schema(EarlyOOMInput),
+    },
+    {
         "name": "validate_skill_extension",
         "description": (
             "Dry-run a proposed regex pattern against a log snippet before committing it. "
@@ -260,6 +314,7 @@ ROUTE_TOOLS: dict[str, set[str]] = {
         "analyze_std_hibernation_error",
         "check_vendor_boot_ufs_driver",
         "check_pmic_rail_voltage",
+        "analyze_early_oom_killer",
     },
     "kernel_pathologist": _UNIVERSAL_TOOLS | {
         "extract_kernel_oops_log",
@@ -267,6 +322,9 @@ ROUTE_TOOLS: dict[str, set[str]] = {
         "decode_aarch64_exception",
         "check_cache_coherency_panic",
         "analyze_watchdog_timeout",
+        "check_clock_dependencies",
+        "diagnose_vfs_mount_failure",
+        "analyze_firmware_load_error",
     },
     "early_boot_advisor": _UNIVERSAL_TOOLS | {
         "parse_early_boot_uart_log",
@@ -314,6 +372,18 @@ _DISPATCH_TABLE: dict[str, Any] = {
     "check_pmic_rail_voltage": lambda inp: check_pmic_rail_voltage(
         dmesg_log=inp["dmesg_log"],
         logcat_log=inp.get("logcat_log", ""),
+    ).model_dump(),
+    "check_clock_dependencies": lambda inp: check_clock_dependencies(
+        dmesg_log=inp["dmesg_log"],
+    ).model_dump(),
+    "diagnose_vfs_mount_failure": lambda inp: diagnose_vfs_mount_failure(
+        dmesg_log=inp["dmesg_log"],
+    ).model_dump(),
+    "analyze_firmware_load_error": lambda inp: analyze_firmware_load_error(
+        dmesg_log=inp["dmesg_log"],
+    ).model_dump(),
+    "analyze_early_oom_killer": lambda inp: analyze_early_oom_killer(
+        dmesg_log=inp["dmesg_log"],
     ).model_dump(),
     "analyze_selinux_denial": lambda inp: analyze_selinux_denial(
         logcat_log=inp["logcat_log"],

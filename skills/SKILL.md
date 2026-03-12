@@ -58,6 +58,10 @@ def my_bsp_skill(input: MySkillInput) -> MySkillOutput:
 | `bsp_diagnostics/pmic.py` | `check_pmic_rail_voltage` | `hardware_advisor` | PMIC Rail Voltages |
 | `bsp_diagnostics/android_init.py` | `analyze_selinux_denial` | `android_init_advisor` | SELinux AVC Denial Parser |
 | `bsp_diagnostics/android_init.py` | `check_android_init_rc` | `android_init_advisor` | Init.rc Command / Service Failure |
+| `bsp_diagnostics/subsystems.py` | `check_clock_dependencies` | `kernel_pathologist` | CCF Probe-Defer / clk_get Failure |
+| `bsp_diagnostics/subsystems.py` | `diagnose_vfs_mount_failure` | `kernel_pathologist` | VFS Root Mount Error |
+| `bsp_diagnostics/subsystems.py` | `analyze_firmware_load_error` | `kernel_pathologist` | Firmware request_firmware Failure |
+| `bsp_diagnostics/subsystems.py` | `analyze_early_oom_killer` | `hardware_advisor` | Early OOM Kill Events |
 | `bsp_diagnostics/skill_improvement.py` | `validate_skill_extension` | **any** (end-user agent) | Dry-run regex against log snippet |
 | `bsp_diagnostics/skill_improvement.py` | `suggest_pattern_improvement` | **any** (end-user agent) | Validate + persist new detection pattern |
 

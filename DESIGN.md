@@ -329,17 +329,17 @@ All pieces of the v6 architecture are in place and tested (107 product tests pas
 | 29 | VALID_CATEGORIES extension | — | `analyze_selinux_denial` → `avc_denied`; `check_android_init_rc` → `command_failure`, `service_crash` |
 | 30 | Knowledge base: `docs/android-init.md` | — | SELinux TE reference, init.rc lifecycle, triage decision tree, emulator gaps |
 
-### Phase 7 — Subsystem Diagnostics (PLANNED)
+### Phase 7 — Subsystem Diagnostics ✓ DONE
 
-Log-only variants. All file paths become `_content: str` inputs — no filesystem access.
+**480 product tests passing.**
 
 | # | Item | Route | Description |
 |---|---|---|---|
-| 31 | Skill: `check_clock_dependencies` | `kernel_pathologist` | CCF probe-defer errors; detects `deferred_probe_pending`, `clk_get failed`, missing parent clock |
-| 32 | Skill: `diagnose_vfs_mount_failure` | `kernel_pathologist` | VFS mount errors (`mount_nodev`, `-EINVAL`, `-ENODEV`); fstab cross-reference from content string |
-| 33 | Skill: `analyze_firmware_load_error` | `kernel_pathologist` | Firmware request failures (`request_firmware` timeout, path not found) |
-| 34 | Skill: `analyze_early_oom_killer` | `hardware_advisor` | Early OOM kill events before userspace is stable; extracts victim process, score, memory pressure |
-| — | `docs/subsystem-boot.md` | — | CCF probe-defer patterns, VFS error codes, firmware search path logic |
+| 31 | Skill: `check_clock_dependencies` | `kernel_pathologist` | CCF probe-defer; detects `deferred_probe_pending` + `clk_get failed`; extracts deferred device names and missing clock names — 55 tests (shared file) |
+| 32 | Skill: `diagnose_vfs_mount_failure` | `kernel_pathologist` | VFS mount errors; extracts block device, errno (-2/-5/-6/-22), filesystem type from EXT4/FAT error lines — 55 tests (shared file) |
+| 33 | Skill: `analyze_firmware_load_error` | `kernel_pathologist` | Firmware request failures (`Direct firmware load ... failed`, `request_firmware timed out`); extracts file names and driver names — 55 tests (shared file) |
+| 34 | Skill: `analyze_early_oom_killer` | `hardware_advisor` | Early OOM kill events; extracts victim process, PID, oom_score_adj, anon_rss_kb; deduplicates by PID — 55 tests (shared file) |
+| — | `docs/subsystem-boot.md` | — | CCF probe-defer debug, VFS errno table, firmware search paths, early OOM oom_score_adj reference |
 
 ### Phase 8 — Stateful Workspace Skills (PLANNED — infrastructure decision required)
 
