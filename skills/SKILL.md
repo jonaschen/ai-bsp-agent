@@ -41,7 +41,7 @@ def my_bsp_skill(input: MySkillInput) -> MySkillOutput:
 
 ## Current Skills
 
-All 13 skills have been validated against 28 real-hardware–style log fixtures (`tools/skill_validation.py`, 28/28 PASS). See `reports/skill_validation_report.md` for the full run.
+13 core skills validated against 28 real-hardware–style log fixtures (`tools/skill_validation.py`, 28/28 PASS). Phase 6 adds 2 Android init skills (15 total). See `reports/skill_validation_report.md` for the full validation run.
 
 | Module | Function | Supervisor Route | Domain |
 |--------|----------|-----------------|--------|
@@ -56,6 +56,8 @@ All 13 skills have been validated against 28 real-hardware–style log fixtures 
 | `bsp_diagnostics/vendor_boot.py` | `check_vendor_boot_ufs_driver` | `hardware_advisor` | UFS Driver / STD Restore |
 | `bsp_diagnostics/watchdog.py` | `analyze_watchdog_timeout` | `kernel_pathologist` | Watchdog / Soft+Hard Lockup |
 | `bsp_diagnostics/pmic.py` | `check_pmic_rail_voltage` | `hardware_advisor` | PMIC Rail Voltages |
+| `bsp_diagnostics/android_init.py` | `analyze_selinux_denial` | `android_init_advisor` | SELinux AVC Denial Parser |
+| `bsp_diagnostics/android_init.py` | `check_android_init_rc` | `android_init_advisor` | Init.rc Command / Service Failure |
 | `bsp_diagnostics/skill_improvement.py` | `validate_skill_extension` | **any** (end-user agent) | Dry-run regex against log snippet |
 | `bsp_diagnostics/skill_improvement.py` | `suggest_pattern_improvement` | **any** (end-user agent) | Validate + persist new detection pattern |
 

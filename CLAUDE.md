@@ -89,6 +89,8 @@ Pure Python functions in `skills/bsp_diagnostics/`. Each skill:
 | `skills/bsp_diagnostics/pmic.py` | `check_pmic_rail_voltage(dmesg_log, logcat_log)` | `hardware_advisor` | PMIC Rail Voltages |
 | `skills/bsp_diagnostics/skill_improvement.py` | `validate_skill_extension(...)` | **universal** | Dry-run user pattern |
 | `skills/bsp_diagnostics/skill_improvement.py` | `suggest_pattern_improvement(...)` | **universal** | Persist user pattern |
+| `skills/bsp_diagnostics/android_init.py` | `analyze_selinux_denial(logcat_log)` | `android_init_advisor` | SELinux AVC Denial Parser |
+| `skills/bsp_diagnostics/android_init.py` | `check_android_init_rc(dmesg_log)` | `android_init_advisor` | Init.rc Command / Service Failure |
 
 ### Layer 3: The Knowledge Base
 - `skills/SKILL.md` — Skill Registry index and authoring contract.
@@ -191,16 +193,18 @@ User-driven pattern improvement loop. **361 tests passing** (369 after validatio
 3. Agent calls `suggest_pattern_improvement` — 4-gate validation then writes to `~/.bsp-diagnostics/`
 4. Next run: skill picks it up automatically (confidence=0.60, `[user pattern]` prefix)
 
-### Phase 6 — Android Init Skills (PLANNED)
+### Phase 6 — Android Init Skills (DONE) ✓
 
-New supervisor route: `android_init_advisor`. Trigger: SELinux AVC lines, init.rc service failures, `[FAILED]` markers.
+New supervisor route: `android_init_advisor`. **425 product tests passing.**
 
 | Deliverable | Detail |
 |---|---|
-| `skills/bsp_diagnostics/android_init.py` | `analyze_selinux_denial`, `check_android_init_rc` |
-| `tests/product_tests/test_android_init_skill.py` | ~20 tests |
-| Supervisor update | Add `android_init_advisor` to triage prompt + `ROUTE_TOOLS` |
-| `docs/android-init.md` | SELinux type enforcement, init.rc service lifecycle |
+| `skills/bsp_diagnostics/android_init.py` | `analyze_selinux_denial`, `check_android_init_rc` — 53 tests |
+| `tests/product_tests/test_android_init_skill.py` | 53 tests: dmesg/logcat AVC format, permissive mode, dedup, command failure, service crash |
+| Supervisor update | `android_init_advisor` route; `_is_android_init_log()` short-circuit (no LLM) for AVC/init-fail markers; LLM fallback token added |
+| Registry update | `analyze_selinux_denial` + `check_android_init_rc` in `TOOL_DEFINITIONS`, `_DISPATCH_TABLE`, `ROUTE_TOOLS["android_init_advisor"]` |
+| `skill_improvement.py` | VALID_CATEGORIES extended: `analyze_selinux_denial` → `avc_denied`; `check_android_init_rc` → `command_failure`, `service_crash` |
+| `docs/android-init.md` | SELinux type enforcement, init.rc lifecycle, triage decision tree, emulator gaps |
 
 ### Phase 7 — Subsystem Diagnostics (PLANNED)
 

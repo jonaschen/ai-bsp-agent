@@ -57,6 +57,12 @@ VALID_CATEGORIES: dict[str, set[str]] = {
     "segment_boot_log": {
         "early_boot", "kernel_init", "android_init",
     },
+    "analyze_selinux_denial": {
+        "avc_denied",
+    },
+    "check_android_init_rc": {
+        "command_failure", "service_crash",
+    },
 }
 
 

@@ -18,16 +18,24 @@ _EARLY_BOOT_MARKERS_RE = re.compile(
     re.IGNORECASE,
 )
 
+_ANDROID_INIT_MARKERS_RE = re.compile(
+    r"avc:\s+denied|"
+    r"init:\s+Command\s+'[^']+'.+?and\s+failed:|"
+    r"init:\s+Service\s+'[^']+'\s+\(pid\s+\d+\)\s+exited\s+with\s+status\s+[1-9]",
+    re.IGNORECASE,
+)
+
 _TRIAGE_SYSTEM = (
     "You are a BSP Supervisor Agent. Triage Android kernel logs and decide "
     "which specialist to route to. Reply with EXACTLY one of these tokens: "
-    "'kernel_pathologist', 'hardware_advisor', or 'clarify_needed'. "
+    "'kernel_pathologist', 'hardware_advisor', 'android_init_advisor', or 'clarify_needed'. "
     "No other text."
 )
 
 _TRIAGE_RULES = """\
 - Software panic / null pointer dereference / kernel oops → kernel_pathologist
 - Hardware hang / watchdog timeout / power management / suspend-resume failure → hardware_advisor
+- SELinux AVC denial / init.rc command failure / Android service crash → android_init_advisor
 - Insufficient information → clarify_needed
 """
 
@@ -73,20 +81,27 @@ class SupervisorAgent:
         return "\n".join(lines[-5000:]) if len(lines) > 5000 else text
 
     def _is_early_boot_log(self, text: str) -> bool:
-        """Return True if text contains pre-kernel UART markers and no kernel timestamps."""
-        has_kernel_ts = bool(re.search(r"\[\s*\d+\.\d+\]", text))
-        return bool(_EARLY_BOOT_MARKERS_RE.search(text)) and not has_kernel_ts
+        """Return True if text contains pre-kernel UART markers."""
+        return bool(_EARLY_BOOT_MARKERS_RE.search(text))
+
+    def _is_android_init_log(self, text: str) -> bool:
+        """Return True if text contains clear Android init / SELinux AVC markers."""
+        return bool(_ANDROID_INIT_MARKERS_RE.search(text))
 
     def route(self, state: AgentState) -> str:
         """Route the case to the appropriate specialist."""
         log_content = state.get("current_log_chunk", "")
 
-        # Early boot logs have no kernel timestamps — bypass LLM triage
+        # Early boot logs (TF-A/LK/U-Boot) — bypass LLM triage
         if self._is_early_boot_log(log_content):
             return "early_boot_advisor"
 
         if not self.validate_input(log_content):
             return "clarify_needed"
+
+        # Android init / SELinux — bypass LLM triage
+        if self._is_android_init_log(log_content):
+            return "android_init_advisor"
 
         response = self._client.messages.create(
             model=self.model,
@@ -109,4 +124,6 @@ class SupervisorAgent:
             return "kernel_pathologist"
         if "hardware_advisor" in decision:
             return "hardware_advisor"
+        if "android_init_advisor" in decision:
+            return "android_init_advisor"
         return "clarify_needed"

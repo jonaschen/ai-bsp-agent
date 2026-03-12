@@ -53,6 +53,12 @@ from skills.bsp_diagnostics.skill_improvement import (
     validate_skill_extension,
     suggest_pattern_improvement,
 )
+from skills.bsp_diagnostics.android_init import (
+    SELinuxDenialInput,
+    AndroidInitRCInput,
+    analyze_selinux_denial,
+    check_android_init_rc,
+)
 
 
 def _pydantic_to_input_schema(model_cls) -> dict:
@@ -193,6 +199,31 @@ TOOL_DEFINITIONS: list[dict] = [
         "input_schema": _pydantic_to_input_schema(PMICVoltageInput),
     },
     {
+        "name": "analyze_selinux_denial",
+        "description": (
+            "Detect and classify SELinux AVC denial events from dmesg or logcat output. "
+            "Parses all 'avc: denied { permission }' lines and extracts: permission, "
+            "process name (comm), source context (scontext), target context (tcontext), "
+            "object class (tclass), and permissive flag. Deduplicates by unique "
+            "(permission, scontext, tcontext, tclass) tuples. Reports enforcing vs. "
+            "permissive-mode denials. Use when segment_boot_log returns 'android_init' "
+            "stage or when AVC denial lines are present."
+        ),
+        "input_schema": _pydantic_to_input_schema(SELinuxDenialInput),
+    },
+    {
+        "name": "check_android_init_rc",
+        "description": (
+            "Detect Android init.rc command failures and service crashes from dmesg. "
+            "Parses 'init: Command ... took Xms and failed: reason' lines and "
+            "'init: Service ... exited with status N' lines (non-zero only). "
+            "Extracts the failed command, init.rc file path and line number, action "
+            "trigger, and failure reason. Use when Android userspace fails to start "
+            "or services crash during boot."
+        ),
+        "input_schema": _pydantic_to_input_schema(AndroidInitRCInput),
+    },
+    {
         "name": "validate_skill_extension",
         "description": (
             "Dry-run a proposed regex pattern against a log snippet before committing it. "
@@ -241,6 +272,10 @@ ROUTE_TOOLS: dict[str, set[str]] = {
         "parse_early_boot_uart_log",
         "analyze_lk_panic",
     },
+    "android_init_advisor": _UNIVERSAL_TOOLS | {
+        "analyze_selinux_denial",
+        "check_android_init_rc",
+    },
 }
 
 _DISPATCH_TABLE: dict[str, Any] = {
@@ -279,6 +314,12 @@ _DISPATCH_TABLE: dict[str, Any] = {
     "check_pmic_rail_voltage": lambda inp: check_pmic_rail_voltage(
         dmesg_log=inp["dmesg_log"],
         logcat_log=inp.get("logcat_log", ""),
+    ).model_dump(),
+    "analyze_selinux_denial": lambda inp: analyze_selinux_denial(
+        logcat_log=inp["logcat_log"],
+    ).model_dump(),
+    "check_android_init_rc": lambda inp: check_android_init_rc(
+        dmesg_log=inp["dmesg_log"],
     ).model_dump(),
     "validate_skill_extension": lambda inp: validate_skill_extension(
         ValidateExtensionInput(**inp)
