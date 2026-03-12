@@ -132,8 +132,8 @@ All pieces of the v6 architecture are in place and tested.
 | 8 | Skill: `check_vendor_boot_ufs_driver` | DONE | `skills/bsp_diagnostics/vendor_boot.py` — 16 tests; phase-classified (probe/link_startup/resume) |
 | 9 | Skill: `analyze_watchdog_timeout` | DONE | `skills/bsp_diagnostics/watchdog.py` — 19 tests; soft/hard lockup, RCU stall, call trace extraction |
 | 10 | Skill: `check_pmic_rail_voltage` | DONE | `skills/bsp_diagnostics/pmic.py` — 19 tests; OCP + undervoltage detection, rpm-smd/qpnp/generic formats |
-| 11 | Real-world log validation | IN PROGRESS | `emulator_scripts/` toolkit generates Android AVD + AArch64 QEMU/LK logs; 28-log corpus validated by `tools/validate_logs.py` (30/30 PASS); real hardware validation deferred to end users |
-| **Total product tests** | **361 passing** | |
+| 11 | Real-world log validation | DONE | `emulator_scripts/` toolkit generates AArch64 QEMU/LK logs; 28-log corpus validated by `tools/skill_validation.py` (**28/28 PASS**); report in `reports/skill_validation_report.md` |
+| **Total product tests** | **369 passing** | |
 
 ### Phase 4 — Early Boot Skills (DONE) ✓
 
@@ -149,7 +149,7 @@ New supervisor route: `early_boot_advisor`. 298 tests passing.
 
 ### Phase 5 — Kernel Exception & Oops Skills (DONE) ✓
 
-Extends `kernel_pathologist` route. No new supervisor route needed. **347 tests passing** (361 after Phase 5.5).
+Extends `kernel_pathologist` route. No new supervisor route needed. **347 tests passing** (369 after Phase 5.5 + validation fixes).
 
 | Deliverable | Detail |
 |---|---|
@@ -159,7 +159,7 @@ Extends `kernel_pathologist` route. No new supervisor route needed. **347 tests 
 
 ### Phase 5.5 — Skill Extension System (DONE) ✓
 
-User-driven pattern improvement loop. **361 tests passing.**
+User-driven pattern improvement loop. **361 tests passing** (369 after validation fixes).
 
 | Deliverable | Detail |
 |---|---|
