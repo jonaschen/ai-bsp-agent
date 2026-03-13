@@ -75,6 +75,18 @@ VALID_CATEGORIES: dict[str, set[str]] = {
     "analyze_early_oom_killer": {
         "oom_kill",
     },
+    "resolve_oops_symbols": {
+        "unresolved_symbol",
+    },
+    "compare_device_tree_nodes": {
+        "property_mismatch",
+    },
+    "diff_kernel_configs": {
+        "config_mismatch",
+    },
+    "validate_gpio_pinctrl_conflict": {
+        "gpio_conflict",
+    },
 }
 
 

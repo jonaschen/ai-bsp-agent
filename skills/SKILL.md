@@ -41,7 +41,7 @@ def my_bsp_skill(input: MySkillInput) -> MySkillOutput:
 
 ## Current Skills
 
-13 core skills validated against 28 real-hardware–style log fixtures (`tools/skill_validation.py`, 28/28 PASS). Phase 6 adds 2 Android init skills (15 total). See `reports/skill_validation_report.md` for the full validation run.
+19 core skills across 5 supervisor routes. Phase 8 adds 4 workspace analysis skills (23 total including improvement tools). See `reports/skill_validation_report.md` for the full validation run.
 
 | Module | Function | Supervisor Route | Domain |
 |--------|----------|-----------------|--------|
@@ -62,6 +62,10 @@ def my_bsp_skill(input: MySkillInput) -> MySkillOutput:
 | `bsp_diagnostics/subsystems.py` | `diagnose_vfs_mount_failure` | `kernel_pathologist` | VFS Root Mount Error |
 | `bsp_diagnostics/subsystems.py` | `analyze_firmware_load_error` | `kernel_pathologist` | Firmware request_firmware Failure |
 | `bsp_diagnostics/subsystems.py` | `analyze_early_oom_killer` | `hardware_advisor` | Early OOM Kill Events |
+| `bsp_diagnostics/workspace.py` | `resolve_oops_symbols` | `source_analyst` | Oops Call-Trace Symbol Resolution |
+| `bsp_diagnostics/workspace.py` | `compare_device_tree_nodes` | `source_analyst` | DTS Node Property Diff |
+| `bsp_diagnostics/workspace.py` | `diff_kernel_configs` | `source_analyst` | Kernel .config Diff |
+| `bsp_diagnostics/workspace.py` | `validate_gpio_pinctrl_conflict` | `source_analyst` | GPIO/Pinctrl Conflict Detection |
 | `bsp_diagnostics/skill_improvement.py` | `validate_skill_extension` | **any** (end-user agent) | Dry-run regex against log snippet |
 | `bsp_diagnostics/skill_improvement.py` | `suggest_pattern_improvement` | **any** (end-user agent) | Validate + persist new detection pattern |
 

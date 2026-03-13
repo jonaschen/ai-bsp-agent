@@ -95,6 +95,10 @@ Pure Python functions in `skills/bsp_diagnostics/`. Each skill:
 | `skills/bsp_diagnostics/subsystems.py` | `diagnose_vfs_mount_failure(dmesg_log)` | `kernel_pathologist` | VFS Root Mount Error |
 | `skills/bsp_diagnostics/subsystems.py` | `analyze_firmware_load_error(dmesg_log)` | `kernel_pathologist` | Firmware request_firmware Failure |
 | `skills/bsp_diagnostics/subsystems.py` | `analyze_early_oom_killer(dmesg_log)` | `hardware_advisor` | Early OOM Kill Events |
+| `skills/bsp_diagnostics/workspace.py` | `resolve_oops_symbols(vmlinux_path, addresses)` | `source_analyst` | Oops Symbol Resolution via addr2line |
+| `skills/bsp_diagnostics/workspace.py` | `compare_device_tree_nodes(node_a, node_b)` | `source_analyst` | DTS Node Property Diff |
+| `skills/bsp_diagnostics/workspace.py` | `diff_kernel_configs(config_a, config_b)` | `source_analyst` | Kernel .config Diff |
+| `skills/bsp_diagnostics/workspace.py` | `validate_gpio_pinctrl_conflict(dts_content)` | `source_analyst` | GPIO/Pinctrl Conflict Detection |
 
 ### Layer 3: The Knowledge Base
 - `skills/SKILL.md` — Skill Registry index and authoring contract.
@@ -222,21 +226,18 @@ New supervisor route: `android_init_advisor`. **425 product tests passing.**
 | `skill_improvement.py` VALID_CATEGORIES | `check_clock_dependencies` → `probe_defer`, `clk_get_failure`; `diagnose_vfs_mount_failure` → `mount_failure`; `analyze_firmware_load_error` → `firmware_missing`, `firmware_timeout`; `analyze_early_oom_killer` → `oom_kill` |
 | `docs/subsystem-boot.md` | CCF probe-defer debug, VFS errno table, firmware search paths, early OOM oom_score_adj reference |
 
-### Phase 8 — Stateful Workspace Skills (PLANNED — infrastructure decision required)
+### Phase 8 — Workspace Skills (DONE) ✓
 
-New supervisor route: `source_analyst`. Trigger: regression/commit/DTS-change keywords.
-
-**Before coding:** Agree on workspace access model (see `ANDROID_LINUX_BSP_BOOTING_SKILL_SETS.md` §6 Phase 8).
-Recommended start: Option A — file path inputs; `resolve_oops_symbols` calls `addr2line` via subprocess.
+New supervisor route: `source_analyst`. Trigger: vmlinux/DTS/.config/GPIO keywords bypass LLM triage. **539 product tests passing.**
 
 | Deliverable | Detail |
 |---|---|
-| `skills/bsp_diagnostics/workspace.py` | `resolve_oops_symbols`, `compare_device_tree_nodes`, `diff_kernel_configs`, `validate_gpio_pinctrl_conflict` |
-| `tests/product_tests/test_workspace_skill.py` | ~20 tests — mock subprocess for `addr2line` |
-| Supervisor update | Add `source_analyst` route |
-| `docs/workspace-analysis.md` | DTS node naming conventions, CONFIG flag impact reference |
-
-**Note:** `resolve_oops_symbols` depends on hex trace output from Phase 5 `extract_kernel_oops_log`.
+| `skills/bsp_diagnostics/workspace.py` | `resolve_oops_symbols` (addr2line subprocess), `compare_device_tree_nodes`, `diff_kernel_configs`, `validate_gpio_pinctrl_conflict` — 59 tests |
+| `tests/product_tests/test_workspace_skill.py` | 59 tests: subprocess mocked for addr2line; DTS/config/GPIO fixtures; intra-node GPIO conflict detection |
+| Supervisor update | `source_analyst` route; `_is_source_analyst_request()` short-circuit (vmlinux/DTS/.config keywords); LLM fallback token added |
+| Registry update | 4 new tools in `TOOL_DEFINITIONS`, `_DISPATCH_TABLE`; `ROUTE_TOOLS["source_analyst"]` with cross-route `extract_kernel_oops_log` synergy |
+| `skill_improvement.py` VALID_CATEGORIES | `resolve_oops_symbols` → `unresolved_symbol`; `compare_device_tree_nodes` → `property_mismatch`; `diff_kernel_configs` → `config_mismatch`; `validate_gpio_pinctrl_conflict` → `gpio_conflict` |
+| `docs/workspace-analysis.md` | addr2line prerequisites, DTS naming conventions, CONFIG value semantics, GPIO conflict resolution |
 
 ### Phase 9a — SoC Errata Lookup (PLANNED)
 

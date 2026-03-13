@@ -25,10 +25,28 @@ _ANDROID_INIT_MARKERS_RE = re.compile(
     re.IGNORECASE,
 )
 
+_SOURCE_ANALYST_MARKERS_RE = re.compile(
+    r"vmlinux|"
+    r"addr2line|"
+    r"\.dts\b|"
+    r"\.dtsi\b|"
+    r"device.tree|"
+    r"kernel\.config|"
+    r"CONFIG_\w+|"
+    r"gpio.*conflict|"
+    r"pinctrl.*conflict|"
+    r"regression.*commit|"
+    r"commit.*regression|"
+    r"diff.*config|"
+    r"compare.*node",
+    re.IGNORECASE,
+)
+
 _TRIAGE_SYSTEM = (
     "You are a BSP Supervisor Agent. Triage Android kernel logs and decide "
     "which specialist to route to. Reply with EXACTLY one of these tokens: "
-    "'kernel_pathologist', 'hardware_advisor', 'android_init_advisor', or 'clarify_needed'. "
+    "'kernel_pathologist', 'hardware_advisor', 'android_init_advisor', "
+    "'source_analyst', or 'clarify_needed'. "
     "No other text."
 )
 
@@ -36,6 +54,7 @@ _TRIAGE_RULES = """\
 - Software panic / null pointer dereference / kernel oops → kernel_pathologist
 - Hardware hang / watchdog timeout / power management / suspend-resume failure → hardware_advisor
 - SELinux AVC denial / init.rc command failure / Android service crash → android_init_advisor
+- vmlinux / DTS file / kernel .config / GPIO conflict / commit regression → source_analyst
 - Insufficient information → clarify_needed
 """
 
@@ -88,6 +107,10 @@ class SupervisorAgent:
         """Return True if text contains clear Android init / SELinux AVC markers."""
         return bool(_ANDROID_INIT_MARKERS_RE.search(text))
 
+    def _is_source_analyst_request(self, text: str) -> bool:
+        """Return True if text references workspace artifacts (vmlinux, DTS, .config)."""
+        return bool(_SOURCE_ANALYST_MARKERS_RE.search(text))
+
     def route(self, state: AgentState) -> str:
         """Route the case to the appropriate specialist."""
         log_content = state.get("current_log_chunk", "")
@@ -102,6 +125,10 @@ class SupervisorAgent:
         # Android init / SELinux — bypass LLM triage
         if self._is_android_init_log(log_content):
             return "android_init_advisor"
+
+        # Source analyst — workspace artifact keywords bypass LLM triage
+        if self._is_source_analyst_request(log_content):
+            return "source_analyst"
 
         response = self._client.messages.create(
             model=self.model,
@@ -126,4 +153,6 @@ class SupervisorAgent:
             return "hardware_advisor"
         if "android_init_advisor" in decision:
             return "android_init_advisor"
+        if "source_analyst" in decision:
+            return "source_analyst"
         return "clarify_needed"

@@ -69,6 +69,16 @@ from skills.bsp_diagnostics.subsystems import (
     analyze_firmware_load_error,
     analyze_early_oom_killer,
 )
+from skills.bsp_diagnostics.workspace import (
+    OopsSymbolsInput,
+    DTSNodeInput,
+    KernelConfigInput,
+    GPIOPinctrlInput,
+    resolve_oops_symbols,
+    compare_device_tree_nodes,
+    diff_kernel_configs,
+    validate_gpio_pinctrl_conflict,
+)
 
 
 def _pydantic_to_input_schema(model_cls) -> dict:
@@ -278,6 +288,49 @@ TOOL_DEFINITIONS: list[dict] = [
         "input_schema": _pydantic_to_input_schema(EarlyOOMInput),
     },
     {
+        "name": "resolve_oops_symbols",
+        "description": (
+            "Resolve hex call-trace addresses from a kernel oops to function name "
+            "and source file:line using addr2line. Requires the vmlinux ELF file "
+            "built with debug symbols (CONFIG_DEBUG_INFO=y) that matches the crashing "
+            "kernel. Pass addresses from extract_kernel_oops_log call_trace output. "
+            "Use in the source_analyst route when a vmlinux path is available."
+        ),
+        "input_schema": _pydantic_to_input_schema(OopsSymbolsInput),
+    },
+    {
+        "name": "compare_device_tree_nodes",
+        "description": (
+            "Diff two DTS (Device Tree Source) node content strings and report "
+            "added, removed, and modified properties. Pass the property block content "
+            "of each node (not the full file). Use when a DTS regression is suspected "
+            "— e.g., a driver that probed correctly before a DTS commit now fails."
+        ),
+        "input_schema": _pydantic_to_input_schema(DTSNodeInput),
+    },
+    {
+        "name": "diff_kernel_configs",
+        "description": (
+            "Compare two kernel .config file contents and report CONFIG option "
+            "differences: added (new in config_b), removed (dropped from config_b), "
+            "and modified (value changed). Use when a kernel config change may have "
+            "caused a regression — e.g., a driver or subsystem was disabled or "
+            "changed from module to built-in."
+        ),
+        "input_schema": _pydantic_to_input_schema(KernelConfigInput),
+    },
+    {
+        "name": "validate_gpio_pinctrl_conflict",
+        "description": (
+            "Detect duplicate GPIO pin assignments in a DTS file or fragment. "
+            "Scans for 'gpios = <&controller pin ...>' patterns across all DTS nodes "
+            "and reports any (controller, pin_number) pair assigned in more than one "
+            "node or more than once within a single node. Use when GPIO or pinctrl "
+            "conflicts are suspected as the cause of peripheral probe failures."
+        ),
+        "input_schema": _pydantic_to_input_schema(GPIOPinctrlInput),
+    },
+    {
         "name": "validate_skill_extension",
         "description": (
             "Dry-run a proposed regex pattern against a log snippet before committing it. "
@@ -333,6 +386,14 @@ ROUTE_TOOLS: dict[str, set[str]] = {
     "android_init_advisor": _UNIVERSAL_TOOLS | {
         "analyze_selinux_denial",
         "check_android_init_rc",
+    },
+    "source_analyst": _UNIVERSAL_TOOLS | {
+        "resolve_oops_symbols",
+        "compare_device_tree_nodes",
+        "diff_kernel_configs",
+        "validate_gpio_pinctrl_conflict",
+        # cross-route synergy: oops symbols builds on kernel oops extraction
+        "extract_kernel_oops_log",
     },
 }
 
@@ -390,6 +451,22 @@ _DISPATCH_TABLE: dict[str, Any] = {
     ).model_dump(),
     "check_android_init_rc": lambda inp: check_android_init_rc(
         dmesg_log=inp["dmesg_log"],
+    ).model_dump(),
+    "resolve_oops_symbols": lambda inp: resolve_oops_symbols(
+        vmlinux_path=inp["vmlinux_path"],
+        addresses=inp["addresses"],
+    ).model_dump(),
+    "compare_device_tree_nodes": lambda inp: compare_device_tree_nodes(
+        node_a=inp["node_a"],
+        node_b=inp["node_b"],
+        node_name=inp.get("node_name"),
+    ).model_dump(),
+    "diff_kernel_configs": lambda inp: diff_kernel_configs(
+        config_a=inp["config_a"],
+        config_b=inp["config_b"],
+    ).model_dump(),
+    "validate_gpio_pinctrl_conflict": lambda inp: validate_gpio_pinctrl_conflict(
+        dts_content=inp["dts_content"],
     ).model_dump(),
     "validate_skill_extension": lambda inp: validate_skill_extension(
         ValidateExtensionInput(**inp)
