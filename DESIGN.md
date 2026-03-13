@@ -341,19 +341,17 @@ All pieces of the v6 architecture are in place and tested (107 product tests pas
 | 34 | Skill: `analyze_early_oom_killer` | `hardware_advisor` | Early OOM kill events; extracts victim process, PID, oom_score_adj, anon_rss_kb; deduplicates by PID — 55 tests (shared file) |
 | — | `docs/subsystem-boot.md` | — | CCF probe-defer debug, VFS errno table, firmware search paths, early OOM oom_score_adj reference |
 
-### Phase 8 — Stateful Workspace Skills (PLANNED — infrastructure decision required)
+### Phase 8 — Workspace Skills ✓ DONE
 
-New supervisor route: `source_analyst`. Trigger: regression/commit/DTS-change keywords.
-
-**Before coding:** Agree on workspace access model. Recommended: Option A — file path inputs; `resolve_oops_symbols` calls `addr2line` via subprocess.
+New supervisor route: `source_analyst`. Keyword short-circuit (`vmlinux`, `.dts`, `CONFIG_`, `gpio.*conflict`) bypasses LLM triage. **539 product tests passing.**
 
 | # | Item | Route | Description |
 |---|---|---|---|
-| 35 | Skill: `resolve_oops_symbols` | `source_analyst` | Resolves hex call-trace addresses to file:line via `addr2line`; depends on Phase 5 `extract_kernel_oops_log` output |
-| 36 | Skill: `compare_device_tree_nodes` | `source_analyst` | Diff two DTS node content strings; highlights added/removed properties |
-| 37 | Skill: `diff_kernel_configs` | `source_analyst` | Diff two kernel `.config` content strings; identifies CONFIG changes |
-| 38 | Skill: `validate_gpio_pinctrl_conflict` | `source_analyst` | Detects duplicate GPIO/pinctrl assignments from DTS content |
-| — | `docs/workspace-analysis.md` | — | DTS node naming conventions, CONFIG flag impact reference |
+| 35 | Skill: `resolve_oops_symbols` | `source_analyst` | Calls `addr2line -e vmlinux -f -C <addrs>`; parses 2-line-per-address output (function, file:line); `??` → unresolved; confidence scales with resolution rate |
+| 36 | Skill: `compare_device_tree_nodes` | `source_analyst` | Diffs two DTS node property blocks; reports added/removed/modified with old_value/new_value; handles `compatible`, `reg`, `status`, `clock-names` |
+| 37 | Skill: `diff_kernel_configs` | `source_analyst` | Diffs two `.config` files; treats `not set` as absent from active key set; reports added/removed/modified with old_value/new_value |
+| 38 | Skill: `validate_gpio_pinctrl_conflict` | `source_analyst` | Detects cross-node AND intra-node duplicate `*gpios` assignments; tracks all occurrences (not deduplicated by node) |
+| — | `docs/workspace-analysis.md` | — | addr2line prerequisites, DTS naming conventions, CONFIG value semantics, GPIO conflict resolution commands |
 
 ### Phase 9a — SoC Errata Lookup (PLANNED)
 

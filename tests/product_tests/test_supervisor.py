@@ -111,3 +111,36 @@ class TestRoute:
         client.messages.create.assert_called_once()
         call_kwargs = client.messages.create.call_args.kwargs
         assert STD_FAILURE_LOG[:2000] in call_kwargs["messages"][0]["content"]
+
+    def test_routes_selinux_avc_to_android_init_without_llm(self):
+        avc_log = (
+            "[  128.521504] type=1400 audit(1773227155.624:8): avc: denied { syslog_read } "
+            "for comm=\"dmesg\" scontext=u:r:shell:s0 tcontext=u:r:kernel:s0 "
+            "tclass=system permissive=0\n"
+        )
+        client = _mock_client("kernel_pathologist")  # LLM would say wrong thing
+        agent = SupervisorAgent(client=client)
+        state: AgentState = {"messages": [], "current_log_chunk": avc_log, "diagnosis_report": None}
+        result = agent.route(state)
+        assert result == "android_init_advisor"
+        # Short-circuit: LLM must NOT be called
+        client.messages.create.assert_not_called()
+
+    def test_routes_init_command_failure_to_android_init_without_llm(self):
+        init_fail_log = (
+            "[   13.385514] init: Command 'start zygote_secondary' "
+            "action=boot (/system/etc/init/hw/init.rc:1062) took 0ms and failed: "
+            "service zygote_secondary not found\n"
+        )
+        client = _mock_client("kernel_pathologist")
+        agent = SupervisorAgent(client=client)
+        state: AgentState = {"messages": [], "current_log_chunk": init_fail_log, "diagnosis_report": None}
+        result = agent.route(state)
+        assert result == "android_init_advisor"
+        client.messages.create.assert_not_called()
+
+    def test_routes_android_init_advisor_token_from_llm(self):
+        client = _mock_client("android_init_advisor")
+        agent = SupervisorAgent(client=client)
+        state: AgentState = {"messages": [], "current_log_chunk": KERNEL_PANIC_LOG, "diagnosis_report": None}
+        assert agent.route(state) == "android_init_advisor"
