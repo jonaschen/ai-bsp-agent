@@ -9,7 +9,7 @@
 
 This repository hosts the **Android BSP Diagnostic Expert**, a specialized AI agent system for diagnosing complex Android/Linux BSP (Board Support Package) issues. The system uses an Anthropic Claude tool-use loop paired with deterministic Python skills to perform accurate Root Cause Analysis (RCA) on kernel logs, power management failures, and hardware-related panics.
 
-> **Alpha testers:** see [QUICKSTART.md](QUICKSTART.md) for the fastest path from clone to first diagnosis.
+> **Alpha testers:** see [QUICKSTART.md](QUICKSTART.md) for the fastest path from clone to first diagnosis. To contribute feedback or new skills, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Market Positioning
 
@@ -113,6 +113,7 @@ Markdown files in `docs/` with YAML frontmatter scoping each document to a super
 .
 ├── AGENTS.md                        # The Constitution: rules and governance for all agents.
 ├── CLAUDE.md                        # Coding agent guidance and milestone tracker.
+├── CONTRIBUTING.md                  # How to add skills, report gaps, and open pull requests.
 ├── DESIGN.md                        # Software design document (class diagram, sequence diagram, roadmap).
 ├── QUICKSTART.md                    # Alpha-tester quick-start guide (start here).
 ├── README.md                        # This file.
