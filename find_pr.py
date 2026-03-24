@@ -1,6 +1,5 @@
 from studio.utils.jules_client import JulesGitHubClient
 from studio.config import get_settings
-from pydantic import SecretStr
 
 settings = get_settings()
 client = JulesGitHubClient(
