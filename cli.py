@@ -13,7 +13,6 @@ Examples:
     python cli.py --dmesg logs/panic.txt --output result.json --device Pixel_Watch_Proto
 """
 import argparse
-import json
 import sys
 import uuid
 from pathlib import Path
