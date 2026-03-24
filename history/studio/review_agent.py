@@ -3,7 +3,6 @@ import logging
 import json
 from dotenv import load_dotenv
 from langchain_google_vertexai import ChatVertexAI
-import re
 from langchain_core.messages import HumanMessage
 from studio.memory import ReviewSummary, ReviewResult
 
