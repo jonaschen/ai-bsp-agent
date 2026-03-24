@@ -2,7 +2,6 @@ import os
 import json
 import asyncio
 import logging
-from typing import List
 from langchain_core.documents import Document
 from product.schemas.datasheet import Datasheet
 from langchain_google_vertexai import VectorSearchVectorStore, VertexAIEmbeddings
